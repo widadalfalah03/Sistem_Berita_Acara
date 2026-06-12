@@ -1,0 +1,89 @@
+# .NET build output
+bin/
+obj/
+out/
+publish/
+artifacts/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.binlog
+
+# Visual Studio
+.vs/
+*.vssscc
+*.vsscc
+*.ncb
+*.aps
+
+# VS Code (personal settings)
+.vscode/*
+!.vscode/extensions.json
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+nuget.dgspec.json
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.opencover.xml
+coverage-report/
+
+# Credentials & config sensitif
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+**/secrets.json
+*.pfx
+*.p12
+.env
+.env.*
+!.env.example
+
+# Upload & dokumen generated
+**/wwwroot/uploads/
+**/wwwroot/dokumen/
+**/wwwroot/ttd/
+**/wwwroot/arsip/
+**/wwwroot/lib/
+
+# Database lokal
+*.db
+*.db-shm
+*.db-wal
+*.mdf
+*.ldf
+
+# Logs
+*.log
+logs/
+Logs/
+Hangfire/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# IDE lain
+.idea/
+*.swp
+*.swo
+*~
+_ReSharper*/
+*.DotSettings.user
