@@ -1,0 +1,497 @@
+@page "/buat-ba"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
+@using PegawaiEntity = SistemBeritaAcara.Core.Entities.Pegawai
+@using MasterBarangEntity = SistemBeritaAcara.Core.Entities.MasterBarang
+@inject AppDbContext DbContext
+@inject IBACounterService BACounterService
+@inject IDocumentService DocumentService
+@inject IEmailService EmailService
+@inject INotificationService NotificationService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject UserManager<ApplicationUser> UserManager
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
+
+<PageTitle>Buat Berita Acara — Sistem Berita Acara</PageTitle>
+
+<div class="page-header">
+    <h1 class="page-title">Buat Berita Acara</h1>
+    <p class="page-subtitle">Isi formulir berikut untuk membuat Berita Acara baru</p>
+</div>
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:#16A34A;">
+        <i class="bi bi-check-circle-fill" style="font-size:18px;"></i>
+        <span>@successMessage</span>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div style="background:var(--danger-light);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:var(--danger);">
+        <i class="bi bi-exclamation-circle-fill" style="font-size:18px;"></i>
+        <span>@errorMessage</span>
+    </div>
+}
+
+<EditForm Model="model" OnValidSubmit="SubmitAsync">
+    <DataAnnotationsValidator />
+
+    <!-- ── 1. Info Dokumen ── -->
+    <div class="form-section">
+        <div class="form-section-title">1. Informasi Dokumen</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Nomor Surat</label>
+                <input class="form-control readonly" readonly value="(auto-generate saat simpan)" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tanggal</label>
+                <InputDate class="form-control" @bind-Value="model.Tanggal" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Jenis Berita Acara <span style="color:var(--danger)">*</span></label>
+                <select class="form-control form-select" @bind="model.Jenis">
+                    <option value="Alokasi">Alokasi</option>
+                    <option value="Peminjaman">Peminjaman</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+            </div>
+            @if (model.Jenis == "Lainnya")
+            {
+                <div class="form-group">
+                    <label class="form-label">Jenis Kustom <span style="color:var(--danger)">*</span></label>
+                    <InputText class="form-control" @bind-Value="model.JenisCustom" placeholder="Deskripsikan jenis BA..." />
+                </div>
+            }
+            else if (model.Jenis == "Peminjaman")
+            {
+                <div class="form-group">
+                    <label class="form-label">Tanggal Kembali</label>
+                    <InputDate class="form-control" @bind-Value="model.TanggalKembali" />
+                </div>
+            }
+            else
+            {
+                <div class="form-group">
+                    <label class="form-label">No. Tiket My SSC</label>
+                    <InputText class="form-control" @bind-Value="model.TiketSscNo" placeholder="Contoh: INC-20240001" />
+                </div>
+            }
+        </div>
+        @if (model.Jenis == "Peminjaman")
+        {
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">No. Tiket My SSC</label>
+                    <InputText class="form-control" @bind-Value="model.TiketSscNo" placeholder="Contoh: INC-20240001" />
+                </div>
+                <div></div>
+            </div>
+        }
+    </div>
+
+    <!-- ── 2. Data Penanggung Jawab ── -->
+    <div class="form-section">
+        <div class="form-section-title">2. Data Penanggung Jawab (PJ)</div>
+        <div class="form-group">
+            <label class="form-label">Cari PJ (Nama / No. Pekerja) <span style="color:var(--danger)">*</span></label>
+            <div class="search-input" style="max-width:400px;">
+                <i class="bi bi-search"></i>
+                <input type="text" placeholder="Ketik nama atau no. pekerja..."
+                       value="@pjSearch"
+                       @onchange="OnPjSearchInput" @oninput="OnPjSearchInput" />
+            </div>
+            @if (pjResults.Any())
+            {
+                <div style="border:1px solid var(--border);border-radius:var(--radius);margin-top:4px;max-height:200px;overflow-y:auto;background:var(--surface);box-shadow:var(--shadow-md);">
+                    @foreach (var p in pjResults)
+                    {
+                        <div @onclick="() => SelectPj(p)"
+                             style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px;"
+                             onmouseover="this.style.background='var(--primary-light)'"
+                             onmouseout="this.style.background='transparent'">
+                            <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">
+                                @p.Nama[0]
+                            </div>
+                            <div>
+                                <div style="font-weight:600;">@p.Nama</div>
+                                <div style="font-size:12px;color:var(--text-muted);">@p.NoPekerja — @p.FungsiDirektorat</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        @if (selectedPj is not null)
+        {
+            <div style="background:var(--primary-light);border:1px solid #BFDBFE;border-radius:var(--radius);padding:16px;display:flex;gap:16px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:180px;">
+                    <div style="font-size:12px;color:var(--text-muted);">Nama</div>
+                    <div style="font-weight:600;">@selectedPj.Nama</div>
+                </div>
+                <div style="flex:1;min-width:180px;">
+                    <div style="font-size:12px;color:var(--text-muted);">No. Pekerja</div>
+                    <div style="font-weight:600;">@selectedPj.NoPekerja</div>
+                </div>
+                <div style="flex:1;min-width:180px;">
+                    <div style="font-size:12px;color:var(--text-muted);">Jabatan</div>
+                    <div style="font-weight:600;">@selectedPj.Jabatan</div>
+                </div>
+                <div style="flex:1;min-width:180px;">
+                    <div style="font-size:12px;color:var(--text-muted);">Fungsi/Direktorat</div>
+                    <div style="font-weight:600;">@selectedPj.FungsiDirektorat</div>
+                </div>
+                <div style="flex:1;min-width:180px;">
+                    <div style="font-size:12px;color:var(--text-muted);">Email</div>
+                    <div style="font-weight:600;">@selectedPj.Email</div>
+                </div>
+                <div style="flex:1;min-width:180px;">
+                    <div style="font-size:12px;color:var(--text-muted);">Cost Center</div>
+                    <div style="font-weight:600;">@selectedPj.CostCenter</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- ── 3. Daftar Perangkat ── -->
+    <div class="form-section">
+        <div class="form-section-title">3. Daftar Perangkat</div>
+        <table class="perangkat-table" style="margin-bottom:12px;">
+            <thead>
+                <tr>
+                    <th style="width:30%">Jenis Perangkat</th>
+                    <th style="width:12%">Jumlah</th>
+                    <th style="width:12%">Satuan</th>
+                    <th style="width:20%">No. Serial</th>
+                    <th style="width:20%">Keterangan</th>
+                    <th style="width:6%"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in model.Perangkat)
+                {
+                    <tr>
+                        <td>
+                            <select @bind="p.BarangId">
+                                <option value="0">-- Pilih Perangkat --</option>
+                                @foreach (var b in barangOptions)
+                                {
+                                    <option value="@b.Id">@b.NamaBarang</option>
+                                }
+                            </select>
+                        </td>
+                        <td><input type="number" min="1" @bind="p.Jumlah" /></td>
+                        <td><input type="text" @bind="p.Satuan" /></td>
+                        <td><input type="text" @bind="p.NoSerial" placeholder="Opsional" /></td>
+                        <td><input type="text" @bind="p.Keterangan" placeholder="Opsional" /></td>
+                        <td>
+                            <button type="button" class="perangkat-delete" @onclick="() => model.Perangkat.Remove(p)">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-outline btn-sm" @onclick="() => model.Perangkat.Add(new())">
+            <i class="bi bi-plus-lg"></i> Tambah Perangkat
+        </button>
+    </div>
+
+    <!-- ── 4. Upload Foto ── -->
+    <div class="form-section">
+        <div class="form-section-title">4. Bukti Foto Serah Terima</div>
+        <div class="upload-area" style="cursor:default;">
+            <i class="bi bi-camera"></i>
+            <div class="upload-text">Upload Foto Bukti</div>
+            <div class="upload-hint">JPG, PNG, maksimal 5MB per file</div>
+            <div style="margin-top:16px;">
+                <InputFile OnChange="OnPhotosSelected" multiple accept="image/*"
+                           style="display:block;margin:0 auto;font-size:13px;" />
+            </div>
+        </div>
+        @if (photoFiles.Any())
+        {
+            <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;">
+                @foreach (var f in photoFiles)
+                {
+                    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;display:flex;align-items:center;gap:6px;">
+                        <i class="bi bi-image" style="color:var(--primary);"></i>
+                        @f.Name
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- ── 5. Tanda Tangan ── -->
+    <div class="form-section">
+        <div class="form-section-title">5. Tanda Tangan</div>
+        <div class="ttd-grid">
+            <!-- Yang Menyerahkan -->
+            <div class="ttd-col">
+                <div class="ttd-label">Yang Menyerahkan</div>
+                <div class="form-group">
+                    <div class="search-input">
+                        <i class="bi bi-search"></i>
+                        <input type="text" placeholder="Cari nama..."
+                               value="@menyerahkanSearch"
+                               @onchange="OnMenyerahkanSearchInput" @oninput="OnMenyerahkanSearchInput" />
+                    </div>
+                    @if (menyerahkanResults.Any())
+                    {
+                        <div style="border:1px solid var(--border);border-radius:var(--radius);margin-top:4px;max-height:160px;overflow-y:auto;background:var(--surface);box-shadow:var(--shadow-md);position:relative;z-index:10;">
+                            @foreach (var p in menyerahkanResults)
+                            {
+                                <div @onclick="() => SelectMenyerahkan(p)"
+                                     style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);">
+                                    <div style="font-weight:600;font-size:13px;">@p.Nama</div>
+                                    <div style="font-size:12px;color:var(--text-muted);">@p.NoPekerja</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                @if (selectedMenyerahkan is not null)
+                {
+                    <div style="font-weight:600;font-size:14px;color:var(--text-primary);padding:8px 0;">
+                        <i class="bi bi-person-check" style="color:var(--success);"></i> @selectedMenyerahkan.Nama
+                    </div>
+                }
+                <div class="ttd-box">
+                    <span>TTD diperoleh dari data pegawai</span>
+                </div>
+            </div>
+
+            <!-- Yang Mengetahui (Approver) -->
+            <div class="ttd-col">
+                <div class="ttd-label">Yang Mengetahui (Approver)</div>
+                <div class="form-group">
+                    <select class="form-control form-select" @bind="model.MengetahuiId">
+                        <option value="0">-- Pilih Approver --</option>
+                        @foreach (var a in approvers)
+                        {
+                            <option value="@a.Id">@a.Nama</option>
+                        }
+                    </select>
+                </div>
+                <div class="ttd-box">
+                    <span>TTD saat approve</span>
+                </div>
+            </div>
+
+            <!-- Yang Menerima (PJ) -->
+            <div class="ttd-col">
+                <div class="ttd-label">Yang Menerima (PJ)</div>
+                <div style="padding:10px 0;font-size:14px;color:var(--text-secondary);">
+                    @if (selectedPj is not null)
+                    {
+                        <span style="font-weight:600;color:var(--text-primary);">
+                            <i class="bi bi-person-check" style="color:var(--success);"></i>
+                            @selectedPj.Nama
+                        </span>
+                    }
+                    else
+                    {
+                        <span style="color:var(--text-muted);">Otomatis dari PJ yang dipilih</span>
+                    }
+                </div>
+                <div class="ttd-box">
+                    <span>TTD melalui magic link</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;justify-content:flex-end;gap:12px;">
+        <NavLink href="/draft" class="btn btn-outline">Batal</NavLink>
+        <button type="submit" class="btn btn-primary" disabled="@isSaving">
+            @if (isSaving)
+            {
+                <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
+                <span>Menyimpan...</span>
+            }
+            else
+            {
+                <i class="bi bi-floppy"></i>
+                <span>Simpan sebagai Draft</span>
+            }
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    private CreateBaModel model = new() { Tanggal = DateTime.Today, Perangkat = [new()] };
+    private List<PegawaiEntity> allPegawai = new();
+    private List<PegawaiEntity> pjResults = new();
+    private List<PegawaiEntity> menyerahkanResults = new();
+    private List<ApplicationUser> approvers = new();
+    private List<MasterBarangEntity> barangOptions = new();
+    private List<IBrowserFile> photoFiles = new();
+    private PegawaiEntity? selectedPj;
+    private PegawaiEntity? selectedMenyerahkan;
+    private string pjSearch = string.Empty;
+    private string menyerahkanSearch = string.Empty;
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        allPegawai = await DbContext.Pegawai.Where(p => p.IsAktif).OrderBy(p => p.Nama).ToListAsync();
+        approvers = await DbContext.Users.Where(u => u.Role == "Approver" && !u.IsDeleted).OrderBy(u => u.Nama).ToListAsync();
+        barangOptions = await DbContext.MasterBarang.Where(b => b.IsAktif).OrderBy(b => b.NamaBarang).ToListAsync();
+    }
+
+    private void OnPjSearchInput(ChangeEventArgs e)
+    {
+        pjSearch = e.Value?.ToString() ?? string.Empty;
+        pjResults = string.IsNullOrWhiteSpace(pjSearch) ? new() :
+            allPegawai.Where(p => p.Nama.Contains(pjSearch, StringComparison.OrdinalIgnoreCase) ||
+                                  p.NoPekerja.Contains(pjSearch, StringComparison.OrdinalIgnoreCase))
+                      .Take(6).ToList();
+    }
+
+    private void OnMenyerahkanSearchInput(ChangeEventArgs e)
+    {
+        menyerahkanSearch = e.Value?.ToString() ?? string.Empty;
+        menyerahkanResults = string.IsNullOrWhiteSpace(menyerahkanSearch) ? new() :
+            allPegawai.Where(p => p.Nama.Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase) ||
+                                  p.NoPekerja.Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase))
+                      .Take(6).ToList();
+    }
+
+    private void SelectPj(PegawaiEntity p)
+    {
+        selectedPj = p;
+        model.PjId = p.Id;
+        pjSearch = p.Nama;
+        pjResults.Clear();
+    }
+
+    private void SelectMenyerahkan(PegawaiEntity p)
+    {
+        selectedMenyerahkan = p;
+        model.MenyerahkanId = p.Id;
+        menyerahkanSearch = p.Nama;
+        menyerahkanResults.Clear();
+    }
+
+    private void OnPhotosSelected(InputFileChangeEventArgs e)
+    {
+        photoFiles = e.GetMultipleFiles(10).ToList();
+    }
+
+    private async Task SubmitAsync()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
+        if (model.MenyerahkanId == 0) { errorMessage = "Pilih Yang Menyerahkan terlebih dahulu."; return; }
+        if (model.MengetahuiId == 0) { errorMessage = "Pilih Approver (Yang Mengetahui) terlebih dahulu."; return; }
+        if (!model.Perangkat.Any(p => p.BarangId > 0)) { errorMessage = "Tambahkan minimal satu perangkat."; return; }
+
+        isSaving = true;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+            if (currentUser is null) { errorMessage = "Sesi habis, silakan login kembali."; return; }
+
+            var ba = new BeritaAcaraEntity
+            {
+                Tanggal = DateOnly.FromDateTime(model.Tanggal),
+                Jenis = model.Jenis,
+                JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null,
+                PjId = model.PjId,
+                MenyerahkanId = model.MenyerahkanId,
+                MengetahuiId = model.MengetahuiId,
+                TiketSscNo = model.TiketSscNo,
+                TanggalKembali = model.TanggalKembali.HasValue ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null,
+                Status = "Draft",
+                CreatedBy = currentUser.Id,
+                CreatedAt = DateTime.Now,
+                Perangkat = model.Perangkat
+                    .Where(p => p.BarangId > 0 && p.Jumlah > 0)
+                    .Select(p => new PerangkatBA
+                    {
+                        BarangId = p.BarangId,
+                        Jumlah = p.Jumlah,
+                        Satuan = string.IsNullOrWhiteSpace(p.Satuan) ? "Pcs" : p.Satuan,
+                        NoSerial = p.NoSerial,
+                        Keterangan = p.Keterangan
+                    }).ToList()
+            };
+
+            DbContext.Set<BeritaAcaraEntity>().Add(ba);
+            await DbContext.SaveChangesAsync();
+
+            var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal);
+            ba.CounterValue = next.counterValue;
+            ba.NomorSurat = next.nomorSurat;
+            await DbContext.SaveChangesAsync();
+
+            // Save photos
+            if (photoFiles.Any())
+            {
+                var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
+                Directory.CreateDirectory(photoFolder);
+                int idx = 1;
+                foreach (var file in photoFiles)
+                {
+                    var ext = Path.GetExtension(file.Name);
+                    var saveName = $"ba-{ba.Id}-photo-{idx}{ext}";
+                    await using var fs = File.Create(Path.Combine(photoFolder, saveName));
+                    await file.OpenReadStream(5_000_000).CopyToAsync(fs);
+                    DbContext.BuktiFoto.Add(new BuktiFoto { BaId = ba.Id, FilePath = $"files/photos/{saveName}" });
+                    idx++;
+                }
+                await DbContext.SaveChangesAsync();
+            }
+
+            successMessage = $"Berita Acara berhasil dibuat sebagai Draft. Nomor: {ba.NomorSurat}";
+            model = new() { Tanggal = DateTime.Today, Perangkat = [new()] };
+            selectedPj = null; selectedMenyerahkan = null;
+            pjSearch = string.Empty; menyerahkanSearch = string.Empty;
+            photoFiles.Clear();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Gagal membuat Berita Acara: {ex.Message}";
+        }
+        finally { isSaving = false; }
+    }
+
+    private class CreateBaModel
+    {
+        public string Jenis { get; set; } = "Alokasi";
+        public string? JenisCustom { get; set; }
+        public int PjId { get; set; }
+        public int MenyerahkanId { get; set; }
+        public int MengetahuiId { get; set; }
+        public string? TiketSscNo { get; set; }
+        public DateTime Tanggal { get; set; } = DateTime.Today;
+        public DateTime? TanggalKembali { get; set; }
+        public List<PerangkatRow> Perangkat { get; set; } = new();
+    }
+
+    private class PerangkatRow
+    {
+        public int BarangId { get; set; }
+        public int Jumlah { get; set; } = 1;
+        public string Satuan { get; set; } = "Pcs";
+        public string? NoSerial { get; set; }
+        public string? Keterangan { get; set; }
+    }
+}

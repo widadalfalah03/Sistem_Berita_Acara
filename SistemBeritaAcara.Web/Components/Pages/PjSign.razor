@@ -1,0 +1,165 @@
+@page "/pj/sign/{Token}"
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
+@inject AppDbContext DbContext
+@inject IDocumentService DocumentService
+@inject INotificationService NotificationService
+@inject NavigationManager Navigation
+@layout EmptyLayout
+@rendermode InteractiveServer
+
+<PageTitle>Tanda Tangan Berita Acara — Sistem Berita Acara</PageTitle>
+
+<div class="login-page" style="background:var(--bg);">
+    <div style="width:100%;max-width:600px;">
+        <!-- Header card -->
+        <div style="background:var(--primary);border-radius:var(--radius-xl) var(--radius-xl) 0 0;padding:24px 32px;color:white;">
+            <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:0.8;margin-bottom:4px;">Pertamina Patra Niaga</div>
+            <div style="font-size:22px;font-weight:800;">Tanda Tangan Berita Acara</div>
+        </div>
+
+        <div style="background:var(--surface);border-radius:0 0 var(--radius-xl) var(--radius-xl);padding:32px;box-shadow:var(--shadow-lg);">
+            @if (isLoading)
+            {
+                <div class="loading-spinner"><div class="spinner"></div><span>Memvalidasi token...</span></div>
+            }
+            else if (!isValidToken)
+            {
+                <div style="text-align:center;padding:32px 0;">
+                    <div style="width:64px;height:64px;border-radius:50%;background:var(--danger-light);color:var(--danger);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Token Tidak Valid</div>
+                    <div style="font-size:14px;color:var(--text-secondary);">
+                        Link ini sudah kadaluarsa atau telah digunakan sebelumnya.<br>Hubungi Admin Gudang untuk mendapatkan link baru.
+                    </div>
+                </div>
+            }
+            else if (alreadySigned)
+            {
+                <div style="text-align:center;padding:32px 0;">
+                    <div style="width:64px;height:64px;border-radius:50%;background:#F0FDF4;color:#22C55E;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Tanda Tangan Berhasil</div>
+                    <div style="font-size:14px;color:var(--text-secondary);">
+                        Berita Acara <strong>@ba!.NomorSurat</strong> telah berhasil ditandatangani dan diteruskan ke Approver.
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- BA Info -->
+                <div style="background:var(--bg);border-radius:var(--radius);padding:16px;margin-bottom:24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);">No. Surat</div>
+                        <div style="font-weight:700;">@ba!.NomorSurat</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);">Jenis</div>
+                        <div style="font-weight:700;">@ba.Jenis</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);">Tanggal</div>
+                        <div style="font-weight:700;">@ba.Tanggal.ToString("dd MMMM yyyy")</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);">Penerima (PJ)</div>
+                        <div style="font-weight:700;">@ba.Pj?.Nama</div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(actionMessage))
+                {
+                    <div class="login-error" style="margin-bottom:16px;">@actionMessage</div>
+                }
+
+                <div style="font-size:16px;font-weight:700;margin-bottom:16px;">
+                    Upload Tanda Tangan Anda
+                </div>
+
+                <div class="upload-area" style="cursor:default;margin-bottom:20px;">
+                    <i class="bi bi-pen"></i>
+                    <div class="upload-text">Upload File Tanda Tangan</div>
+                    <div class="upload-hint">PNG, JPG · Latar belakang transparan lebih baik · Maks 5MB</div>
+                    <div style="margin-top:16px;">
+                        <InputFile OnChange="OnFileSelected" accept="image/*"
+                                   style="display:block;margin:0 auto;font-size:13px;" />
+                    </div>
+                </div>
+
+                @if (selectedFile is not null)
+                {
+                    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#F0FDF4;border-radius:var(--radius);margin-bottom:20px;font-size:14px;color:#16A34A;">
+                        <i class="bi bi-check-circle-fill"></i>
+                        File dipilih: <strong>@selectedFile.Name</strong>
+                    </div>
+                }
+
+                <button class="login-btn" @onclick="SubmitSignatureAsync" disabled="@(selectedFile is null || isSubmitting)">
+                    @if (isSubmitting) { <span>Mengirim...</span> }
+                    else { <span><i class="bi bi-send" style="margin-right:8px;"></i>Kirim Tanda Tangan</span> }
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Token { get; set; } = string.Empty;
+
+    private BeritaAcaraEntity? ba;
+    private ApprovalToken? approvalToken;
+    private bool isLoading = true;
+    private bool isValidToken;
+    private bool alreadySigned;
+    private bool isSubmitting;
+    private string actionMessage = string.Empty;
+    private IBrowserFile? selectedFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        approvalToken = await DbContext.ApprovalToken
+            .Include(t => t.BeritaAcara).ThenInclude(b => b.Pj)
+            .FirstOrDefaultAsync(t => t.Token == Token && t.UsedAt == null && t.ExpiresAt > DateTime.Now);
+
+        if (approvalToken is null) { isValidToken = false; isLoading = false; return; }
+
+        ba = approvalToken.BeritaAcara;
+        isValidToken = ba is not null;
+        isLoading = false;
+    }
+
+    private void OnFileSelected(InputFileChangeEventArgs e) => selectedFile = e.File;
+
+    private async Task SubmitSignatureAsync()
+    {
+        if (selectedFile is null) return;
+        isSubmitting = true;
+        actionMessage = string.Empty;
+        try
+        {
+            var ext = Path.GetExtension(selectedFile.Name);
+            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
+            Directory.CreateDirectory(folder);
+            var fname = $"ba-{ba!.Id}-pj{ext}";
+            var fpath = Path.Combine(folder, fname);
+            await using var fs = File.Create(fpath);
+            await selectedFile.OpenReadStream(5_000_000).CopyToAsync(fs);
+
+            ba.TtdPjPath = $"files/signatures/{fname}";
+            ba.Status = "WaitingApproval";
+            ba.PjSignedAt = DateTime.Now;
+            approvalToken!.UsedAt = DateTime.Now;
+            await DbContext.SaveChangesAsync();
+
+            await DocumentService.EmbedTtdPjAsync(ba.Id, fpath);
+            await NotificationService.SendToRoleAsync("Approver", "WAITING_APPROVAL", $"BA {ba.NomorSurat} menunggu approval.", ba.Id);
+            await NotificationService.SendToRoleAsync("AdminGudangBarang", "PJ_SIGNED", $"BA {ba.NomorSurat} telah ditandatangani PJ.", ba.Id);
+            alreadySigned = true;
+        }
+        catch (Exception ex) { actionMessage = $"Gagal: {ex.Message}"; }
+        finally { isSubmitting = false; }
+    }
+}

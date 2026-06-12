@@ -1,0 +1,189 @@
+@page "/progress"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
+@inject AppDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Progress Berita Acara — Sistem Berita Acara</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat data...</span></div>
+}
+else if (currentRole == "AdminGudangBarang")
+{
+    <div class="page-header">
+        <h1 class="page-title">Progress Berita Acara</h1>
+        <p class="page-subtitle">BA yang sedang dalam proses pengajuan dan persetujuan</p>
+    </div>
+
+    @if (!baList.Any())
+    {
+        <div class="card" style="text-align:center;padding:60px;">
+            <i class="bi bi-hourglass" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
+            <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Tidak ada BA dalam proses</div>
+            <div style="font-size:14px;color:var(--text-secondary);">Semua BA sudah selesai atau belum diajukan</div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>No. Surat</th>
+                        <th>Jenis BA</th>
+                        <th>Tanggal Submit</th>
+                        <th>Approver</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ba in baList)
+                    {
+                        <tr>
+                            <td>
+                                <div class="cell-main">@ba.NomorSurat</div>
+                                <div class="cell-sub">@ba.Pj?.Nama</div>
+                            </td>
+                            <td><span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span></td>
+                            <td>@ba.SubmittedAt?.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <div class="cell-main">@ba.Mengetahui?.Nama</div>
+                                <div class="cell-sub">Approver</div>
+                            </td>
+                            <td>
+                                @if (ba.Status == "WaitingPJSign")
+                                {
+                                    <span style="color:#3B82F6;font-weight:600;font-size:13px;">
+                                        <i class="bi bi-pen"></i> Menunggu TTD PJ
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span style="color:#F59E0B;font-weight:600;font-size:13px;">
+                                        <i class="bi bi-hourglass-split"></i> Menunggu Approval
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <NavLink class="btn-icon" href="@($"/berita-acara/{ba.Id}")">
+                                    <i class="bi bi-eye"></i>
+                                </NavLink>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+else if (currentRole == "Approver")
+{
+    <div class="page-header d-flex align-center justify-between">
+        <div>
+            <h1 class="page-title">Antrian Persetujuan</h1>
+            <p class="page-subtitle">Berita Acara yang menunggu persetujuan kamu</p>
+        </div>
+        @if (baList.Any())
+        {
+            <span class="pill pill-waiting-approval">@baList.Count Menunggu</span>
+        }
+    </div>
+
+    @if (!baList.Any())
+    {
+        <div class="card" style="text-align:center;padding:60px;">
+            <i class="bi bi-inbox" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
+            <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Antrian kosong</div>
+            <div style="font-size:14px;color:var(--text-secondary);">Tidak ada BA yang menunggu persetujuan kamu</div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            @foreach (var ba in baList)
+            {
+                <NavLink class="queue-item" href="@($"/berita-acara/{ba.Id}")">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+                        <div style="flex:1;">
+                            <div class="queue-number">@ba.NomorSurat</div>
+                            <div class="queue-desc">
+                                <span class="pill @GetJenisPill(ba.Jenis)" style="font-size:11px;">@ba.Jenis</span>
+                                <span style="margin-left:8px;font-size:14px;">@(ba.Perangkat?.FirstOrDefault()?.Barang?.NamaBarang ?? "—")</span>
+                            </div>
+                            <div class="queue-person" style="margin-top:6px;">
+                                <i class="bi bi-person"></i>
+                                <span>@ba.Pj?.Nama</span>
+                                <span style="color:var(--text-muted);">•</span>
+                                <span style="color:var(--text-muted);">@ba.Pj?.FungsiDirektorat</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <div style="font-size:13px;color:var(--text-muted);">@GetRelativeTime(ba.SubmittedAt)</div>
+                            <button class="btn-review" style="margin-top:8px;">Review</button>
+                        </div>
+                    </div>
+                </NavLink>
+            }
+        </div>
+    }
+}
+
+@code {
+    private List<BeritaAcaraEntity> baList = new();
+    private bool isLoading = true;
+    private string currentRole = string.Empty;
+    private int currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+        currentRole = appUser!.Role;
+        currentUserId = appUser.Id;
+
+        if (currentRole == "AdminGudangBarang")
+        {
+            baList = await DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Pj).Include(b => b.Mengetahui)
+                .Where(b => b.CreatedBy == currentUserId &&
+                            (b.Status == "WaitingPJSign" || b.Status == "WaitingApproval"))
+                .OrderByDescending(b => b.SubmittedAt)
+                .ToListAsync();
+        }
+        else if (currentRole == "Approver")
+        {
+            baList = await DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Pj)
+                .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
+                .Where(b => b.MengetahuiId == currentUserId && b.Status == "WaitingApproval")
+                .OrderBy(b => b.SubmittedAt)
+                .ToListAsync();
+        }
+        isLoading = false;
+    }
+
+    private static string GetJenisPill(string jenis) => jenis switch
+    {
+        "Alokasi" => "pill-alokasi",
+        "Peminjaman" => "pill-peminjaman",
+        _ => "pill-lainnya"
+    };
+
+    private static string GetRelativeTime(DateTime? dt)
+    {
+        if (dt is null) return "-";
+        var diff = DateTime.Now - dt.Value;
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes} menit lalu";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours} jam lalu";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} hari lalu";
+        return dt.Value.ToString("dd MMM yyyy");
+    }
+}

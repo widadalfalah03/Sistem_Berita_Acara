@@ -1,0 +1,257 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using SistemBeritaAcara.Core.Entities
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inherits LayoutComponentBase
+
+@if (isLoginPage)
+{
+    @Body
+}
+else
+{
+    <div class="app-layout">
+        <aside class="sidebar">
+            <!-- Logo -->
+            <div class="sidebar-logo">
+                <div class="logo-text">
+                    <div>
+                        <div class="brand-name">Pertamina</div>
+                        <div class="brand-sub">Patra Niaga</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTA Buat BA (hanya AdminGudangBarang) -->
+            @if (currentRole == "AdminGudangBarang")
+            {
+                <div class="sidebar-cta">
+                    <NavLink class="btn-create-ba" href="/buat-ba">
+                        <i class="bi bi-plus-lg"></i>
+                        Buat Berita Acara
+                    </NavLink>
+                </div>
+            }
+
+            <!-- Navigation -->
+            <nav class="sidebar-nav">
+                @if (currentRole == "AdminGudangBarang")
+                {
+                    <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </NavLink>
+                    <NavLink class="nav-link" href="/notifikasi">
+                        <i class="bi bi-bell"></i>
+                        <span>Inbox</span>
+                        @if (unreadCount > 0)
+                        {
+                            <span class="nav-badge">@unreadCount</span>
+                        }
+                    </NavLink>
+                    <NavLink class="nav-link" href="/draft">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Draft</span>
+                        @if (draftCount > 0)
+                        {
+                            <span class="nav-badge">@draftCount</span>
+                        }
+                    </NavLink>
+                    <NavLink class="nav-link" href="/progress">
+                        <i class="bi bi-hourglass-split"></i>
+                        <span>Progress</span>
+                        @if (progressCount > 0)
+                        {
+                            <span class="nav-badge">@progressCount</span>
+                        }
+                    </NavLink>
+                    <NavLink class="nav-link" href="/rejected">
+                        <i class="bi bi-x-circle"></i>
+                        <span>Ditolak</span>
+                    </NavLink>
+                    <NavLink class="nav-link" href="/archive">
+                        <i class="bi bi-archive"></i>
+                        <span>Arsip</span>
+                    </NavLink>
+                }
+                else if (currentRole == "Approver")
+                {
+                    <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </NavLink>
+                    <NavLink class="nav-link" href="/notifikasi">
+                        <i class="bi bi-bell"></i>
+                        <span>Inbox</span>
+                        @if (unreadCount > 0)
+                        {
+                            <span class="nav-badge">@unreadCount</span>
+                        }
+                    </NavLink>
+                    <NavLink class="nav-link" href="/progress">
+                        <i class="bi bi-hourglass-split"></i>
+                        <span>Antrian</span>
+                        @if (progressCount > 0)
+                        {
+                            <span class="nav-badge">@progressCount</span>
+                        }
+                    </NavLink>
+                    <NavLink class="nav-link" href="/rejected">
+                        <i class="bi bi-x-circle"></i>
+                        <span>Ditolak</span>
+                    </NavLink>
+                    <NavLink class="nav-link" href="/archive">
+                        <i class="bi bi-archive"></i>
+                        <span>Arsip</span>
+                    </NavLink>
+                }
+                else if (currentRole == "AdminIT")
+                {
+                    <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
+                        <i class="bi bi-people"></i>
+                        <span>Daftar Pengguna</span>
+                    </NavLink>
+                    <NavLink class="nav-link" href="/data-pegawai">
+                        <i class="bi bi-person-badge"></i>
+                        <span>Data Pegawai</span>
+                    </NavLink>
+                    <NavLink class="nav-link" href="/data-barang">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Data Barang</span>
+                    </NavLink>
+                }
+            </nav>
+
+            <!-- Footer -->
+            <div class="sidebar-footer">
+                <a class="nav-link" href="#">
+                    <i class="bi bi-question-circle"></i>
+                    <span>Bantuan</span>
+                </a>
+                <form method="post" action="/account/logout" style="margin:0;">
+                    <AntiforgeryToken />
+                    <button type="submit" class="nav-link" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;cursor:pointer;">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span>Keluar</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="topbar-actions">
+                    <NavLink class="topbar-notif" href="/notifikasi">
+                        <i class="bi bi-bell"></i>
+                        @if (unreadCount > 0)
+                        {
+                            <span class="notif-badge">@unreadCount</span>
+                        }
+                    </NavLink>
+                </div>
+                <div class="topbar-user">
+                    <div class="topbar-avatar">@initials</div>
+                    <div>
+                        <div class="topbar-username">@currentUserName</div>
+                        <div class="topbar-dropdown">@currentRoleLabel</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="content-area">
+                @Body
+            </div>
+        </div>
+    </div>
+}
+
+<div id="blazor-error-ui" data-nosnippet>
+    Terjadi kesalahan. <a href="." class="reload">Muat ulang</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private string currentRole = string.Empty;
+    private string currentRoleLabel = string.Empty;
+    private string currentUserName = string.Empty;
+    private string initials = string.Empty;
+    private int unreadCount;
+    private int draftCount;
+    private int progressCount;
+    private bool isLoginPage;
+    private int _currentUserId;
+
+    [Inject] private AppDbContext DbContext { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = Navigation.Uri;
+        isLoginPage = uri.Contains("/login") || uri.Contains("/logout") || uri.Contains("/pj/sign");
+
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var principal = auth.User;
+
+        if (principal.Identity?.IsAuthenticated == true)
+        {
+            // Baca dari claims — TIDAK ada DB call di sini
+            // "nama" dan "app_role" ditambahkan oleh AppClaimsPrincipalFactory saat login
+            currentUserName = principal.FindFirst("nama")?.Value
+                           ?? principal.Identity.Name
+                           ?? string.Empty;
+
+            currentRole = principal.FindFirst("app_role")?.Value
+                       ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+                       ?? string.Empty;
+
+            var userIdStr = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int.TryParse(userIdStr, out _currentUserId);
+
+            initials = GetInitials(currentUserName);
+            currentRoleLabel = currentRole switch
+            {
+                "AdminIT"            => "Admin IT",
+                "AdminGudangBarang"  => "Admin Gudang & Barang",
+                "Approver"           => "Approver",
+                _                    => currentRole
+            };
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Hanya jalan setelah circuit interaktif terbentuk
+        // Tidak ada risiko concurrency dengan page OnInitializedAsync
+        if (!firstRender || isLoginPage || _currentUserId == 0) return;
+
+        unreadCount = await DbContext.Notification
+            .CountAsync(n => n.UserId == _currentUserId && !n.IsRead);
+
+        if (currentRole == "AdminGudangBarang")
+        {
+            draftCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+                .CountAsync(ba => ba.CreatedBy == _currentUserId && ba.Status == "Draft");
+            progressCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+                .CountAsync(ba => ba.CreatedBy == _currentUserId &&
+                    (ba.Status == "WaitingPJSign" || ba.Status == "WaitingApproval"));
+        }
+        else if (currentRole == "Approver")
+        {
+            progressCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+                .CountAsync(ba => ba.MengetahuiId == _currentUserId && ba.Status == "WaitingApproval");
+        }
+
+        StateHasChanged();
+    }
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+        return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpper();
+    }
+}

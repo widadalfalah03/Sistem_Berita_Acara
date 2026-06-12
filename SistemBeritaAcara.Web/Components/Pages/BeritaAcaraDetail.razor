@@ -1,0 +1,410 @@
+@page "/berita-acara/{Id:int}"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
+@inject AppDbContext DbContext
+@inject IDocumentService DocumentService
+@inject IEmailService EmailService
+@inject INotificationService NotificationService
+@inject IExcelService ExcelService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Detail Berita Acara — Sistem Berita Acara</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat detail...</span></div>
+}
+else if (notFound || ba is null)
+{
+    <div style="text-align:center;padding:60px;color:var(--text-muted);">
+        <i class="bi bi-file-x" style="font-size:48px;display:block;margin-bottom:16px;"></i>
+        <div style="font-size:18px;font-weight:700;">Berita Acara tidak ditemukan</div>
+    </div>
+}
+else
+{
+    <!-- Breadcrumb -->
+    <button class="breadcrumb-back" @onclick="GoBack">
+        <i class="bi bi-arrow-left"></i>
+        Kembali
+    </button>
+
+    @if (!string.IsNullOrEmpty(actionMessage))
+    {
+        var isError = actionMessage.StartsWith("Gagal");
+        <div style="background:@(isError ? "var(--danger-light)" : "#F0FDF4");border:1px solid @(isError ? "var(--danger)" : "#22C55E");border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:@(isError ? "var(--danger)" : "#16A34A");">
+            <i class="bi @(isError ? "bi-exclamation-circle-fill" : "bi-check-circle-fill")"></i>
+            @actionMessage
+        </div>
+    }
+
+    @if (isApprover && ba.Status == "WaitingApproval")
+    {
+        <!-- ════ REVIEW LAYOUT (Approver) ════ -->
+        <div class="review-layout">
+            <!-- Preview area -->
+            <div class="review-preview">
+                @if (!string.IsNullOrEmpty(ba.DocxPath) || !string.IsNullOrEmpty(ba.DocxFinalPath))
+                {
+                    <div style="text-align:center;padding:40px;">
+                        <i class="bi bi-file-earmark-word" style="font-size:64px;color:#2B579A;display:block;margin-bottom:16px;"></i>
+                        <div style="font-weight:700;font-size:16px;margin-bottom:8px;">@ba.NomorSurat</div>
+                        <div style="color:var(--text-muted);font-size:14px;margin-bottom:24px;">Dokumen Berita Acara</div>
+                        <a href="/@(ba.DocxPath)" target="_blank" class="btn btn-outline-primary">
+                            <i class="bi bi-eye"></i> Buka Dokumen
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div style="text-align:center;">
+                        <i class="bi bi-file-earmark-text" style="font-size:48px;display:block;margin-bottom:12px;"></i>
+                        <div>Dokumen belum tersedia</div>
+                    </div>
+                }
+            </div>
+
+            <!-- Review Panel -->
+            <div class="review-panel">
+                <h3>Review & Status</h3>
+
+                <div class="review-info">
+                    <div class="review-info-item">
+                        <span class="review-info-label">No. Surat</span>
+                        <span class="review-info-value text-primary">@ba.NomorSurat</span>
+                    </div>
+                    <div class="review-info-item">
+                        <span class="review-info-label">Jenis</span>
+                        <span class="review-info-value">@ba.Jenis</span>
+                    </div>
+                    <div class="review-info-item">
+                        <span class="review-info-label">Penanggung Jawab</span>
+                        <span class="review-info-value">@ba.Pj?.Nama</span>
+                    </div>
+                    <div class="review-info-item">
+                        <span class="review-info-label">Fungsi</span>
+                        <span class="review-info-value">@ba.Pj?.FungsiDirektorat</span>
+                    </div>
+                    <div class="review-info-item">
+                        <span class="review-info-label">Tanggal</span>
+                        <span class="review-info-value">@ba.Tanggal.ToString("dd MMM yyyy")</span>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-dot completed"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">Dokumen Dibuat</div>
+                            <div class="timeline-desc">@ba.CreatedAt.ToString("dd MMM yyyy HH:mm")</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot completed"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">PJ Menandatangani</div>
+                            <div class="timeline-desc">@(ba.PjSignedAt?.ToString("dd MMM yyyy HH:mm") ?? "-")</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot pending"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title pending">Menunggu Persetujuan Anda</div>
+                            <div class="timeline-desc">Harap review dokumen dan berikan keputusan</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div style="display:flex;gap:12px;margin-top:20px;">
+                    <button class="btn btn-success" style="flex:1;" @onclick="ApproveAsync" disabled="@isProcessing">
+                        <i class="bi bi-check-lg"></i> Setujui (Approve)
+                    </button>
+                    <button class="btn btn-outline-danger" style="flex:1;" @onclick="() => showRejectModal = true" disabled="@isProcessing">
+                        <i class="bi bi-x-lg"></i> Tolak (Reject)
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- ════ STANDARD DETAIL VIEW ════ -->
+        <div class="page-header d-flex align-center justify-between">
+            <div>
+                <h1 class="page-title">@(ba.NomorSurat ?? "Draft BA")</h1>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                    <span class="pill @GetStatusPill(ba.Status)">@GetStatusLabel(ba.Status)</span>
+                    <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+            <!-- Info Dokumen -->
+            <div class="card">
+                <div class="card-header"><h3>Informasi Dokumen</h3></div>
+                <div class="card-body">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">No. Surat</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@(ba.NomorSurat ?? "Belum di-generate")</td></tr>
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Tanggal.ToString("dd MMMM yyyy")</td></tr>
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tiket SSC</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@(ba.TiketSscNo ?? "-")</td></tr>
+                        @if (ba.Jenis == "Peminjaman")
+                        {
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tgl Kembali</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@(ba.TanggalKembali?.ToString("dd MMMM yyyy") ?? "-")</td></tr>
+                        }
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Dibuat Oleh</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Creator?.Nama</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pihak Terkait -->
+            <div class="card">
+                <div class="card-header"><h3>Pihak Terkait</h3></div>
+                <div class="card-body">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">PJ (Menerima)</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Pj?.Nama</td></tr>
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Menyerahkan</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Menyerahkan?.Nama</td></tr>
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Approver</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Mengetahui?.Nama</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Perangkat -->
+        @if (ba.Perangkat?.Any() == true)
+        {
+            <div class="card" style="margin-bottom:24px;">
+                <div class="card-header"><h3>Daftar Perangkat</h3></div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Perangkat</th>
+                            <th>Jumlah</th>
+                            <th>Satuan</th>
+                            <th>No. Serial</th>
+                            <th>Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in ba.Perangkat)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@p.Barang?.NamaBarang</td>
+                                <td>@p.Jumlah</td>
+                                <td>@p.Satuan</td>
+                                <td>@(p.NoSerial ?? "-")</td>
+                                <td>@(p.Keterangan ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <!-- Action buttons for AdminGudang -->
+        @if (currentRole == "AdminGudangBarang")
+        {
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                @if (ba.Status == "Draft")
+                {
+                    <button class="btn btn-primary" @onclick="SendMagicLinkAsync" disabled="@isProcessing">
+                        <i class="bi bi-send"></i> Kirim Magic Link ke PJ
+                    </button>
+                }
+                else if (ba.Status == "WaitingPJSign")
+                {
+                    <div style="background:var(--primary-light);border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:10px;color:var(--primary);">
+                        <i class="bi bi-hourglass-split"></i>
+                        Menunggu PJ menandatangani dokumen
+                    </div>
+                }
+                else if (ba.Status == "Rejected")
+                {
+                    <div style="background:var(--danger-light);border-radius:var(--radius);padding:14px 20px;flex:1;">
+                        <div style="color:var(--danger);font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+                            <i class="bi bi-x-circle-fill"></i> Ditolak
+                        </div>
+                        <div style="font-size:14px;color:var(--text-secondary);">@ba.AlasanReject</div>
+                    </div>
+                }
+            </div>
+        }
+    }
+}
+
+<!-- Reject Modal -->
+@if (showRejectModal)
+{
+    <div class="modal-overlay" @onclick="() => showRejectModal = false">
+        <div class="modal-content" @onclick:stopPropagation>
+            <button class="modal-close" @onclick="() => showRejectModal = false">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <div style="margin-bottom:20px;">
+                <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Tolak Berita Acara</div>
+                <div style="font-size:14px;color:var(--text-secondary);">Berikan alasan penolakan yang jelas</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Alasan Penolakan <span style="color:var(--danger)">*</span></label>
+                <textarea class="form-control" rows="4" @bind="rejectReason"
+                          placeholder="Contoh: Dokumen tidak lengkap, nomor serial tidak sesuai..."></textarea>
+            </div>
+            @if (!string.IsNullOrEmpty(rejectError))
+            {
+                <div class="login-error" style="margin-bottom:12px;">@rejectError</div>
+            }
+            <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
+                <button class="btn btn-outline" @onclick="() => showRejectModal = false">Batal</button>
+                <button class="btn btn-danger" @onclick="RejectAsync" disabled="@isProcessing">
+                    <i class="bi bi-x-lg"></i> Tolak (Reject)
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private BeritaAcaraEntity? ba;
+    private bool isLoading = true;
+    private bool notFound;
+    private bool isApprover;
+    private bool showRejectModal;
+    private string rejectReason = string.Empty;
+    private string rejectError = string.Empty;
+    private string actionMessage = string.Empty;
+    private string currentRole = string.Empty;
+    private bool isProcessing = false;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+        if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
+        currentRole = appUser.Role;
+
+        ba = await DbContext.Set<BeritaAcaraEntity>()
+            .Include(x => x.Pj)
+            .Include(x => x.Menyerahkan)
+            .Include(x => x.Mengetahui)
+            .Include(x => x.Creator)
+            .Include(x => x.Perangkat).ThenInclude(p => p.Barang)
+            .Include(x => x.BuktiFotos)
+            .FirstOrDefaultAsync(x => x.Id == Id);
+
+        if (ba is null) { notFound = true; isLoading = false; return; }
+
+        isApprover = currentRole == "Approver" && appUser.Id == ba.MengetahuiId;
+        isLoading = false;
+    }
+
+    private async Task SendMagicLinkAsync()
+    {
+        isProcessing = true;
+        try
+        {
+            var tokenValue = Guid.NewGuid().ToString("N");
+            DbContext.ApprovalToken.Add(new ApprovalToken { BaId = ba!.Id, Token = tokenValue, ExpiresAt = DateTime.Now.AddDays(7) });
+            ba!.Status = "WaitingPJSign";
+            ba.SubmittedAt = DateTime.Now;
+            await DbContext.SaveChangesAsync();
+            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue);
+            await NotificationService.SendToRoleAsync("AdminGudangBarang", "WAITING_PJ_SIGN", $"BA {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
+            actionMessage = "Magic link berhasil dikirim ke email PJ.";
+            await LoadAsync();
+        }
+        catch (Exception ex) { actionMessage = $"Gagal: {ex.Message}"; }
+        finally { isProcessing = false; }
+    }
+
+    private async Task ApproveAsync()
+    {
+        isProcessing = true;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+            if (currentUser is null || string.IsNullOrWhiteSpace(currentUser.TtdPath) || !File.Exists(currentUser.TtdPath))
+            {
+                actionMessage = "Gagal: Approver belum memiliki file TTD yang valid. Hubungi Admin IT.";
+                isProcessing = false;
+                return;
+            }
+            await DocumentService.EmbedTtdMengetahuiAsync(ba!.Id, currentUser.TtdPath);
+            ba!.Status = "Approved";
+            ba.ApprovedAt = DateTime.Now;
+            await DbContext.SaveChangesAsync();
+            await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
+            await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"BA {ba.NomorSurat} telah disetujui.", ba.Id);
+            actionMessage = "Berita Acara berhasil disetujui!";
+            await LoadAsync();
+        }
+        catch (Exception ex) { actionMessage = $"Gagal: {ex.Message}"; }
+        finally { isProcessing = false; }
+    }
+
+    private async Task RejectAsync()
+    {
+        if (string.IsNullOrWhiteSpace(rejectReason)) { rejectError = "Alasan penolakan wajib diisi."; return; }
+        isProcessing = true;
+        try
+        {
+            ba!.Status = "Rejected";
+            ba.AlasanReject = rejectReason;
+            ba.ApprovedAt = DateTime.Now;
+            await DbContext.SaveChangesAsync();
+            await NotificationService.SendAsync(ba.CreatedBy, "BA_REJECTED", $"BA {ba.NomorSurat} ditolak: {rejectReason}", ba.Id);
+            showRejectModal = false;
+            rejectReason = string.Empty;
+            actionMessage = "Berita Acara telah ditolak.";
+            await LoadAsync();
+        }
+        catch (Exception ex) { rejectError = $"Gagal: {ex.Message}"; }
+        finally { isProcessing = false; }
+    }
+
+    private static string GetStatusPill(string s) => s switch
+    {
+        "Draft" => "pill-draft",
+        "WaitingPJSign" => "pill-waiting-pj",
+        "WaitingApproval" => "pill-waiting-approval",
+        "Approved" => "pill-approved",
+        "Rejected" => "pill-rejected",
+        _ => "pill-draft"
+    };
+
+    private static string GetStatusLabel(string s) => s switch
+    {
+        "Draft" => "Draft",
+        "WaitingPJSign" => "Menunggu TTD PJ",
+        "WaitingApproval" => "Menunggu Approval",
+        "Approved" => "Disetujui",
+        "Rejected" => "Ditolak",
+        _ => s
+    };
+
+    private void GoBack()
+    {
+        var dest = currentRole == "Approver" ? "/progress" : "/draft";
+        Navigation.NavigateTo(dest);
+    }
+
+    private static string GetJenisPill(string jenis) => jenis switch
+    {
+        "Alokasi" => "pill-alokasi",
+        "Peminjaman" => "pill-peminjaman",
+        _ => "pill-lainnya"
+    };
+}
+

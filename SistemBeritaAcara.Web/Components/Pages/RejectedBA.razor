@@ -1,0 +1,143 @@
+@page "/rejected"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
+@inject AppDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Ditolak — Sistem Berita Acara</PageTitle>
+
+<div class="page-header">
+    <h1 class="page-title">Berita Acara Ditolak</h1>
+    <p class="page-subtitle">Daftar Berita Acara yang ditolak dan perlu revisi</p>
+</div>
+
+<!-- Search & Filter -->
+<div class="search-bar">
+    <div class="search-input" style="max-width:300px;">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Cari nomor surat..." @bind="search" @bind:event="oninput" />
+    </div>
+    <select class="filter-select" @bind="yearFilter">
+        <option value="0">Semua Tahun</option>
+        @foreach (var y in availableYears)
+        {
+            <option value="@y">@y</option>
+        }
+    </select>
+    @if (currentRole == "Approver")
+    {
+        <select class="filter-select" @bind="jenisFilter">
+            <option value="">Semua Jenis</option>
+            <option value="Alokasi">Alokasi</option>
+            <option value="Peminjaman">Peminjaman</option>
+            <option value="Lainnya">Lainnya</option>
+        </select>
+    }
+    @if (!string.IsNullOrEmpty(search) || yearFilter != 0 || !string.IsNullOrEmpty(jenisFilter))
+    {
+        <button class="filter-clear" @onclick="ClearFilters">
+            <i class="bi bi-x-circle"></i> Bersihkan Semua
+        </button>
+    }
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat data...</span></div>
+}
+else if (!FilteredBA.Any())
+{
+    <div class="card" style="text-align:center;padding:60px;">
+        <i class="bi bi-x-circle" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Tidak ada Berita Acara yang ditolak</div>
+        <div style="font-size:14px;color:var(--text-secondary);">Semua berjalan dengan lancar!</div>
+    </div>
+}
+else
+{
+    @foreach (var ba in FilteredBA)
+    {
+        <div class="ba-card">
+            <div class="ba-card-left">
+                <div class="ba-card-badge">
+                    <span class="pill pill-rejected">DITOLAK</span>
+                </div>
+                <div class="ba-card-number">@ba.NomorSurat</div>
+                <div class="ba-card-title">Berita Acara @ba.Jenis</div>
+                <div class="ba-card-jenis">Jenis: @ba.Jenis</div>
+                <div class="ba-card-person">
+                    <i class="bi bi-person-circle"></i>
+                    <div>
+                        <div class="person-name">@ba.Mengetahui?.Nama</div>
+                        <div class="person-role">Approver</div>
+                    </div>
+                </div>
+                <div class="ba-card-date">
+                    <i class="bi bi-calendar3"></i>
+                    <span>@ba.ApprovedAt?.ToString("dd MMMM yyyy")</span>
+                </div>
+            </div>
+            <div class="ba-card-right">
+                <div class="rejection-reason">
+                    <div class="rejection-label">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        Alasan Penolakan
+                    </div>
+                    <div class="rejection-quote">
+                        @(ba.AlasanReject ?? "Tidak ada alasan yang diberikan")
+                    </div>
+                </div>
+                <NavLink class="ba-card-link" style="margin-top:auto;display:block;margin-top:16px;"
+                   href="@($"/berita-acara/{ba.Id}")">
+                    Lihat Detail →
+                </NavLink>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<BeritaAcaraEntity> allBA = new();
+    private bool isLoading = true;
+    private string currentRole = string.Empty;
+    private int currentUserId;
+    private string search = string.Empty;
+    private int yearFilter = 0;
+    private string jenisFilter = string.Empty;
+    private List<int> availableYears = new();
+
+    private IEnumerable<BeritaAcaraEntity> FilteredBA => allBA
+        .Where(b => string.IsNullOrEmpty(search) ||
+                    (b.NomorSurat ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
+        .Where(b => yearFilter == 0 || b.CreatedAt.Year == yearFilter)
+        .Where(b => string.IsNullOrEmpty(jenisFilter) || b.Jenis == jenisFilter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+        currentRole = appUser!.Role;
+        currentUserId = appUser.Id;
+
+        IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
+            .Include(b => b.Mengetahui)
+            .Include(b => b.Pj)
+            .Where(b => b.Status == "Rejected");
+
+        if (currentRole == "AdminGudangBarang")
+            query = query.Where(b => b.CreatedBy == currentUserId);
+        else if (currentRole == "Approver")
+            query = query.Where(b => b.MengetahuiId == currentUserId);
+
+        allBA = await query.OrderByDescending(b => b.CreatedAt).ToListAsync();
+        availableYears = allBA.Select(b => b.CreatedAt.Year).Distinct().OrderByDescending(y => y).ToList();
+        isLoading = false;
+    }
+
+    private void ClearFilters() { search = string.Empty; yearFilter = 0; jenisFilter = string.Empty; }
+}

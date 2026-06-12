@@ -1,0 +1,150 @@
+@page "/archive"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
+@inject AppDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Arsip — Sistem Berita Acara</PageTitle>
+
+<div class="page-header">
+    <h1 class="page-title">Arsip Berita Acara</h1>
+    <p class="page-subtitle">Berita Acara yang telah disetujui dan diarsipkan</p>
+</div>
+
+<!-- Search & Filter -->
+<div class="search-bar">
+    <div class="search-input" style="max-width:300px;">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Cari nomor surat..." @bind="search" @bind:event="oninput" />
+    </div>
+    <select class="filter-select" @bind="yearFilter">
+        <option value="0">Semua Tahun</option>
+        @foreach (var y in availableYears)
+        {
+            <option value="@y">@y</option>
+        }
+    </select>
+    @if (!string.IsNullOrEmpty(search) || yearFilter != 0)
+    {
+        <button class="filter-clear" @onclick="() => { search = string.Empty; yearFilter = 0; }">
+            <i class="bi bi-x-circle"></i> Bersihkan
+        </button>
+    }
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat arsip...</span></div>
+}
+else if (!FilteredBA.Any())
+{
+    <div class="card" style="text-align:center;padding:60px;">
+        <i class="bi bi-archive" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Belum ada arsip</div>
+        <div style="font-size:14px;color:var(--text-secondary);">Berita Acara yang disetujui akan muncul di sini</div>
+    </div>
+}
+else
+{
+    @foreach (var ba in FilteredBA)
+    {
+        var fileName = string.IsNullOrEmpty(ba.DocxFinalPath)
+            ? $"BA-{ba.NomorSurat ?? ba.Id.ToString()}.docx"
+            : Path.GetFileName(ba.DocxFinalPath);
+
+        <div class="ba-card">
+            <div class="ba-card-left">
+                <div class="ba-card-badge">
+                    <span class="pill pill-approved">DITERIMA</span>
+                </div>
+                <div class="ba-card-number">@ba.NomorSurat</div>
+                <div class="ba-card-title">Berita Acara @ba.Jenis</div>
+                <div class="ba-card-jenis">PJ: @ba.Pj?.Nama</div>
+                <div class="ba-card-person">
+                    <i class="bi bi-person-check-fill"></i>
+                    <div>
+                        <div class="person-name">@ba.Mengetahui?.Nama</div>
+                        <div class="person-role">Approver</div>
+                    </div>
+                </div>
+                <div class="ba-card-date">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>Disetujui: @ba.ApprovedAt?.ToString("dd MMMM yyyy")</span>
+                </div>
+            </div>
+            <div class="ba-card-right">
+                <!-- PDF/DOCX card -->
+                <div class="pdf-card">
+                    <div class="pdf-icon">
+                        @(string.IsNullOrEmpty(ba.DocxFinalPath) ? "DOCX" : "PDF")
+                    </div>
+                    <div class="pdf-info">
+                        <div class="pdf-name">@fileName</div>
+                        <div class="pdf-size">Berita Acara Final</div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(ba.DocxFinalPath))
+                    {
+                        <a href="/@ba.DocxFinalPath" download class="pdf-download" title="Download">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    }
+                </div>
+
+                <div style="display:flex;gap:12px;margin-top:8px;">
+                    <NavLink class="btn btn-outline btn-sm" style="flex:1;" href="@($"/berita-acara/{ba.Id}")">
+                        <i class="bi bi-eye"></i> Pratinjau
+                    </NavLink>
+                    @if (!string.IsNullOrEmpty(ba.DocxFinalPath))
+                    {
+                        <a href="/@ba.DocxFinalPath" download class="btn btn-outline-primary btn-sm" style="flex:1;text-align:center;">
+                            <i class="bi bi-download"></i> Unduh
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<BeritaAcaraEntity> allBA = new();
+    private bool isLoading = true;
+    private string currentRole = string.Empty;
+    private int currentUserId;
+    private string search = string.Empty;
+    private int yearFilter = 0;
+    private List<int> availableYears = new();
+
+    private IEnumerable<BeritaAcaraEntity> FilteredBA => allBA
+        .Where(b => string.IsNullOrEmpty(search) ||
+                    (b.NomorSurat ?? "").Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    (b.Pj?.Nama ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
+        .Where(b => yearFilter == 0 || b.ApprovedAt?.Year == yearFilter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+        currentRole = appUser!.Role;
+        currentUserId = appUser.Id;
+
+        IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
+            .Include(b => b.Pj)
+            .Include(b => b.Mengetahui)
+            .Where(b => b.Status == "Approved");
+
+        if (currentRole == "AdminGudangBarang")
+            query = query.Where(b => b.CreatedBy == currentUserId);
+        else if (currentRole == "Approver")
+            query = query.Where(b => b.MengetahuiId == currentUserId);
+
+        allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();
+        availableYears = allBA.Where(b => b.ApprovedAt.HasValue).Select(b => b.ApprovedAt!.Value.Year).Distinct().OrderByDescending(y => y).ToList();
+        isLoading = false;
+    }
+}

@@ -1,0 +1,18 @@
+@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Sistem Berita Acara</PageTitle>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (auth.User.Identity?.IsAuthenticated == true)
+            Navigation.NavigateTo("/dashboard", true);
+        else
+            Navigation.NavigateTo("/login", true);
+    }
+}

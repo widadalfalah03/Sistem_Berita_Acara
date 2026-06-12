@@ -1,0 +1,244 @@
+@page "/edit-pengguna/{Id:int}"
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
+
+<PageTitle>Edit Pengguna — Sistem Berita Acara</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat data pengguna...</span></div>
+}
+else if (appUser is null)
+{
+    <div style="text-align:center;padding:60px;color:var(--text-muted);">Pengguna tidak ditemukan.</div>
+}
+else
+{
+    <NavLink class="breadcrumb-back" href="/dashboard">
+        <i class="bi bi-arrow-left"></i> Kembali ke Dashboard
+    </NavLink>
+
+    @if (!string.IsNullOrEmpty(successMsg))
+    {
+        <div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;color:#16A34A;display:flex;align-items:center;gap:10px;">
+            <i class="bi bi-check-circle-fill"></i> @successMsg
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMsg))
+    {
+        <div class="login-error" style="margin-bottom:16px;">@errorMsg</div>
+    }
+
+    <div class="edit-layout">
+        <!-- Left column -->
+        <div>
+            <!-- Profile card -->
+            <div class="card" style="margin-bottom:24px;">
+                <div class="profile-card">
+                    <div class="profile-avatar">@GetInitials(appUser.Nama)</div>
+                    <div class="profile-info">
+                        <div style="font-size:12px;color:var(--text-muted);">Nama Lengkap</div>
+                        <div class="profile-name">@appUser.Nama</div>
+                        <div class="profile-details">
+                            <div>
+                                <div class="profile-detail-label">Jabatan</div>
+                                <div class="profile-detail-value">@(pegawai?.Jabatan ?? "—")</div>
+                            </div>
+                            <div>
+                                <div class="profile-detail-label">Fungsi/Direktorat</div>
+                                <div class="profile-detail-value">@(pegawai?.FungsiDirektorat ?? "—")</div>
+                            </div>
+                            <div>
+                                <div class="profile-detail-label">Email</div>
+                                <div class="profile-detail-value">@appUser.Email</div>
+                            </div>
+                            <div>
+                                <div class="profile-detail-label">NIP</div>
+                                <div class="profile-detail-value">@(pegawai?.NoPekerja ?? "—")</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account settings -->
+            <div class="card">
+                <div class="card-header"><h3>Pengaturan Akun</h3></div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <select class="form-control form-select" @bind="editRole">
+                            <option value="AdminIT">Admin IT</option>
+                            <option value="AdminGudangBarang">Admin Gudang & Barang</option>
+                            <option value="Approver">Approver</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="side-cards">
+            <!-- Security -->
+            <div class="side-card">
+                <h4>Keamanan</h4>
+                <p>Reset password pengguna ke password default.</p>
+                @if (!string.IsNullOrEmpty(resetMsg))
+                {
+                    <div style="background:#F0FDF4;border-radius:var(--radius);padding:10px 12px;color:#16A34A;font-size:13px;margin-bottom:12px;">
+                        @resetMsg
+                    </div>
+                }
+                <button class="btn btn-outline" style="width:100%;" @onclick="ResetPasswordAsync" disabled="@isSaving">
+                    <i class="bi bi-key"></i> Reset Password
+                </button>
+            </div>
+
+            <!-- Status -->
+            <div class="side-card">
+                <h4>Status Akun</h4>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <span class="status-dot @(appUser.IsDeleted ? "inactive" : "active")">
+                        @(appUser.IsDeleted ? "Nonaktif" : "Aktif")
+                    </span>
+                    <div class="toggle-switch @(appUser.IsDeleted ? "" : "active")"
+                         @onclick="ToggleStatusAsync" style="cursor:pointer;"></div>
+                </div>
+                <div style="font-size:13px;color:var(--text-muted);">
+                    @(appUser.IsDeleted ? "Pengguna tidak dapat login" : "Pengguna dapat mengakses sistem")
+                </div>
+            </div>
+
+            <!-- TTD -->
+            <div class="side-card">
+                <h4>Tanda Tangan</h4>
+                <p>Upload file TTD untuk digunakan pada dokumen.</p>
+                @if (!string.IsNullOrEmpty(appUser.TtdPath))
+                {
+                    <div style="background:#F0FDF4;border-radius:var(--radius);padding:10px 12px;color:#16A34A;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                        <i class="bi bi-check-circle-fill"></i> TTD tersedia
+                    </div>
+                }
+                <InputFile OnChange="OnTtdSelected" accept="image/*"
+                           style="display:block;width:100%;font-size:13px;" />
+                @if (ttdFile is not null)
+                {
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
+                        Dipilih: @ttdFile.Name
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Form actions -->
+    <div class="form-actions" style="margin-top:24px;">
+        <NavLink class="btn btn-outline" href="/dashboard">Batal</NavLink>
+        <button class="btn btn-primary" @onclick="SaveAsync" disabled="@isSaving">
+            @if (isSaving) { <span>Menyimpan...</span> }
+            else { <span><i class="bi bi-floppy"></i> Simpan Perubahan</span> }
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ApplicationUser? appUser;
+    private SistemBeritaAcara.Core.Entities.Pegawai? pegawai;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string editRole = string.Empty;
+    private string successMsg = string.Empty;
+    private string errorMsg = string.Empty;
+    private string resetMsg = string.Empty;
+    private IBrowserFile? ttdFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        appUser = await DbContext.Users.Include(u => u.Pegawai).FirstOrDefaultAsync(u => u.Id == Id);
+        if (appUser is not null)
+        {
+            pegawai = appUser.Pegawai;
+            editRole = appUser.Role;
+        }
+        isLoading = false;
+    }
+
+    private void OnTtdSelected(InputFileChangeEventArgs e) => ttdFile = e.File;
+
+    private async Task SaveAsync()
+    {
+        if (appUser is null) return;
+        isSaving = true;
+        errorMsg = string.Empty;
+        try
+        {
+            appUser.Role = editRole;
+
+            if (ttdFile is not null)
+            {
+                var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
+                Directory.CreateDirectory(folder);
+                var ext = Path.GetExtension(ttdFile.Name);
+                var fname = $"ttd-user-{appUser.Id}{ext}";
+                var path = Path.Combine(folder, fname);
+                await using var fs = File.Create(path);
+                await ttdFile.OpenReadStream(5_000_000).CopyToAsync(fs);
+                appUser.TtdPath = path;
+            }
+
+            await UserManager.UpdateAsync(appUser);
+            successMsg = "Perubahan berhasil disimpan.";
+        }
+        catch (Exception ex) { errorMsg = ex.Message; }
+        finally { isSaving = false; }
+    }
+
+    private async Task ResetPasswordAsync()
+    {
+        if (appUser is null) return;
+        isSaving = true;
+        try
+        {
+            var token = await UserManager.GeneratePasswordResetTokenAsync(appUser);
+            await UserManager.ResetPasswordAsync(appUser, token, "Admin1234!");
+            resetMsg = "Password berhasil direset ke Admin1234!";
+        }
+        catch (Exception ex) { errorMsg = ex.Message; }
+        finally { isSaving = false; }
+    }
+
+    private async Task ToggleStatusAsync()
+    {
+        if (appUser is null) return;
+        appUser.IsDeleted = !appUser.IsDeleted;
+        if (appUser.IsDeleted)
+        {
+            appUser.DeletedAt = DateTime.Now;
+            await UserManager.SetLockoutEnabledAsync(appUser, true);
+            await UserManager.SetLockoutEndDateAsync(appUser, DateTimeOffset.MaxValue);
+        }
+        else
+        {
+            appUser.DeletedAt = null;
+            await UserManager.SetLockoutEndDateAsync(appUser, null);
+        }
+        await UserManager.UpdateAsync(appUser);
+        successMsg = appUser.IsDeleted ? "Akun dinonaktifkan." : "Akun diaktifkan kembali.";
+    }
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 1 ? parts[0][0].ToString().ToUpper()
+            : (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpper();
+    }
+}

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SistemBeritaAcara.Core/SistemBeritaAcara.Core.csproj" />
+  <Project Path="SistemBeritaAcara.Infrastructure/SistemBeritaAcara.Infrastructure.csproj" />
+  <Project Path="SistemBeritaAcara.Web/SistemBeritaAcara.Web.csproj" />
+</Solution>

@@ -1,0 +1,621 @@
+@page "/dashboard"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using SistemBeritaAcara.Core.Entities
+@using BAEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
+@inject AppDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Dashboard — Sistem Berita Acara</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-spinner">
+        <div class="spinner"></div>
+        <span>Memuat dashboard...</span>
+    </div>
+}
+else if (currentRole == "AdminGudangBarang")
+{
+    <!-- ════ DASHBOARD ADMIN GUDANG ════ -->
+    <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Ringkasan aktivitas Berita Acara kamu</p>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stat-cards">
+        <div class="stat-card">
+            <div class="stat-card-icon draft"><i class="bi bi-file-earmark-text"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Total Draft</div>
+                <div class="stat-card-value">@stat.Draft</div>
+                <div class="stat-card-desc">Belum diajukan</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon progress"><i class="bi bi-hourglass-split"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Sedang Diproses</div>
+                <div class="stat-card-value blue">@stat.Progress</div>
+                <div class="stat-card-desc">Menunggu TTD / Approval</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon approved"><i class="bi bi-check-circle"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Disetujui</div>
+                <div class="stat-card-value green">@stat.Approved</div>
+                <div class="stat-card-desc">Sudah selesai</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon rejected"><i class="bi bi-x-circle"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Ditolak</div>
+                <div class="stat-card-value red">@stat.Rejected</div>
+                <div class="stat-card-desc">Perlu revisi</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="dashboard-grid">
+        <!-- Line chart -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <span class="chart-title">Tren Pembuatan Berita Acara</span>
+                <span class="chart-period">6 Bulan Terakhir</span>
+            </div>
+            <div class="chart-container" style="height:220px;">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Donut chart -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <span class="chart-title">Status BA Saat Ini</span>
+            </div>
+            <div class="chart-container" style="height:180px;position:relative;">
+                <canvas id="statusChart"></canvas>
+            </div>
+            <div class="chart-legend">
+                <div class="legend-item"><div class="legend-dot" style="background:#22C55E"></div>Selesai</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Proses</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>Ditolak</div>
+                <div class="legend-item"><div class="legend-dot" style="background:#94A3B8"></div>Draft</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jenis BA + Due Date row -->
+    <div class="dashboard-grid">
+        <!-- Jenis BA progress bars -->
+        <div class="jenis-card">
+            <div class="jenis-title">Jenis BA</div>
+            @{
+                var total = jenisData.Alokasi + jenisData.Peminjaman + jenisData.Lainnya;
+                var pctAlokasi = total > 0 ? (int)Math.Round((double)jenisData.Alokasi / total * 100) : 0;
+                var pctPeminjaman = total > 0 ? (int)Math.Round((double)jenisData.Peminjaman / total * 100) : 0;
+                var pctLainnya = total > 0 ? (int)Math.Round((double)jenisData.Lainnya / total * 100) : 0;
+            }
+            <div class="jenis-item">
+                <div class="jenis-label">
+                    <span class="jenis-name">Alokasi</span>
+                    <span class="jenis-pct">@pctAlokasi%</span>
+                </div>
+                <div class="jenis-bar"><div class="jenis-fill alokasi" style="width:@pctAlokasi%"></div></div>
+            </div>
+            <div class="jenis-item">
+                <div class="jenis-label">
+                    <span class="jenis-name">Peminjaman</span>
+                    <span class="jenis-pct">@pctPeminjaman%</span>
+                </div>
+                <div class="jenis-bar"><div class="jenis-fill peminjaman" style="width:@pctPeminjaman%"></div></div>
+            </div>
+            <div class="jenis-item">
+                <div class="jenis-label">
+                    <span class="jenis-name">Lainnya</span>
+                    <span class="jenis-pct">@pctLainnya%</span>
+                </div>
+                <div class="jenis-bar"><div class="jenis-fill lainnya" style="width:@pctLainnya%"></div></div>
+            </div>
+        </div>
+
+        <!-- Due Date table -->
+        <div class="due-section">
+            <div class="due-header">
+                <div class="due-title">
+                    <i class="bi bi-alarm"></i>
+                    Peminjaman Jatuh Tempo
+                </div>
+                <a class="due-link" href="/archive">Lihat Semua</a>
+            </div>
+            @if (!dueDates.Any())
+            {
+                <div style="text-align:center;padding:24px;color:var(--text-muted);">
+                    <i class="bi bi-check-circle" style="font-size:24px;"></i>
+                    <div style="margin-top:8px;font-size:14px;">Tidak ada jatuh tempo mendekati</div>
+                </div>
+            }
+            else
+            {
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>No. Surat</th>
+                            <th>PJ</th>
+                            <th>Tgl Kembali</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in dueDates)
+                        {
+                            var daysLeft = (d.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
+                            <tr>
+                                <td><span class="fw-semibold">@d.NomorSurat</span></td>
+                                <td>@d.Pj?.Nama</td>
+                                <td>@d.TanggalKembali?.ToString("dd MMM yyyy")</td>
+                                <td>
+                                    @if (daysLeft == 0)
+                                    {
+                                        <span class="due-badge today">Hari Ini</span>
+                                    }
+                                    else if (daysLeft == 1)
+                                    {
+                                        <span class="due-badge h1">H-1</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="due-badge h2">H-@daysLeft</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}
+else if (currentRole == "Approver")
+{
+    <!-- ════ DASHBOARD APPROVER ════ -->
+    <div class="page-header">
+        <h1 class="page-title">Dashboard Approver</h1>
+        <p class="page-subtitle">Kelola antrian persetujuan Berita Acara</p>
+    </div>
+
+    <div class="stat-cards">
+        <div class="stat-card">
+            <div class="stat-card-icon pending"><i class="bi bi-inbox"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Antrian Pending</div>
+                <div class="stat-card-value red">@approverStat.Pending</div>
+                <div class="stat-card-desc">Perlu diproses</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon total"><i class="bi bi-clipboard-data"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Total Review</div>
+                <div class="stat-card-value">@approverStat.Total</div>
+                <div class="stat-card-desc">Semua waktu</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon approved"><i class="bi bi-check-circle"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Disetujui</div>
+                <div class="stat-card-value green">@approverStat.Approved</div>
+                <div class="stat-card-desc">@approverStat.ApprovedPct% dari total</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon rejected"><i class="bi bi-x-circle"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Ditolak</div>
+                <div class="stat-card-value red">@approverStat.Rejected</div>
+                <div class="stat-card-desc">@approverStat.RejectedPct% dari total</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <span class="chart-title">Tren Persetujuan Bulanan</span>
+                <span class="chart-period">6 Bulan Terakhir</span>
+            </div>
+            <div class="chart-container" style="height:220px;">
+                <canvas id="approverTrendChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <span class="chart-title">Approval / Rejection</span>
+            </div>
+            <div class="chart-container" style="height:200px;position:relative;">
+                <canvas id="approverDonut"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Antrian -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Antrean Persetujuan</h3>
+            @if (approverQueue.Any())
+            {
+                <span class="pill pill-waiting-approval">@approverQueue.Count Menunggu</span>
+            }
+        </div>
+        @if (!approverQueue.Any())
+        {
+            <div style="text-align:center;padding:48px;color:var(--text-muted);">
+                <i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:12px;"></i>
+                Tidak ada antrian persetujuan saat ini
+            </div>
+        }
+        else
+        {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>No. Surat</th>
+                        <th>Jenis BA</th>
+                        <th>Penanggung Jawab</th>
+                        <th>Tanggal Submit</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ba in approverQueue)
+                    {
+                        <tr>
+                            <td><span class="fw-semibold text-primary">@ba.NomorSurat</span></td>
+                            <td><span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span></td>
+                            <td>
+                                <div class="cell-main">@ba.Pj?.Nama</div>
+                                <div class="cell-sub">@ba.Pj?.FungsiDirektorat</div>
+                            </td>
+                            <td>@ba.SubmittedAt?.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <NavLink class="btn-review" href="@($"/berita-acara/{ba.Id}")">
+                                    Review
+                                </NavLink>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+else if (currentRole == "AdminIT")
+{
+    <!-- ════ DASHBOARD ADMIN IT (Daftar Pengguna) ════ -->
+    <div class="page-header d-flex align-center justify-between">
+        <div>
+            <h1 class="page-title">Daftar Pengguna</h1>
+            <p class="page-subtitle">Kelola akun pengguna sistem Berita Acara</p>
+        </div>
+        <NavLink class="btn btn-primary" href="/tambah-pengguna">
+            <i class="bi bi-plus-lg"></i>
+            Tambah Pengguna
+        </NavLink>
+    </div>
+
+    <div class="stat-cards">
+        <div class="stat-card">
+            <div class="stat-card-icon total"><i class="bi bi-people"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Total Pengguna</div>
+                <div class="stat-card-value">@userStats.Total</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon neutral"><i class="bi bi-shield-lock"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Admin IT</div>
+                <div class="stat-card-value">@userStats.AdminIT</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Admin Gudang</div>
+                <div class="stat-card-value green">@userStats.AdminGudang</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon progress"><i class="bi bi-person-check"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Approver</div>
+                <div class="stat-card-value blue">@userStats.Approver</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="search-bar">
+        <div class="search-input" style="max-width:320px;">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Cari nama atau email..."
+                   @bind="userSearch" @bind:event="oninput" />
+        </div>
+        <select class="filter-select" @bind="roleFilter">
+            <option value="">Semua Role</option>
+            <option value="AdminIT">Admin IT</option>
+            <option value="AdminGudangBarang">Admin Gudang</option>
+            <option value="Approver">Approver</option>
+        </select>
+        <div class="toggle-wrapper" @onclick="() => { showInactive = !showInactive; }">
+            <div class="toggle-switch @(showInactive ? "active" : "")"></div>
+            <span>Tampilkan Non-Aktif</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nama / NIP</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Tanggal Dibuat</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in FilteredUsers)
+                {
+                    <tr>
+                        <td>
+                            <div class="cell-main">@u.Nama</div>
+                            <div class="cell-sub">NIP: @(u.Pegawai?.NoPekerja ?? "-")</div>
+                        </td>
+                        <td>@u.Email</td>
+                        <td>
+                            <span class="pill @GetRolePill(u.Role)">@GetRoleLabel(u.Role)</span>
+                        </td>
+                        <td>-</td>
+                        <td>
+                            @if (!u.IsDeleted)
+                            {
+                                <span class="status-dot active">Aktif</span>
+                            }
+                            else
+                            {
+                                <span class="status-dot inactive">Nonaktif</span>
+                            }
+                        </td>
+                        <td>
+                            <NavLink href="@($"/edit-pengguna/{u.Id}")" class="btn-icon">
+                                <i class="bi bi-pencil"></i>
+                            </NavLink>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private string currentRole = string.Empty;
+    private int currentUserId;
+
+    // Gudang stats
+    private (int Draft, int Progress, int Approved, int Rejected) stat;
+    private (int Alokasi, int Peminjaman, int Lainnya) jenisData;
+    private List<BAEntity> dueDates = new();
+    private List<int[]> trendData = new(); // [month-6..month-0]
+
+    // Approver stats
+    private (int Pending, int Total, int Approved, int Rejected, int ApprovedPct, int RejectedPct) approverStat;
+    private List<BAEntity> approverQueue = new();
+
+    // AdminIT stats
+    private (int Total, int AdminIT, int AdminGudang, int Approver) userStats;
+    private List<ApplicationUser> allUsers = new();
+    private string userSearch = string.Empty;
+    private string roleFilter = string.Empty;
+    private bool showInactive = false;
+
+    [Inject] private AppDbContext DbCtx { get; set; } = null!;
+
+    private IEnumerable<ApplicationUser> FilteredUsers => allUsers
+        .Where(u => showInactive || !u.IsDeleted)
+        .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
+        .Where(u => string.IsNullOrEmpty(userSearch) ||
+                    u.Nama.Contains(userSearch, StringComparison.OrdinalIgnoreCase) ||
+                    (u.Email ?? "").Contains(userSearch, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var email = auth.User.Identity?.Name;
+        if (email is null) { Navigation.NavigateTo("/login", true); return; }
+
+        var appUser = await UserManager.FindByEmailAsync(email);
+        if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
+
+        currentRole = appUser.Role;
+        currentUserId = appUser.Id;
+
+        if (currentRole == "AdminGudangBarang")
+            await LoadGudangDataAsync();
+        else if (currentRole == "Approver")
+            await LoadApproverDataAsync();
+        else if (currentRole == "AdminIT")
+            await LoadAdminITDataAsync();
+
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || isLoading) return;
+
+        if (currentRole == "AdminGudangBarang")
+        {
+            var months = GetLast6MonthLabels();
+            var monthData = GetMonthlyData();
+            await JS.InvokeVoidAsync("chartInterop.createLineChart", "trendChart",
+                months,
+                new[] { new { label = "Berita Acara Dibuat", data = monthData, color = "#1D4ED8" } });
+
+            await JS.InvokeVoidAsync("chartInterop.createDonutChart", "statusChart",
+                new[] { "Selesai", "Proses", "Ditolak", "Draft" },
+                new[] { stat.Approved, stat.Progress, stat.Rejected, stat.Draft },
+                new[] { "#22C55E", "#3B82F6", "#EF4444", "#94A3B8" });
+        }
+        else if (currentRole == "Approver")
+        {
+            var months = GetLast6MonthLabels();
+            await JS.InvokeVoidAsync("chartInterop.createLineChart", "approverTrendChart",
+                months,
+                new[]
+                {
+                    new { label = "Disetujui", data = GetApproverMonthlyData(approved: true), color = "#22C55E" },
+                    new { label = "Ditolak", data = GetApproverMonthlyData(approved: false), color = "#EF4444" }
+                });
+
+            await JS.InvokeVoidAsync("chartInterop.createDonutChart", "approverDonut",
+                new[] { "Disetujui", "Ditolak" },
+                new[] { approverStat.Approved, approverStat.Rejected },
+                new[] { "#22C55E", "#EF4444" });
+        }
+    }
+
+    private async Task LoadGudangDataAsync()
+    {
+        var myBA = await DbCtx.Set<BAEntity>()
+            .Include(b => b.Pj)
+            .Where(b => b.CreatedBy == currentUserId)
+            .ToListAsync();
+
+        stat.Draft = myBA.Count(b => b.Status == "Draft");
+        stat.Progress = myBA.Count(b => b.Status is "WaitingPJSign" or "WaitingApproval");
+        stat.Approved = myBA.Count(b => b.Status == "Approved");
+        stat.Rejected = myBA.Count(b => b.Status == "Rejected");
+
+        jenisData.Alokasi = myBA.Count(b => b.Jenis == "Alokasi");
+        jenisData.Peminjaman = myBA.Count(b => b.Jenis == "Peminjaman");
+        jenisData.Lainnya = myBA.Count(b => b.Jenis != "Alokasi" && b.Jenis != "Peminjaman");
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        dueDates = myBA
+            .Where(b => b.Jenis == "Peminjaman" && b.TanggalKembali.HasValue &&
+                        b.TanggalKembali.Value >= today &&
+                        b.TanggalKembali.Value <= today.AddDays(2) &&
+                        b.Status != "Approved")
+            .OrderBy(b => b.TanggalKembali)
+            .Take(5)
+            .ToList();
+    }
+
+    private async Task LoadApproverDataAsync()
+    {
+        var myQueue = await DbCtx.Set<BAEntity>()
+            .Include(b => b.Pj)
+            .Where(b => b.MengetahuiId == currentUserId)
+            .ToListAsync();
+
+        approverStat.Pending = myQueue.Count(b => b.Status == "WaitingApproval");
+        approverStat.Approved = myQueue.Count(b => b.Status == "Approved");
+        approverStat.Rejected = myQueue.Count(b => b.Status == "Rejected");
+        approverStat.Total = approverStat.Approved + approverStat.Rejected;
+        approverStat.ApprovedPct = approverStat.Total > 0 ? (int)Math.Round((double)approverStat.Approved / approverStat.Total * 100) : 0;
+        approverStat.RejectedPct = approverStat.Total > 0 ? 100 - approverStat.ApprovedPct : 0;
+
+        approverQueue = myQueue
+            .Where(b => b.Status == "WaitingApproval")
+            .OrderBy(b => b.SubmittedAt)
+            .ToList();
+    }
+
+    private async Task LoadAdminITDataAsync()
+    {
+        allUsers = await DbCtx.Users
+            .Include(u => u.Pegawai)
+            .OrderBy(u => u.Nama)
+            .ToListAsync();
+
+        userStats.Total = allUsers.Count(u => !u.IsDeleted);
+        userStats.AdminIT = allUsers.Count(u => u.Role == "AdminIT" && !u.IsDeleted);
+        userStats.AdminGudang = allUsers.Count(u => u.Role == "AdminGudangBarang" && !u.IsDeleted);
+        userStats.Approver = allUsers.Count(u => u.Role == "Approver" && !u.IsDeleted);
+    }
+
+    private string[] GetLast6MonthLabels()
+    {
+        return Enumerable.Range(0, 6)
+            .Select(i => DateTime.Today.AddMonths(-5 + i).ToString("MMM", new System.Globalization.CultureInfo("id-ID")))
+            .ToArray();
+    }
+
+    private int[] GetMonthlyData()
+    {
+        var result = new int[6];
+        for (int i = 0; i < 6; i++)
+        {
+            var month = DateTime.Today.AddMonths(-5 + i);
+            result[i] = DbCtx.Set<BAEntity>().Count(b =>
+                b.CreatedBy == currentUserId &&
+                b.CreatedAt.Month == month.Month &&
+                b.CreatedAt.Year == month.Year);
+        }
+        return result;
+    }
+
+    private int[] GetApproverMonthlyData(bool approved)
+    {
+        var status = approved ? "Approved" : "Rejected";
+        var result = new int[6];
+        for (int i = 0; i < 6; i++)
+        {
+            var month = DateTime.Today.AddMonths(-5 + i);
+            result[i] = DbCtx.Set<BAEntity>().Count(b =>
+                b.MengetahuiId == currentUserId &&
+                b.Status == status &&
+                b.CreatedAt.Month == month.Month &&
+                b.CreatedAt.Year == month.Year);
+        }
+        return result;
+    }
+
+    private static string GetJenisPill(string jenis) => jenis switch
+    {
+        "Alokasi" => "pill-alokasi",
+        "Peminjaman" => "pill-peminjaman",
+        _ => "pill-lainnya"
+    };
+
+    private static string GetRolePill(string role) => role switch
+    {
+        "AdminIT" => "pill-admin-it",
+        "AdminGudangBarang" => "pill-admin-gudang",
+        "Approver" => "pill-approver",
+        _ => "pill-draft"
+    };
+
+    private static string GetRoleLabel(string role) => role switch
+    {
+        "AdminIT" => "Admin IT",
+        "AdminGudangBarang" => "Admin Gudang",
+        "Approver" => "Approver",
+        _ => role
+    };
+}

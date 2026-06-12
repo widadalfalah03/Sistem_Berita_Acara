@@ -1,0 +1,15 @@
+﻿@page "/logout"
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+
+<PageTitle>Logout</PageTitle>
+
+<p>Keluar sedang diproses...</p>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await SignInManager.SignOutAsync();
+        Navigation.NavigateTo("/login", true);
+    }
+}

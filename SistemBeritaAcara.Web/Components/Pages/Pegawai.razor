@@ -1,0 +1,194 @@
+@page "/data-pegawai"
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using PegawaiEntity = SistemBeritaAcara.Core.Entities.Pegawai
+@inject AppDbContext DbContext
+@inject IExcelService ExcelService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
+
+<PageTitle>Data Pegawai — Sistem Berita Acara</PageTitle>
+
+<div class="page-header d-flex align-center justify-between">
+    <div>
+        <h1 class="page-title">Daftar Pegawai</h1>
+        <p class="page-subtitle">Data pegawai PT Pertamina Patra Niaga</p>
+    </div>
+    <button class="btn btn-primary" @onclick="() => showUpload = true">
+        <i class="bi bi-arrow-up-circle"></i> Update Data Pegawai
+    </button>
+</div>
+
+<!-- Stat Card -->
+<div class="stat-cards" style="grid-template-columns:repeat(3,1fr);max-width:640px;margin-bottom:24px;">
+    <div class="stat-card">
+        <div class="stat-card-icon total"><i class="bi bi-person-badge"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-label">Total Pegawai</div>
+            <div class="stat-card-value">@allPegawai.Count</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon approved"><i class="bi bi-person-check"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-label">Aktif</div>
+            <div class="stat-card-value green">@allPegawai.Count(p => p.IsAktif)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon neutral"><i class="bi bi-person-x"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-label">Nonaktif</div>
+            <div class="stat-card-value">@allPegawai.Count(p => !p.IsAktif)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Search + Toggle -->
+<div class="search-bar">
+    <div class="search-input" style="max-width:320px;">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Cari nama, NIP, atau jabatan..."
+               @bind="search" @bind:event="oninput" />
+    </div>
+    <div class="toggle-wrapper" @onclick="() => showInactive = !showInactive">
+        <div class="toggle-switch @(showInactive ? "active" : "")"></div>
+        <span>Tampilkan Data Non-Aktif</span>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat data pegawai...</span></div>
+}
+else
+{
+    @if (!string.IsNullOrEmpty(importResult))
+    {
+        var isErr = importResult.StartsWith("Gagal");
+        <div style="background:@(isErr ? "var(--danger-light)" : "#F0FDF4");border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;color:@(isErr ? "var(--danger)" : "#16A34A");font-size:14px;">
+            @importResult
+        </div>
+    }
+
+    <div class="card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nama / NIP</th>
+                    <th>Jabatan</th>
+                    <th>Fungsi/Direktorat</th>
+                    <th>Email</th>
+                    <th>Cost Center</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in FilteredPegawai)
+                {
+                    <tr>
+                        <td>
+                            <div class="cell-main">@p.Nama</div>
+                            <div class="cell-sub">NIP: @p.NoPekerja</div>
+                        </td>
+                        <td>@p.Jabatan</td>
+                        <td>@p.FungsiDirektorat</td>
+                        <td>@p.Email</td>
+                        <td>@p.CostCenter</td>
+                        <td>
+                            <span class="status-dot @(p.IsAktif ? "active" : "inactive")">
+                                @(p.IsAktif ? "Aktif" : "Nonaktif")
+                            </span>
+                        </td>
+                    </tr>
+                }
+                @if (!FilteredPegawai.Any())
+                {
+                    <tr>
+                        <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">
+                            Tidak ada data pegawai yang sesuai filter
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Upload Modal -->
+@if (showUpload)
+{
+    <div class="modal-overlay" @onclick="() => showUpload = false">
+        <div class="modal-content" style="max-width:500px;" @onclick:stopPropagation>
+            <button class="modal-close" @onclick="() => showUpload = false">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Import Data Pegawai</div>
+            <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">
+                Upload file Excel (.xlsx) dengan kolom: Nama, No Pekerja, Jabatan, Fungsi/Direktorat, Email, Cost Center
+            </div>
+            <div class="upload-area">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                <div class="upload-text">Pilih File Excel</div>
+                <div class="upload-hint">.xlsx · Maksimal 10MB</div>
+                <div style="margin-top:16px;">
+                    <InputFile OnChange="OnImportFileChanged" accept=".xlsx"
+                               style="display:block;margin:0 auto;font-size:13px;" />
+                </div>
+            </div>
+            @if (isImporting)
+            {
+                <div class="loading-spinner" style="padding:20px;">
+                    <div class="spinner"></div><span>Mengimpor data...</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private List<PegawaiEntity> allPegawai = new();
+    private bool isLoading = true;
+    private bool showUpload = false;
+    private bool isImporting = false;
+    private bool showInactive = false;
+    private string search = string.Empty;
+    private string importResult = string.Empty;
+
+    private IEnumerable<PegawaiEntity> FilteredPegawai => allPegawai
+        .Where(p => showInactive || p.IsAktif)
+        .Where(p => string.IsNullOrEmpty(search) ||
+                    p.Nama.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    p.NoPekerja.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    (p.Jabatan ?? "").Contains(search, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        allPegawai = await DbContext.Pegawai.OrderBy(p => p.Nama).ToListAsync();
+        isLoading = false;
+    }
+
+    private async Task OnImportFileChanged(InputFileChangeEventArgs e)
+    {
+        isImporting = true;
+        importResult = string.Empty;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+            using var stream = e.File.OpenReadStream(10_000_000);
+            var (added, updated, deactivated, errors) = await ExcelService.ImportPegawaiAsync(stream, currentUser!.Id, e.File.Name);
+            importResult = $"Berhasil: {added} ditambahkan, {updated} diperbarui, {deactivated} dinonaktifkan.";
+            if (errors.Any()) importResult += $" Kesalahan: {string.Join("; ", errors)}";
+            showUpload = false;
+            await LoadAsync();
+        }
+        catch (Exception ex) { importResult = $"Gagal impor: {ex.Message}"; }
+        finally { isImporting = false; }
+    }
+}

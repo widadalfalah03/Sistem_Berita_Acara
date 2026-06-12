@@ -1,0 +1,198 @@
+@page "/tambah-pengguna"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using PegawaiEntity = SistemBeritaAcara.Core.Entities.Pegawai
+@inject AppDbContext DbContext
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
+
+<PageTitle>Tambah Pengguna — Sistem Berita Acara</PageTitle>
+
+<div class="add-user-card">
+    <h2>Tambah Pengguna</h2>
+    <p>Cari pegawai berdasarkan nama atau NIP untuk ditambahkan sebagai pengguna sistem.</p>
+
+    <div class="form-group">
+        <label class="form-label">Cari Pegawai</label>
+        <div class="search-input">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Masukkan Nama atau NIP..."
+                   value="@searchQuery"
+                   @oninput="OnSearch" />
+        </div>
+    </div>
+
+    @if (results.Any())
+    {
+        <div style="margin-top:16px;">
+            @foreach (var p in results)
+            {
+                <div class="user-result">
+                    <div class="user-result-avatar">@p.Nama[0]</div>
+                    <div style="flex:1;">
+                        <div class="user-result-name">@p.Nama</div>
+                        <div class="user-result-nip">NIP: @p.NoPekerja · @p.FungsiDirektorat</div>
+                    </div>
+                    @if (existingUserIds.Contains(p.Id))
+                    {
+                        <span class="pill pill-draft">Sudah ada akun</span>
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary btn-sm" @onclick="() => SelectPegawai(p)">
+                            <i class="bi bi-plus-lg"></i> Tambah
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(searchQuery))
+    {
+        <div style="text-align:center;padding:32px;color:var(--text-muted);">
+            <i class="bi bi-search" style="font-size:32px;display:block;margin-bottom:12px;"></i>
+            Pegawai tidak ditemukan
+        </div>
+    }
+
+    <!-- Setup Role Form (after selecting) -->
+    @if (selectedPegawai is not null && !formSaved)
+    {
+        <div style="border-top:1px solid var(--border);margin-top:24px;padding-top:24px;">
+            <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Konfigurasi Akun</div>
+            <div style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;">
+                Untuk: <strong>@selectedPegawai.Nama</strong>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Role <span style="color:var(--danger)">*</span></label>
+                <select class="form-control form-select" @bind="selectedRole">
+                    <option value="">-- Pilih Role --</option>
+                    <option value="AdminIT">Admin IT</option>
+                    <option value="AdminGudangBarang">Admin Gudang & Barang</option>
+                    <option value="Approver">Approver</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password Awal</label>
+                <input class="form-control" type="text" value="Admin1234!" readonly />
+                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Password default, wajib diganti oleh pengguna</div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMsg))
+            {
+                <div class="login-error" style="margin-bottom:12px;">@errorMsg</div>
+            }
+
+            <div style="display:flex;gap:12px;">
+                <button class="btn btn-outline" @onclick="() => { selectedPegawai = null; selectedRole = string.Empty; }">Batal</button>
+                <button class="btn btn-primary" @onclick="CreateUserAsync" disabled="@isSaving">
+                    @if (isSaving) { <span>Membuat akun...</span> }
+                    else { <span><i class="bi bi-person-plus"></i> Buat Akun</span> }
+                </button>
+            </div>
+        </div>
+    }
+
+    @if (formSaved)
+    {
+        <div style="text-align:center;padding:32px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:#F0FDF4;color:#22C55E;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Akun Berhasil Dibuat</div>
+            <div style="font-size:14px;color:var(--text-secondary);margin-bottom:24px;">
+                Akun untuk <strong>@savedName</strong> telah dibuat dengan role <strong>@savedRole</strong>
+            </div>
+            <div style="display:flex;gap:12px;justify-content:center;">
+                <button class="btn btn-outline" @onclick="Reset">Tambah Pengguna Lain</button>
+                <NavLink class="btn btn-primary" href="/dashboard">Kembali ke Dashboard</NavLink>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<PegawaiEntity> allPegawai = new();
+    private List<PegawaiEntity> results = new();
+    private HashSet<int> existingUserIds = new();
+    private PegawaiEntity? selectedPegawai;
+    private string searchQuery = string.Empty;
+    private string selectedRole = string.Empty;
+    private string errorMsg = string.Empty;
+    private bool isSaving = false;
+    private bool formSaved = false;
+    private string savedName = string.Empty;
+    private string savedRole = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        allPegawai = await DbContext.Pegawai.Where(p => p.IsAktif).OrderBy(p => p.Nama).ToListAsync();
+        var usersWithPegawai = await DbContext.Users.Where(u => u.PegawaiId != null).Select(u => u.PegawaiId!.Value).ToListAsync();
+        existingUserIds = usersWithPegawai.ToHashSet();
+    }
+
+    private void OnSearch(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? string.Empty;
+        results = string.IsNullOrWhiteSpace(searchQuery) ? new() :
+            allPegawai.Where(p => p.Nama.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                                  p.NoPekerja.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+                      .Take(8).ToList();
+    }
+
+    private void SelectPegawai(PegawaiEntity p)
+    {
+        selectedPegawai = p;
+        searchQuery = p.Nama;
+        results.Clear();
+        errorMsg = string.Empty;
+    }
+
+    private async Task CreateUserAsync()
+    {
+        if (string.IsNullOrEmpty(selectedRole)) { errorMsg = "Pilih role terlebih dahulu."; return; }
+        isSaving = true;
+        errorMsg = string.Empty;
+        try
+        {
+            var user = new ApplicationUser
+            {
+                UserName = selectedPegawai!.Email ?? $"user{selectedPegawai.Id}@pertamina.com",
+                Email = selectedPegawai.Email ?? $"user{selectedPegawai.Id}@pertamina.com",
+                Nama = selectedPegawai.Nama,
+                Role = selectedRole,
+                PegawaiId = selectedPegawai.Id,
+                EmailConfirmed = true,
+                IsDeleted = false
+            };
+            var result = await UserManager.CreateAsync(user, "Admin1234!");
+            if (!result.Succeeded)
+            {
+                errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                return;
+            }
+            savedName = selectedPegawai.Nama;
+            savedRole = selectedRole switch
+            {
+                "AdminIT" => "Admin IT",
+                "AdminGudangBarang" => "Admin Gudang & Barang",
+                "Approver" => "Approver",
+                _ => selectedRole
+            };
+            formSaved = true;
+        }
+        catch (Exception ex) { errorMsg = ex.Message; }
+        finally { isSaving = false; }
+    }
+
+    private void Reset()
+    {
+        formSaved = false; selectedPegawai = null;
+        searchQuery = string.Empty; selectedRole = string.Empty;
+        savedName = string.Empty; savedRole = string.Empty;
+    }
+}

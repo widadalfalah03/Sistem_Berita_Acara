@@ -1,0 +1,188 @@
+@page "/data-barang"
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using MasterBarangEntity = SistemBeritaAcara.Core.Entities.MasterBarang
+@inject AppDbContext DbContext
+@inject IExcelService ExcelService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
+
+<PageTitle>Data Barang — Sistem Berita Acara</PageTitle>
+
+<div class="page-header d-flex align-center justify-between">
+    <div>
+        <h1 class="page-title">Daftar Barang</h1>
+        <p class="page-subtitle">Master data barang/perangkat IT yang tersedia</p>
+    </div>
+    <button class="btn btn-primary" @onclick="() => showUpload = true">
+        <i class="bi bi-arrow-up-circle"></i> Update Data Barang
+    </button>
+</div>
+
+<!-- Stat Cards -->
+<div class="stat-cards" style="grid-template-columns:repeat(3,1fr);max-width:640px;margin-bottom:24px;">
+    <div class="stat-card">
+        <div class="stat-card-icon total"><i class="bi bi-box-seam"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-label">Total Barang</div>
+            <div class="stat-card-value">@allBarang.Count</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon approved"><i class="bi bi-check-circle"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-label">Aktif</div>
+            <div class="stat-card-value green">@allBarang.Count(b => b.IsAktif)</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon neutral"><i class="bi bi-archive"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-label">Nonaktif</div>
+            <div class="stat-card-value">@allBarang.Count(b => !b.IsAktif)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Search + Toggle -->
+<div class="search-bar">
+    <div class="search-input" style="max-width:320px;">
+        <i class="bi bi-search"></i>
+        <input type="text" placeholder="Cari nama atau kode barang..."
+               @bind="search" @bind:event="oninput" />
+    </div>
+    <div class="toggle-wrapper" @onclick="() => showInactive = !showInactive">
+        <div class="toggle-switch @(showInactive ? "active" : "")"></div>
+        <span>Tampilkan Data Non-Aktif</span>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat data barang...</span></div>
+}
+else
+{
+    @if (!string.IsNullOrEmpty(importResult))
+    {
+        var isErr = importResult.StartsWith("Gagal");
+        <div style="background:@(isErr ? "var(--danger-light)" : "#F0FDF4");border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;color:@(isErr ? "var(--danger)" : "#16A34A");font-size:14px;">
+            @importResult
+        </div>
+    }
+
+    <div class="card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Kode Barang</th>
+                    <th>Jenis / Nama Barang</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in FilteredBarang)
+                {
+                    <tr>
+                        <td>
+                            <span style="font-family:monospace;font-size:13px;background:var(--bg);padding:4px 8px;border-radius:4px;border:1px solid var(--border);">
+                                @b.KodeBarang
+                            </span>
+                        </td>
+                        <td class="fw-semibold">@b.NamaBarang</td>
+                        <td>
+                            <span class="status-dot @(b.IsAktif ? "active" : "inactive")">
+                                @(b.IsAktif ? "Aktif" : "Nonaktif")
+                            </span>
+                        </td>
+                    </tr>
+                }
+                @if (!FilteredBarang.Any())
+                {
+                    <tr>
+                        <td colspan="3" style="text-align:center;padding:40px;color:var(--text-muted);">
+                            Tidak ada data barang yang sesuai filter
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Upload Modal -->
+@if (showUpload)
+{
+    <div class="modal-overlay" @onclick="() => showUpload = false">
+        <div class="modal-content" style="max-width:500px;" @onclick:stopPropagation>
+            <button class="modal-close" @onclick="() => showUpload = false">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Import Data Barang</div>
+            <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">
+                Upload file Excel (.xlsx) dengan kolom: Kode Barang, Nama Barang
+            </div>
+            <div class="upload-area">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                <div class="upload-text">Pilih File Excel</div>
+                <div class="upload-hint">.xlsx · Maksimal 10MB</div>
+                <div style="margin-top:16px;">
+                    <InputFile OnChange="OnImportFileChanged" accept=".xlsx"
+                               style="display:block;margin:0 auto;font-size:13px;" />
+                </div>
+            </div>
+            @if (isImporting)
+            {
+                <div class="loading-spinner" style="padding:20px;">
+                    <div class="spinner"></div><span>Mengimpor data...</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private List<MasterBarangEntity> allBarang = new();
+    private bool isLoading = true;
+    private bool showUpload = false;
+    private bool isImporting = false;
+    private bool showInactive = false;
+    private string search = string.Empty;
+    private string importResult = string.Empty;
+
+    private IEnumerable<MasterBarangEntity> FilteredBarang => allBarang
+        .Where(b => showInactive || b.IsAktif)
+        .Where(b => string.IsNullOrEmpty(search) ||
+                    b.NamaBarang.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    b.KodeBarang.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        allBarang = await DbContext.MasterBarang.OrderBy(b => b.NamaBarang).ToListAsync();
+        isLoading = false;
+    }
+
+    private async Task OnImportFileChanged(InputFileChangeEventArgs e)
+    {
+        isImporting = true;
+        importResult = string.Empty;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+            using var stream = e.File.OpenReadStream(10_000_000);
+            var (added, updated, deactivated, errors) = await ExcelService.ImportBarangAsync(stream, currentUser!.Id, e.File.Name);
+            importResult = $"Berhasil: {added} ditambahkan, {updated} diperbarui, {deactivated} dinonaktifkan.";
+            if (errors.Any()) importResult += $" Kesalahan: {string.Join("; ", errors)}";
+            showUpload = false;
+            await LoadAsync();
+        }
+        catch (Exception ex) { importResult = $"Gagal impor: {ex.Message}"; }
+        finally { isImporting = false; }
+    }
+}

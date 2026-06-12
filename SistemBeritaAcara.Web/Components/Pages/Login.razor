@@ -1,0 +1,93 @@
+@page "/login"
+@inject NavigationManager Navigation
+@layout EmptyLayout
+
+<PageTitle>Login — Sistem Berita Acara</PageTitle>
+
+@{
+    var uri = new Uri(Navigation.Uri);
+    var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+    var errorParam = query["error"] ?? string.Empty;
+    var errorMessage = errorParam == "invalid" ? "Email atau password tidak valid." : string.Empty;
+}
+
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-card-bar"></div>
+        <div class="login-card-body">
+            <!-- Logo -->
+            <div class="login-logo">
+                <div class="logo-mark">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="40" height="40" rx="8" fill="#1D4ED8"/>
+                        <text x="20" y="27" font-family="Inter" font-size="18" font-weight="800" fill="white" text-anchor="middle">P</text>
+                    </svg>
+                    <div>
+                        <div class="brand-name">Pertamina</div>
+                        <div style="font-size:11px;font-weight:600;color:#DC2626;text-transform:uppercase;letter-spacing:0.5px;">Patra Niaga</div>
+                    </div>
+                </div>
+                <div style="font-size:13px;color:var(--text-muted);margin-top:12px;">Sistem Berita Acara</div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="login-error">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    @errorMessage
+                </div>
+            }
+
+            <!-- HTML form POST ke /account/login — wajib agar cookie auth bisa ditulis -->
+            <form method="post" action="/account/login">
+                <AntiforgeryToken />
+                <input type="hidden" name="returnUrl" value="/dashboard" />
+
+                <div class="form-group">
+                    <label class="form-label" for="login-email">Email</label>
+                    <div class="search-input">
+                        <i class="bi bi-person"></i>
+                        <input class="form-control" type="email" id="login-email" name="email"
+                               placeholder="email@pertamina.com" autocomplete="email" required />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="login-password">Password</label>
+                    <div class="search-input" style="position:relative;">
+                        <i class="bi bi-lock"></i>
+                        <input class="form-control" type="password" id="login-password" name="password"
+                               placeholder="Masukkan password" autocomplete="current-password"
+                               required style="padding-right:44px;" />
+                        <button type="button" onclick="togglePw(this)"
+                                style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">
+                            <i class="bi bi-eye" id="pw-toggle-icon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="login-remember">
+                    <input type="checkbox" id="remember-me" name="rememberMe" value="on" />
+                    <label for="remember-me">Ingat Saya</label>
+                </div>
+
+                <button type="submit" class="login-btn">
+                    <span>Login</span>
+                </button>
+            </form>
+        </div>
+        <div class="login-footer">
+            <a href="#">Lupa password? Hubungi Admin IT →</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePw(btn) {
+        var inp = document.getElementById('login-password');
+        var icon = document.getElementById('pw-toggle-icon');
+        if (!inp) return;
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+        icon.className = inp.type === 'text' ? 'bi bi-eye-slash' : 'bi bi-eye';
+    }
+</script>

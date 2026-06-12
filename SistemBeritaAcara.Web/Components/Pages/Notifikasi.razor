@@ -1,0 +1,170 @@
+@page "/notifikasi"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+@inject INotificationService NotificationService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Inbox — Sistem Berita Acara</PageTitle>
+
+<div class="page-header">
+    <h1 class="page-title">Inbox</h1>
+    <p class="page-subtitle">Notifikasi terkait aktivitas Berita Acara kamu</p>
+</div>
+
+<!-- Tabs -->
+<div class="notif-tabs">
+    <button class="notif-tab @(activeTab == "all" ? "active" : "")" @onclick="SetTabAll">
+        Semua
+        @if (notifications.Any())
+        {
+            <span style="margin-left:6px;font-size:12px;">(@notifications.Count)</span>
+        }
+    </button>
+    <button class="notif-tab @(activeTab == "unread" ? "active" : "")" @onclick="SetTabUnread">
+        Belum Dibaca
+        @if (notifications.Any(n => !n.IsRead))
+        {
+            <span style="margin-left:6px;font-size:12px;">(@notifications.Count(n => !n.IsRead))</span>
+        }
+    </button>
+    <button class="notif-mark-read" @onclick="MarkAllReadAsync">
+        <i class="bi bi-check2-all"></i> Tandai sudah dibaca
+    </button>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat notifikasi...</span></div>
+}
+else if (!DisplayedNotifications.Any())
+{
+    <div class="card" style="text-align:center;padding:60px;">
+        <i class="bi bi-bell-slash" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">
+            @(activeTab == "unread" ? "Tidak ada notifikasi yang belum dibaca" : "Tidak ada notifikasi")
+        </div>
+        <div style="font-size:14px;color:var(--text-secondary);">Kamu sudah up-to-date!</div>
+    </div>
+}
+else
+{
+    <div class="card" style="overflow:hidden;">
+        @foreach (var n in DisplayedNotifications)
+        {
+            <div class="notif-item @(n.IsRead ? "" : "unread")"
+                 @onclick="async () => await MarkReadAndNavigate(n)">
+                <div class="notif-icon @GetNotifIconClass(n.Tipe)">
+                    <i class="bi @GetNotifIcon(n.Tipe)"></i>
+                </div>
+                <div class="notif-content">
+                    <div class="notif-title">@GetNotifTitle(n.Tipe)</div>
+                    <div class="notif-message">@n.Message</div>
+                </div>
+                <div class="notif-meta">
+                    <div class="notif-time">@GetRelativeTime(n.CreatedAt)</div>
+                    @if (!n.IsRead)
+                    {
+                        <div class="notif-dot"></div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Notification> notifications = new();
+    private bool isLoading = true;
+    private int currentUserId;
+    private string activeTab = "all";
+
+    private IEnumerable<Notification> DisplayedNotifications => activeTab == "unread"
+        ? notifications.Where(n => !n.IsRead)
+        : notifications;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+        if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
+        currentUserId = appUser.Id;
+        await LoadAsync();
+    }
+
+    private void SetTabAll() => activeTab = "all";
+    private void SetTabUnread() => activeTab = "unread";
+
+    private async Task LoadAsync()
+    {
+        notifications = await DbContext.Notification
+            .Where(n => n.UserId == currentUserId)
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync();
+        isLoading = false;
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        await NotificationService.MarkAllReadAsync(currentUserId);
+        await LoadAsync();
+    }
+
+    private async Task MarkReadAndNavigate(Notification n)
+    {
+        if (!n.IsRead)
+        {
+            n.IsRead = true;
+            await DbContext.SaveChangesAsync();
+        }
+        if (n.BaId.HasValue)
+            Navigation.NavigateTo($"/berita-acara/{n.BaId.Value}");
+    }
+
+    private static string GetNotifIconClass(string tipe) => tipe switch
+    {
+        "BA_APPROVED" => "success",
+        "BA_REJECTED" => "danger",
+        "WAITING_APPROVAL" => "warning",
+        "WAITING_PJ_SIGN" => "info",
+        "PJ_SIGNED" => "info",
+        "DUE_DATE_REMINDER" => "warning",
+        _ => "info"
+    };
+
+    private static string GetNotifIcon(string tipe) => tipe switch
+    {
+        "BA_APPROVED" => "bi-check-circle-fill",
+        "BA_REJECTED" => "bi-x-circle-fill",
+        "WAITING_APPROVAL" => "bi-hourglass-split",
+        "WAITING_PJ_SIGN" => "bi-pen",
+        "PJ_SIGNED" => "bi-pen-fill",
+        "DUE_DATE_REMINDER" => "bi-alarm-fill",
+        _ => "bi-bell-fill"
+    };
+
+    private static string GetNotifTitle(string tipe) => tipe switch
+    {
+        "BA_APPROVED" => "Berita Acara Disetujui",
+        "BA_REJECTED" => "Berita Acara Ditolak",
+        "WAITING_APPROVAL" => "Menunggu Persetujuan",
+        "WAITING_PJ_SIGN" => "Menunggu TTD PJ",
+        "PJ_SIGNED" => "PJ Sudah Menandatangani",
+        "DUE_DATE_REMINDER" => "Pengingat Jatuh Tempo",
+        _ => "Notifikasi"
+    };
+
+    private static string GetRelativeTime(DateTime dt)
+    {
+        var diff = DateTime.Now - dt;
+        if (diff.TotalMinutes < 1) return "baru saja";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes} mnt lalu";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours} jam lalu";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} hari lalu";
+        return dt.ToString("dd MMM yyyy");
+    }
+}
