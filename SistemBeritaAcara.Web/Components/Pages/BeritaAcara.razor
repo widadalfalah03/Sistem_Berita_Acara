@@ -540,7 +540,7 @@
                         var saveName = $"ba-{ba.Id}-photo-{idx}{ext}";
                         await using var fs = File.Create(Path.Combine(photoFolder, saveName));
                         await file.OpenReadStream(5_000_000).CopyToAsync(fs);
-                        DbContext.BuktiFoto.Add(new BuktiFoto { BaId = ba.Id, FilePath = $"files/photos/{saveName}" });
+                        DbContext.BuktiFoto.Add(new BuktiFoto { BaId = ba.Id, BeritaAcara = ba, FilePath = $"files/photos/{saveName}" });
                         idx++;
                     }
                     await DbContext.SaveChangesAsync();

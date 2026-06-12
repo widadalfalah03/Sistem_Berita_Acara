@@ -77,7 +77,7 @@ else
             var baseUri = Navigation.BaseUri;
             if (baseUri.Contains("localhost"))
             {
-                baseUri = baseUri.Replace("localhost", "host.docker.internal");
+                baseUri = baseUri.Replace("localhost", "10.64.245.114");
             }
 
             var docUrl = $"{baseUri}{ba.DocxPath}";

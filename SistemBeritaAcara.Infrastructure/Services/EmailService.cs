@@ -46,6 +46,13 @@ public class EmailService(IConfiguration config) : IEmailService
 
     private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
     {
+        if (string.IsNullOrEmpty(_user) || string.IsNullOrEmpty(_pass))
+        {
+            Console.WriteLine($"[MOCK EMAIL] To: {toEmail}, Subject: {subject}");
+            Console.WriteLine($"[MOCK EMAIL BODY]: {htmlBody}");
+            return;
+        }
+
         var message = new MimeMessage();
         message.From.Add(MailboxAddress.Parse(_from));
         message.To.Add(MailboxAddress.Parse(toEmail));

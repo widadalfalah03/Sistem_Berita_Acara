@@ -219,6 +219,7 @@ else
             DbContext.ApprovalToken.Add(new ApprovalToken
             {
                 BaId = ba.Id,
+                BeritaAcara = ba,
                 Token = tokenValue,
                 TokenType = "PJ_SIGNATURE",
                 ExpiresAt = DateTime.Now.AddDays(7),
