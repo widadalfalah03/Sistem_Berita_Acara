@@ -15,90 +15,136 @@ public class DocumentService : IDocumentService
 {
     private readonly AppDbContext _db;
     private readonly string _outputRoot;
+    private readonly string _templatePath;
 
     public DocumentService(AppDbContext db)
     {
         _db = db;
         _outputRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
+        _templatePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "templates", "BA_Template.docx");
         Directory.CreateDirectory(_outputRoot);
         Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures"));
     }
 
     public Task<string> GenerateDocxAsync(BeritaAcara ba)
     {
+        if (!File.Exists(_templatePath))
+        {
+            throw new FileNotFoundException("Template DOCX tidak ditemukan. Pastikan file BA_Template.docx ada di wwwroot/files/templates/");
+        }
+
         string relativePath = GetRelativePath($"ba-{ba.Id}-draft.docx");
         string physicalPath = GetPhysicalPath(relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(physicalPath)!);
 
-        using var wordDoc = WordprocessingDocument.Create(physicalPath, WordprocessingDocumentType.Document);
-        var mainPart = wordDoc.AddMainDocumentPart();
-        mainPart.Document = new Document();
-        var body = mainPart.Document.AppendChild(new Body());
+        // Copy template ke file draft
+        File.Copy(_templatePath, physicalPath, true);
 
-        body.Append(CreateParagraph("BERITA ACARA", true, 24));
-        body.Append(CreateParagraph($"Nomor Surat: {ba.NomorSurat ?? "-"}", false));
-        body.Append(CreateParagraph($"Tanggal: {ba.Tanggal:dd MMMM yyyy}", false));
-        body.Append(CreateParagraph($"Jenis: {ba.Jenis}{(string.IsNullOrWhiteSpace(ba.JenisCustom) ? string.Empty : $" ({ba.JenisCustom})")}", false));
-        body.Append(CreateParagraph($"PJ: {ba.Pj?.Nama ?? "-"}", false));
-        body.Append(CreateParagraph($"Yang Menyerahkan: {ba.Menyerahkan?.Nama ?? "-"}", false));
-        body.Append(CreateParagraph($"Yang Mengetahui: {ba.Mengetahui?.Nama ?? "-"}", false));
-        body.Append(CreateParagraph($"Tiket SSC: {ba.TiketSscNo ?? "-"}", false));
-
-        body.Append(new Paragraph(new Run(new Break())));
-        body.Append(CreateParagraph("Daftar Perangkat", true, 20));
-
-        var table = new Table();
-        table.Append(new TableProperties(
-            new TableBorders(
-                new TopBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
-                new BottomBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
-                new LeftBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
-                new RightBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
-                new InsideHorizontalBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
-                new InsideVerticalBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 }
-            )));
-
-        table.Append(CreateTableRow("No", "Barang", "Jumlah", "Satuan", "No. Serial", "Keterangan", true));
-
-        int idx = 1;
-        foreach (var perangkat in ba.Perangkat ?? Array.Empty<PerangkatBA>())
+        using (var wordDoc = WordprocessingDocument.Open(physicalPath, true))
         {
-            string barangNama = perangkat.Barang?.NamaBarang ?? "-";
-            table.Append(CreateTableRow(idx.ToString(), barangNama, perangkat.Jumlah.ToString(), perangkat.Satuan, perangkat.NoSerial ?? string.Empty, perangkat.Keterangan ?? string.Empty));
-            idx++;
+            var mainPart = wordDoc.MainDocumentPart!;
+            
+            // 1. Replace Simple Placeholders
+            var replacements = new Dictionary<string, string>
+            {
+                { "{{NomorSurat}}", ba.NomorSurat ?? "Draft" },
+                { "{{Tanggal}}", ba.Tanggal.ToString("dd MMMM yyyy") },
+                { "{{NamaPJ}}", ba.Pj?.Nama ?? "-" },
+                { "{{CostCenter}}", ba.Pj?.CostCenter ?? "-" },
+                { "{{JabatanPJ}}", ba.Pj?.Jabatan ?? "-" },
+                { "{{FungsiPJ}}", ba.Pj?.FungsiDirektorat ?? "-" },
+                { "{{EmailPJ}}", ba.Pj?.Email ?? "-" },
+                { "{{NoPekerjaPJ}}", ba.Pj?.NoPekerja ?? "-" },
+                { "{{NoTelpPJ}}", ba.Pj?.NoTelp ?? "-" },
+                { "{{Menyerahkan}}", ba.Menyerahkan?.Nama ?? "-" },
+                { "{{Approver}}", ba.Mengetahui?.Nama ?? "-" }
+            };
+
+            foreach (var text in mainPart.Document.Body!.Descendants<Text>())
+            {
+                foreach (var r in replacements)
+                {
+                    if (text.Text.Contains(r.Key))
+                    {
+                        text.Text = text.Text.Replace(r.Key, r.Value);
+                    }
+                }
+            }
+
+            // 2. Replace Table Rows for Perangkat
+            var templateRow = mainPart.Document.Body.Descendants<TableRow>()
+                .FirstOrDefault(r => r.Descendants<Text>().Any(t => t.Text.Contains("{{PerangkatNama}}")));
+
+            if (templateRow != null && ba.Perangkat != null)
+            {
+                int idx = 1;
+                foreach (var p in ba.Perangkat)
+                {
+                    var newRow = (TableRow)templateRow.CloneNode(true);
+                    
+                    // Ganti kolom NO. (Angka 1 di template dummy ada di kolom pertama, tapi saya tidak set placeholder untuk NO)
+                    // Cari Text yang isinya "1" dan ganti jadi index
+                    var firstCellText = newRow.Elements<TableCell>().FirstOrDefault()?.Descendants<Text>().FirstOrDefault(t => t.Text == "1");
+                    if (firstCellText != null) firstCellText.Text = idx.ToString();
+
+                    foreach (var text in newRow.Descendants<Text>())
+                    {
+                        if (text.Text.Contains("{{PerangkatNama}}"))
+                            text.Text = text.Text.Replace("{{PerangkatNama}}", $"{(p.Barang?.NamaBarang ?? "-")} {(p.Keterangan ?? string.Empty)}".Trim());
+                        if (text.Text.Contains("{{PerangkatSN}}"))
+                            text.Text = text.Text.Replace("{{PerangkatSN}}", string.IsNullOrWhiteSpace(p.NoSerial) ? "-" : p.NoSerial);
+                        if (text.Text.Contains("{{PerangkatJumlah}}"))
+                            text.Text = text.Text.Replace("{{PerangkatJumlah}}", p.Jumlah.ToString());
+                        if (text.Text.Contains("{{PerangkatTerbilang}}"))
+                            text.Text = text.Text.Replace("{{PerangkatTerbilang}}", Terbilang(p.Jumlah));
+                        if (text.Text.Contains("{{PerangkatSatuan}}"))
+                            text.Text = text.Text.Replace("{{PerangkatSatuan}}", p.Satuan ?? "Pcs");
+                    }
+                    
+                    templateRow.InsertBeforeSelf(newRow);
+                    idx++;
+                }
+                templateRow.Remove();
+            }
+
+            mainPart.Document.Save();
         }
 
-        body.Append(table);
-        body.Append(new Paragraph(new Run(new Break())));
-        body.Append(CreateParagraph("Dokumen ini dibuat otomatis oleh sistem Berita Acara.", false));
+        // Convert ke PDF menggunakan Spire.Doc untuk keperluan Preview di browser
+        try
+        {
+            string pdfPhysicalPath = physicalPath.Replace(".docx", ".pdf");
+            var spireDoc = new Spire.Doc.Document();
+            spireDoc.LoadFromFile(physicalPath);
+            spireDoc.SaveToFile(pdfPhysicalPath, Spire.Doc.FileFormat.PDF);
+            spireDoc.Close();
+        }
+        catch (Exception ex)
+        {
+            // Jika gagal generate PDF, minimal DOCX tetap ada
+            Console.WriteLine($"Gagal membuat PDF preview: {ex.Message}");
+        }
 
-        mainPart.Document.Save();
         return Task.FromResult(relativePath);
     }
 
     public async Task<string> EmbedTtdMenyerahkanAsync(int baId, string ttdPath)
     {
-        var ba = await _db.BeritaAcara.FindAsync(baId)
-            ?? throw new InvalidOperationException($"Berita Acara {baId} tidak ditemukan.");
-
-        string relativePath = ba.DocxPath ?? throw new InvalidOperationException("DocxPath belum disimpan untuk BA ini.");
-        string physicalPath = GetPhysicalPath(relativePath);
+        var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
+        string physicalPath = GetPhysicalPath(ba.DocxPath!);
         EnsureFileExists(physicalPath);
 
         using var wordDoc = WordprocessingDocument.Open(physicalPath, true);
         AppendSignatureImage(wordDoc, ttdPath, "Tanda Tangan Yang Menyerahkan");
         wordDoc.MainDocumentPart!.Document.Save();
 
-        return relativePath;
+        return ba.DocxPath!;
     }
 
     public async Task<string> EmbedTtdPjAsync(int baId, string ttdPath)
     {
-        var ba = await _db.BeritaAcara.FindAsync(baId)
-            ?? throw new InvalidOperationException($"Berita Acara {baId} tidak ditemukan.");
-
-        string relativePath = ba.DocxPath ?? throw new InvalidOperationException("DocxPath belum disimpan untuk BA ini.");
-        string physicalPath = GetPhysicalPath(relativePath);
+        var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
+        string physicalPath = GetPhysicalPath(ba.DocxPath!);
         EnsureFileExists(physicalPath);
 
         using var wordDoc = WordprocessingDocument.Open(physicalPath, true);
@@ -108,16 +154,13 @@ public class DocumentService : IDocumentService
         ba.TtdPjPath = Path.Combine("files", "signatures", Path.GetFileName(ttdPath)).Replace("\\", "/");
         await _db.SaveChangesAsync();
 
-        return relativePath;
+        return ba.DocxPath!;
     }
 
     public async Task<string> EmbedTtdMengetahuiAsync(int baId, string ttdPath)
     {
-        var ba = await _db.BeritaAcara.FindAsync(baId)
-            ?? throw new InvalidOperationException($"Berita Acara {baId} tidak ditemukan.");
-
-        string draftPath = ba.DocxPath ?? throw new InvalidOperationException("DocxPath belum disimpan untuk BA ini.");
-        string draftPhysicalPath = GetPhysicalPath(draftPath);
+        var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
+        string draftPhysicalPath = GetPhysicalPath(ba.DocxPath!);
         EnsureFileExists(draftPhysicalPath);
 
         string finalRelativePath = GetRelativePath($"ba-{baId}-final.docx");
@@ -134,77 +177,30 @@ public class DocumentService : IDocumentService
         return finalRelativePath;
     }
 
-    private string GetRelativePath(string fileName)
-        => Path.Combine("files", "documents", fileName).Replace("\\", "/");
-
-    private string GetPhysicalPath(string relativePath)
-        => Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+    private string GetRelativePath(string fileName) => Path.Combine("files", "documents", fileName).Replace("\\", "/");
+    private string GetPhysicalPath(string relativePath) => Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
 
     private static void EnsureFileExists(string path)
     {
-        if (!File.Exists(path))
-            throw new FileNotFoundException("File DOCX tidak ditemukan.", path);
-    }
-
-    private static Paragraph CreateParagraph(string text, bool bold = false, int fontSize = 12)
-    {
-        var runProperties = new RunProperties();
-        if (bold)
-        {
-            runProperties.Append(new Bold());
-        }
-        runProperties.Append(new FontSize { Val = (fontSize * 2).ToString() });
-
-        return new Paragraph(new Run(runProperties, new Text(text)));
-    }
-
-    private static TableRow CreateTableRow(string c1, string c2, string c3, string c4, string c5, string c6, bool isHeader = false)
-    {
-        var row = new TableRow();
-        row.Append(CreateTableCell(c1, isHeader));
-        row.Append(CreateTableCell(c2, isHeader));
-        row.Append(CreateTableCell(c3, isHeader));
-        row.Append(CreateTableCell(c4, isHeader));
-        row.Append(CreateTableCell(c5, isHeader));
-        row.Append(CreateTableCell(c6, isHeader));
-        return row;
-    }
-
-    private static TableCell CreateTableCell(string text, bool isHeader)
-    {
-        var cell = new TableCell();
-        var paragraph = new Paragraph(new Run(new Text(text)));
-        if (isHeader)
-        {
-            paragraph.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
-        }
-        cell.Append(paragraph);
-        cell.Append(new TableCellProperties(new TableCellWidth { Type = TableWidthUnitValues.Auto }));
-        return cell;
+        if (!File.Exists(path)) throw new FileNotFoundException("File DOCX tidak ditemukan.", path);
     }
 
     private static void AppendSignatureImage(WordprocessingDocument wordDoc, string imagePath, string caption)
     {
-        if (!File.Exists(imagePath))
-            throw new FileNotFoundException("File tanda tangan tidak ditemukan.", imagePath);
+        if (!File.Exists(imagePath)) throw new FileNotFoundException("File tanda tangan tidak ditemukan.", imagePath);
 
         var mainPart = wordDoc.MainDocumentPart ?? wordDoc.AddMainDocumentPart();
         var imagePart = Path.GetExtension(imagePath).ToLowerInvariant() switch
         {
             ".png" => mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Png),
             ".jpg" or ".jpeg" => mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Jpeg),
-            ".gif" => mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Gif),
-            ".bmp" => mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Bmp),
             _ => mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Png)
         };
-        using (var stream = File.OpenRead(imagePath))
-        {
-            imagePart.FeedData(stream);
-        }
+        using (var stream = File.OpenRead(imagePath)) { imagePart.FeedData(stream); }
 
         var element = CreateImageDrawing(mainPart.GetIdOfPart(imagePart), 990000L, 330000L, Path.GetFileName(imagePath));
-        mainPart.Document.Body.Append(new Paragraph(new Run(new Text(caption))) { ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center }) });
-        mainPart.Document.Body.Append(new Paragraph(new Run(element)));
+        mainPart.Document.Body!.Append(new Paragraph(new Run(new Text(caption))) { ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center }) });
+        mainPart.Document.Body!.Append(new Paragraph(new Run(element)));
     }
 
     private static Drawing CreateImageDrawing(string relationshipId, long widthEmu, long heightEmu, string name)
@@ -232,13 +228,19 @@ public class DocumentService : IDocumentService
             new DW.NonVisualGraphicFrameDrawingProperties(new A.GraphicFrameLocks { NoChangeAspect = true }),
             graphic)
         {
-            DistanceFromTop = (UInt32Value)0U,
-            DistanceFromBottom = (UInt32Value)0U,
-            DistanceFromLeft = (UInt32Value)0U,
-            DistanceFromRight = (UInt32Value)0U
+            DistanceFromTop = (UInt32Value)0U, DistanceFromBottom = (UInt32Value)0U,
+            DistanceFromLeft = (UInt32Value)0U, DistanceFromRight = (UInt32Value)0U
         };
 
         return new Drawing(inline);
     }
 
+    private static string Terbilang(int angka)
+    {
+        string[] huruf = { "", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas" };
+        if (angka < 12) return huruf[angka];
+        if (angka < 20) return Terbilang(angka - 10) + " Belas";
+        if (angka < 100) return Terbilang(angka / 10) + " Puluh " + Terbilang(angka % 10);
+        return angka.ToString(); // Simplified for basic amounts
+    }
 }

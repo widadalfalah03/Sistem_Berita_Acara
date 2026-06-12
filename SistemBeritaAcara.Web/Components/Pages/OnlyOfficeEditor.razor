@@ -1,0 +1,124 @@
+@page "/onlyoffice-editor/{Id:int}"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using Microsoft.Extensions.Configuration
+@using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
+@inject AppDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject IConfiguration Configuration
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
+@implements IAsyncDisposable
+
+<PageTitle>Edit Manual Dokumen — Sistem Berita Acara</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat Editor ONLYOFFICE...</span></div>
+}
+else if (ba is null)
+{
+    <div style="text-align:center;padding:60px;color:var(--text-muted);">
+        <i class="bi bi-file-x" style="font-size:48px;display:block;margin-bottom:16px;"></i>
+        <div style="font-size:18px;font-weight:700;">Berita Acara tidak ditemukan</div>
+        <NavLink href="/draft" class="btn btn-outline" style="margin-top:16px;">← Kembali ke Draft</NavLink>
+    </div>
+}
+else
+{
+    <div style="display:flex;align-items:center;gap:16px;padding:12px 0;margin-bottom:16px;border-bottom:1px solid var(--border);">
+        <button class="btn btn-outline btn-sm" @onclick="GoBack" style="display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-arrow-left"></i> Kembali ke Pratinjau
+        </button>
+        <div>
+            <div style="font-weight:700;font-size:16px;">Edit Manual: @(ba.NomorSurat ?? "Draft")</div>
+        </div>
+    </div>
+
+    <!-- Container untuk ONLYOFFICE Editor -->
+    <div style="height: 800px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius);">
+        <div id="onlyoffice-placeholder"></div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private BeritaAcaraEntity? ba;
+    private bool isLoading = true;
+    private int _currentUserId;
+    private string _currentUserName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        _currentUserName = auth.User.Identity?.Name ?? "User";
+        int.TryParse(userIdStr, out _currentUserId);
+
+        ba = await DbContext.Set<BeritaAcaraEntity>()
+            .FirstOrDefaultAsync(b => b.Id == Id && b.Status == "Draft" && b.CreatedBy == _currentUserId);
+
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && ba != null && !string.IsNullOrEmpty(ba.DocxPath))
+        {
+            var onlyOfficeServerUrl = Configuration["OnlyOffice:ServerUrl"] ?? "http://localhost:8080";
+            var apiScriptUrl = $"{onlyOfficeServerUrl}/web-apps/apps/api/documents/api.js";
+
+            // Gunakan BaseUri dari Navigation, lalu ganti localhost dengan host.docker.internal 
+            // agar bisa diakses oleh ONLYOFFICE di dalam Docker
+            var baseUri = Navigation.BaseUri;
+            if (baseUri.Contains("localhost"))
+            {
+                baseUri = baseUri.Replace("localhost", "host.docker.internal");
+            }
+
+            var docUrl = $"{baseUri}{ba.DocxPath}";
+            var callbackUrl = $"{baseUri}api/onlyoffice/callback/{ba.Id}";
+            var key = $"{ba.Id}-{DateTime.Now.Ticks}"; // Key unik untuk memaksa reload/edit baru
+
+            var config = new
+            {
+                document = new
+                {
+                    fileType = "docx",
+                    key = key,
+                    title = $"Berita Acara - {(ba.NomorSurat ?? ba.Id.ToString())}.docx",
+                    url = docUrl
+                },
+                documentType = "word",
+                editorConfig = new
+                {
+                    callbackUrl = callbackUrl,
+                    user = new
+                    {
+                        id = _currentUserId.ToString(),
+                        name = _currentUserName
+                    },
+                    mode = "edit",
+                    lang = "id-ID"
+                }
+            };
+
+            await JSRuntime.InvokeVoidAsync("onlyoffice.init", apiScriptUrl, config);
+        }
+    }
+
+    private void GoBack() => Navigation.NavigateTo($"/editor/{Id}");
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("onlyoffice.destroy");
+        }
+        catch { /* ignored if disposed */ }
+    }
+}

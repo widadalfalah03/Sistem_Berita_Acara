@@ -1,6 +1,27 @@
-﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+@using SistemBeritaAcara.Web.Components.Layout
+@using SistemBeritaAcara.Web.Components.Pages
+
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(NotFound)">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+            <NotAuthorized>
+                @if (!context.User.Identity?.IsAuthenticated ?? true)
+                {
+                    <RedirectToLogin />
+                }
+                else
+                {
+                    <LayoutView Layout="typeof(MainLayout)">
+                        <AksesDitolak />
+                    </LayoutView>
+                }
+            </NotAuthorized>
+            <Authorizing>
+                <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+                    <div class="spinner"></div>
+                </div>
+            </Authorizing>
+        </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>

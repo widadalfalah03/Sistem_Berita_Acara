@@ -1,0 +1,267 @@
+@page "/editor/{Id:int}"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
+@inject AppDbContext DbContext
+@inject IBACounterService BACounterService
+@inject IDocumentService DocumentService
+@inject IEmailService EmailService
+@inject INotificationService NotificationService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
+
+<PageTitle>Editor Berita Acara — Sistem Berita Acara</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat dokumen...</span></div>
+}
+else if (ba is null)
+{
+    <div style="text-align:center;padding:60px;color:var(--text-muted);">
+        <i class="bi bi-file-x" style="font-size:48px;display:block;margin-bottom:16px;"></i>
+        <div style="font-size:18px;font-weight:700;">Berita Acara tidak ditemukan</div>
+        <NavLink href="/draft" class="btn btn-outline" style="margin-top:16px;">← Kembali ke Draft</NavLink>
+    </div>
+}
+else
+{
+    <!-- ── Topbar Editor ── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-bottom:16px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn btn-outline btn-sm" @onclick="GoBack" style="display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-arrow-left"></i> Kembali
+            </button>
+            <div>
+                <div style="font-weight:700;font-size:16px;">@(ba.NomorSurat ?? "Nomor belum di-generate")</div>
+                <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">PRATINJAU DOKUMEN</div>
+            </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;">
+            <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#16A34A;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:20px;padding:5px 12px;">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Draft tersimpan</span>
+            </div>
+            <button class="btn btn-primary" @onclick="SubmitForApprovalAsync" disabled="@isSubmitting"
+                    style="display:flex;align-items:center;gap:8px;">
+                @if (isSubmitting)
+                {
+                    <span class="spinner" style="width:16px;height:16px;border-width:2px;border-color:white;border-top-color:transparent;"></span>
+                    <span>Mengirim...</span>
+                }
+                else
+                {
+                    <i class="bi bi-send-fill"></i>
+                    <span>Submit for Approval</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div style="background:var(--danger-light);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:10px;color:var(--danger);">
+            <i class="bi bi-exclamation-circle-fill" style="font-size:18px;"></i>
+            <span>@errorMessage</span>
+        </div>
+    }
+
+    <!-- ── Layout: Area Editor kiri + Panel Ringkasan kanan ── -->
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+
+        <!-- ── Area Dokumen / Editor ── -->
+        <div style="background:#E8EAF0;border-radius:var(--radius);height:842px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.05);">
+            @if (!string.IsNullOrEmpty(ba.DocxPath))
+            {
+                <iframe src="/@ba.DocxPath.Replace(".docx", ".pdf")#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
+            }
+            else
+            {
+                <div style="text-align:center;padding:80px 40px;color:var(--text-muted);">
+                    <div class="spinner" style="margin-bottom:16px;"></div>
+                    <div>Memproses dokumen...</div>
+                </div>
+            }
+        </div>
+
+        <!-- ── Panel Ringkasan BA ── -->
+        <div>
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-header"><h3 style="font-size:15px;">Ringkasan Dokumen</h3></div>
+                <div class="card-body" style="padding:16px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <tr>
+                            <td style="padding:7px 0;color:var(--text-secondary);width:45%;">No. Surat</td>
+                            <td style="padding:7px 0;font-weight:600;color:var(--primary);">@(ba.NomorSurat ?? "Auto-generate saat submit")</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:7px 0;color:var(--text-secondary);">Jenis BA</td>
+                            <td style="padding:7px 0;"><span class="pill @GetJenisPill(ba.Jenis)" style="font-size:11px;">@ba.Jenis</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:7px 0;color:var(--text-secondary);">Tanggal</td>
+                            <td style="padding:7px 0;font-weight:600;">@ba.Tanggal.ToString("dd MMM yyyy")</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:7px 0;color:var(--text-secondary);">Penanggung Jawab</td>
+                            <td style="padding:7px 0;font-weight:600;">@ba.Pj?.Nama</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:7px 0;color:var(--text-secondary);">Yang Menyerahkan</td>
+                            <td style="padding:7px 0;font-weight:600;">@ba.Menyerahkan?.Nama</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:7px 0;color:var(--text-secondary);">Approver</td>
+                            <td style="padding:7px 0;font-weight:600;">@ba.Mengetahui?.Nama</td>
+                        </tr>
+                        @if (ba.TiketSscNo is not null)
+                        {
+                            <tr>
+                                <td style="padding:7px 0;color:var(--text-secondary);">Tiket SSC</td>
+                                <td style="padding:7px 0;font-weight:600;">@ba.TiketSscNo</td>
+                            </tr>
+                        }
+                    </table>
+                </div>
+            </div>
+
+            @if (ba.Perangkat?.Any() == true)
+            {
+                <div class="card" style="margin-bottom:16px;">
+                    <div class="card-header"><h3 style="font-size:15px;">Daftar Perangkat</h3></div>
+                    <div style="padding:0 16px 8px;">
+                        @foreach (var p in ba.Perangkat)
+                        {
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
+                                <div>
+                                    <div style="font-weight:600;">@p.Barang?.NamaBarang</div>
+                                    @if (!string.IsNullOrEmpty(p.NoSerial))
+                                    {
+                                        <div style="font-size:11px;color:var(--text-muted);">S/N: @p.NoSerial</div>
+                                    }
+                                </div>
+                                <div style="color:var(--text-secondary);">@p.Jumlah @p.Satuan</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <NavLink href="@($"/onlyoffice-editor/{ba.Id}")" class="btn btn-outline" style="text-align:center;font-size:13px;">
+                    <i class="bi bi-pencil"></i> Edit Manual
+                </NavLink>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private BeritaAcaraEntity? ba;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string errorMessage = string.Empty;
+    private int _currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        int.TryParse(userIdStr, out _currentUserId);
+
+        ba = await DbContext.Set<BeritaAcaraEntity>()
+            .Include(b => b.Pj)
+            .Include(b => b.Menyerahkan)
+            .Include(b => b.Mengetahui)
+            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
+            .FirstOrDefaultAsync(b => b.Id == Id && b.Status == "Draft" && b.CreatedBy == _currentUserId);
+
+        if (ba != null)
+        {
+            try
+            {
+                ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+                await DbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "Gagal memuat pratinjau dokumen: " + ex.Message;
+            }
+        }
+
+        isLoading = false;
+    }
+
+    private async Task SubmitForApprovalAsync()
+    {
+        if (ba is null) return;
+        errorMessage = string.Empty;
+        isSubmitting = true;
+
+        try
+        {
+            // 1. Generate nomor surat (atomic increment)
+            if (string.IsNullOrEmpty(ba.NomorSurat))
+            {
+                var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal);
+                ba.CounterValue = next.counterValue;
+                ba.NomorSurat = next.nomorSurat;
+            }
+
+            // 2. Buat ApprovalToken untuk magic link PJ
+            var tokenValue = Guid.NewGuid().ToString("N");
+            DbContext.ApprovalToken.Add(new ApprovalToken
+            {
+                BaId = ba.Id,
+                Token = tokenValue,
+                TokenType = "PJ_SIGNATURE",
+                ExpiresAt = DateTime.Now.AddDays(7),
+                CreatedAt = DateTime.Now
+            });
+
+            // 3. Update status → WaitingPJSign
+            ba.Status = "WaitingPJSign";
+            ba.SubmittedAt = DateTime.Now;
+            await DbContext.SaveChangesAsync();
+
+            // 4. Kirim email magic link ke PJ
+            await EmailService.SendMagicLinkAsync(
+                ba.Pj!.Email ?? string.Empty,
+                ba.Pj.Nama,
+                ba.Id,
+                tokenValue
+            );
+
+            // 5. Kirim notifikasi in-app ke AdminGudangBarang
+            await NotificationService.SendAsync(
+                _currentUserId,
+                "WAITING_PJ_SIGN",
+                $"BA {ba.NomorSurat} telah diajukan. Menunggu tanda tangan PJ ({ba.Pj.Nama}).",
+                ba.Id
+            );
+
+            // 6. Redirect ke halaman Progress
+            Navigation.NavigateTo("/progress");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Gagal submit: {ex.Message}";
+        }
+        finally { isSubmitting = false; }
+    }
+
+    private void GoBack() => Navigation.NavigateTo($"/buat-ba?edit={Id}");
+
+    private static string GetJenisPill(string jenis) => jenis switch
+    {
+        "Alokasi" => "pill-alokasi",
+        "Peminjaman" => "pill-peminjaman",
+        _ => "pill-lainnya"
+    };
+}

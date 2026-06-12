@@ -78,7 +78,7 @@ else
                         <td>@ba.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
                         <td>
                             <div style="display:flex;gap:4px;">
-                                <NavLink class="btn-icon" href="@($"/berita-acara/{ba.Id}")" title="Lihat & Edit">
+                                <NavLink class="btn-icon" href="@($"/buat-ba?edit={ba.Id}")" title="Edit Draft">
                                     <i class="bi bi-pencil"></i>
                                 </NavLink>
                                 <button class="btn-icon" title="Hapus"

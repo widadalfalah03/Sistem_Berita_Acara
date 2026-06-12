@@ -3,34 +3,23 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
 @using PegawaiEntity = SistemBeritaAcara.Core.Entities.Pegawai
 @using MasterBarangEntity = SistemBeritaAcara.Core.Entities.MasterBarang
 @inject AppDbContext DbContext
-@inject IBACounterService BACounterService
 @inject IDocumentService DocumentService
-@inject IEmailService EmailService
-@inject INotificationService NotificationService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
-@inject UserManager<ApplicationUser> UserManager
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
-<PageTitle>Buat Berita Acara — Sistem Berita Acara</PageTitle>
+<PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") — Sistem Berita Acara</PageTitle>
 
 <div class="page-header">
-    <h1 class="page-title">Buat Berita Acara</h1>
-    <p class="page-subtitle">Isi formulir berikut untuk membuat Berita Acara baru</p>
+    <h1 class="page-title">@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara Baru")</h1>
+    <p class="page-subtitle">Isi formulir berikut, lalu klik Next untuk melanjutkan ke editor dokumen</p>
 </div>
-
-@if (!string.IsNullOrEmpty(successMessage))
-{
-    <div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:#16A34A;">
-        <i class="bi bi-check-circle-fill" style="font-size:18px;"></i>
-        <span>@successMessage</span>
-    </div>
-}
 
 @if (!string.IsNullOrEmpty(errorMessage))
 {
@@ -39,6 +28,7 @@
         <span>@errorMessage</span>
     </div>
 }
+
 
 <EditForm Model="model" OnValidSubmit="SubmitAsync">
     <DataAnnotationsValidator />
@@ -313,9 +303,11 @@
     </div>
 
     <!-- Actions -->
-    <div style="display:flex;justify-content:flex-end;gap:12px;">
-        <NavLink href="/draft" class="btn btn-outline">Batal</NavLink>
-        <button type="submit" class="btn btn-primary" disabled="@isSaving">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 0;">
+        <NavLink href="/draft" class="btn btn-outline">
+            <i class="bi bi-x-lg"></i> Batal
+        </NavLink>
+        <button type="submit" class="btn btn-primary" disabled="@isSaving" style="min-width:140px;">
             @if (isSaving)
             {
                 <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
@@ -323,14 +315,18 @@
             }
             else
             {
-                <i class="bi bi-floppy"></i>
-                <span>Simpan sebagai Draft</span>
+                <span>Next</span>
+                <i class="bi bi-arrow-right"></i>
             }
         </button>
     </div>
 </EditForm>
 
 @code {
+    [SupplyParameterFromQuery(Name = "edit")]
+    public int? EditIdParam { get; set; }
+
+    private int? editId;
     private CreateBaModel model = new() { Tanggal = DateTime.Today, Perangkat = [new()] };
     private List<PegawaiEntity> allPegawai = new();
     private List<PegawaiEntity> pjResults = new();
@@ -342,15 +338,65 @@
     private PegawaiEntity? selectedMenyerahkan;
     private string pjSearch = string.Empty;
     private string menyerahkanSearch = string.Empty;
-    private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
     private bool isSaving = false;
+    private int _currentUserId;
 
     protected override async Task OnInitializedAsync()
     {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        int.TryParse(userIdStr, out _currentUserId);
+
         allPegawai = await DbContext.Pegawai.Where(p => p.IsAktif).OrderBy(p => p.Nama).ToListAsync();
         approvers = await DbContext.Users.Where(u => u.Role == "Approver" && !u.IsDeleted).OrderBy(u => u.Nama).ToListAsync();
         barangOptions = await DbContext.MasterBarang.Where(b => b.IsAktif).OrderBy(b => b.NamaBarang).ToListAsync();
+
+        // Mode Edit: load data BA yang sudah ada
+        editId = EditIdParam;
+        if (editId.HasValue)
+        {
+            var existing = await DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Perangkat)
+                .FirstOrDefaultAsync(b => b.Id == editId.Value && b.Status == "Draft" && b.CreatedBy == _currentUserId);
+
+            if (existing is not null)
+            {
+                model.Jenis = existing.Jenis;
+                model.JenisCustom = existing.JenisCustom;
+                model.Tanggal = existing.Tanggal.ToDateTime(TimeOnly.MinValue);
+                model.TiketSscNo = existing.TiketSscNo;
+                model.TanggalKembali = existing.TanggalKembali.HasValue
+                    ? existing.TanggalKembali.Value.ToDateTime(TimeOnly.MinValue)
+                    : null;
+                model.PjId = existing.PjId;
+                model.MenyerahkanId = existing.MenyerahkanId;
+                model.MengetahuiId = existing.MengetahuiId;
+
+                // Pre-fill selected pegawai untuk display
+                selectedPj = allPegawai.FirstOrDefault(p => p.Id == existing.PjId);
+                if (selectedPj is not null) pjSearch = selectedPj.Nama;
+
+                selectedMenyerahkan = allPegawai.FirstOrDefault(p => p.Id == existing.MenyerahkanId);
+                if (selectedMenyerahkan is not null) menyerahkanSearch = selectedMenyerahkan.Nama;
+
+                model.Perangkat = existing.Perangkat.Select(p => new PerangkatRow
+                {
+                    BarangId = p.BarangId,
+                    Jumlah = p.Jumlah,
+                    Satuan = p.Satuan,
+                    NoSerial = p.NoSerial,
+                    Keterangan = p.Keterangan
+                }).ToList();
+
+                if (!model.Perangkat.Any()) model.Perangkat.Add(new());
+            }
+            else
+            {
+                // Draft tidak ditemukan / bukan milik user ini — buat baru
+                editId = null;
+            }
+        }
     }
 
     private void OnPjSearchInput(ChangeEventArgs e)
@@ -395,7 +441,6 @@
     private async Task SubmitAsync()
     {
         errorMessage = string.Empty;
-        successMessage = string.Empty;
 
         if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
         if (model.MenyerahkanId == 0) { errorMessage = "Pilih Yang Menyerahkan terlebih dahulu."; return; }
@@ -405,70 +450,111 @@
         isSaving = true;
         try
         {
-            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-            var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
-            if (currentUser is null) { errorMessage = "Sesi habis, silakan login kembali."; return; }
-
-            var ba = new BeritaAcaraEntity
+            if (_currentUserId == 0)
             {
-                Tanggal = DateOnly.FromDateTime(model.Tanggal),
-                Jenis = model.Jenis,
-                JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null,
-                PjId = model.PjId,
-                MenyerahkanId = model.MenyerahkanId,
-                MengetahuiId = model.MengetahuiId,
-                TiketSscNo = model.TiketSscNo,
-                TanggalKembali = model.TanggalKembali.HasValue ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null,
-                Status = "Draft",
-                CreatedBy = currentUser.Id,
-                CreatedAt = DateTime.Now,
-                Perangkat = model.Perangkat
+                var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+                var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                int.TryParse(userIdStr, out _currentUserId);
+            }
+            if (_currentUserId == 0) { errorMessage = "Sesi habis, silakan login kembali."; isSaving = false; return; }
+
+            int savedBaId;
+
+            if (editId.HasValue)
+            {
+                // ── MODE EDIT: update draft yang sudah ada ──
+                var existing = await DbContext.Set<BeritaAcaraEntity>()
+                    .Include(b => b.Perangkat)
+                    .FirstOrDefaultAsync(b => b.Id == editId.Value);
+
+                if (existing is null) { errorMessage = "Draft tidak ditemukan."; isSaving = false; return; }
+
+                existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
+                existing.Jenis = model.Jenis;
+                existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
+                existing.PjId = model.PjId;
+                existing.MenyerahkanId = model.MenyerahkanId;
+                existing.MengetahuiId = model.MengetahuiId;
+                existing.TiketSscNo = model.TiketSscNo;
+                existing.TanggalKembali = model.TanggalKembali.HasValue
+                    ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
+
+                // Update perangkat: hapus lama, masukkan yang baru
+                DbContext.PerangkatBA.RemoveRange(existing.Perangkat);
+                existing.Perangkat = model.Perangkat
                     .Where(p => p.BarangId > 0 && p.Jumlah > 0)
                     .Select(p => new PerangkatBA
                     {
+                        BaId = existing.Id,
                         BarangId = p.BarangId,
                         Jumlah = p.Jumlah,
                         Satuan = string.IsNullOrWhiteSpace(p.Satuan) ? "Pcs" : p.Satuan,
                         NoSerial = p.NoSerial,
                         Keterangan = p.Keterangan
-                    }).ToList()
-            };
+                    }).ToList();
 
-            DbContext.Set<BeritaAcaraEntity>().Add(ba);
-            await DbContext.SaveChangesAsync();
-
-            var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal);
-            ba.CounterValue = next.counterValue;
-            ba.NomorSurat = next.nomorSurat;
-            await DbContext.SaveChangesAsync();
-
-            // Save photos
-            if (photoFiles.Any())
-            {
-                var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
-                Directory.CreateDirectory(photoFolder);
-                int idx = 1;
-                foreach (var file in photoFiles)
-                {
-                    var ext = Path.GetExtension(file.Name);
-                    var saveName = $"ba-{ba.Id}-photo-{idx}{ext}";
-                    await using var fs = File.Create(Path.Combine(photoFolder, saveName));
-                    await file.OpenReadStream(5_000_000).CopyToAsync(fs);
-                    DbContext.BuktiFoto.Add(new BuktiFoto { BaId = ba.Id, FilePath = $"files/photos/{saveName}" });
-                    idx++;
-                }
                 await DbContext.SaveChangesAsync();
+                savedBaId = existing.Id;
+            }
+            else
+            {
+                // ── MODE BARU: insert draft baru ──
+                var ba = new BeritaAcaraEntity
+                {
+                    Tanggal = DateOnly.FromDateTime(model.Tanggal),
+                    Jenis = model.Jenis,
+                    JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null,
+                    PjId = model.PjId,
+                    MenyerahkanId = model.MenyerahkanId,
+                    MengetahuiId = model.MengetahuiId,
+                    TiketSscNo = model.TiketSscNo,
+                    TanggalKembali = model.TanggalKembali.HasValue
+                        ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null,
+                    Status = "Draft",
+                    CreatedBy = _currentUserId,
+                    CreatedAt = DateTime.Now,
+                    Perangkat = model.Perangkat
+                        .Where(p => p.BarangId > 0 && p.Jumlah > 0)
+                        .Select(p => new PerangkatBA
+                        {
+                            BarangId = p.BarangId,
+                            Jumlah = p.Jumlah,
+                            Satuan = string.IsNullOrWhiteSpace(p.Satuan) ? "Pcs" : p.Satuan,
+                            NoSerial = p.NoSerial,
+                            Keterangan = p.Keterangan
+                        }).ToList()
+                };
+
+                DbContext.Set<BeritaAcaraEntity>().Add(ba);
+                await DbContext.SaveChangesAsync();
+
+                // Save photos jika ada
+                if (photoFiles.Any())
+                {
+                    var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
+                    Directory.CreateDirectory(photoFolder);
+                    int idx = 1;
+                    foreach (var file in photoFiles)
+                    {
+                        var ext = Path.GetExtension(file.Name);
+                        var saveName = $"ba-{ba.Id}-photo-{idx}{ext}";
+                        await using var fs = File.Create(Path.Combine(photoFolder, saveName));
+                        await file.OpenReadStream(5_000_000).CopyToAsync(fs);
+                        DbContext.BuktiFoto.Add(new BuktiFoto { BaId = ba.Id, FilePath = $"files/photos/{saveName}" });
+                        idx++;
+                    }
+                    await DbContext.SaveChangesAsync();
+                }
+
+                savedBaId = ba.Id;
             }
 
-            successMessage = $"Berita Acara berhasil dibuat sebagai Draft. Nomor: {ba.NomorSurat}";
-            model = new() { Tanggal = DateTime.Today, Perangkat = [new()] };
-            selectedPj = null; selectedMenyerahkan = null;
-            pjSearch = string.Empty; menyerahkanSearch = string.Empty;
-            photoFiles.Clear();
+            // Redirect ke halaman Editor
+            Navigation.NavigateTo($"/editor/{savedBaId}");
         }
         catch (Exception ex)
         {
-            errorMessage = $"Gagal membuat Berita Acara: {ex.Message}";
+            errorMessage = $"Gagal menyimpan Berita Acara: {ex.Message}";
         }
         finally { isSaving = false; }
     }

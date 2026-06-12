@@ -184,6 +184,51 @@ app.MapPost("/account/logout", async (
     return Results.Redirect("/login");
 });
 
+// ── ONLYOFFICE Callback Endpoint ──
+app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
+    int baId,
+    HttpContext ctx,
+    SistemBeritaAcara.Infrastructure.Data.AppDbContext db) =>
+{
+    try
+    {
+        var payload = await ctx.Request.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        
+        // Status 2 = document is saved
+        if (payload.TryGetProperty("status", out var statusProp) && (statusProp.GetInt32() == 2 || statusProp.GetInt32() == 6))
+        {
+            if (payload.TryGetProperty("url", out var downloadUrlProp))
+            {
+                var downloadUrl = downloadUrlProp.GetString();
+                if (!string.IsNullOrEmpty(downloadUrl))
+                {
+                    var ba = await db.BeritaAcara.FindAsync(baId);
+                    if (ba != null && !string.IsNullOrEmpty(ba.DocxPath))
+                    {
+                        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", ba.DocxPath.TrimStart('/'));
+                        using var httpClient = new System.Net.Http.HttpClient();
+                        var response = await httpClient.GetAsync(downloadUrl);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            await using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                            await response.Content.CopyToAsync(fs);
+                            
+                            // Hapus cache preview PDF jika digunakan
+                            var pdfPath = filePath.Replace(".docx", ".pdf");
+                            if (File.Exists(pdfPath)) File.Delete(pdfPath);
+                        }
+                    }
+                }
+            }
+        }
+        return Results.Ok(new { error = 0 });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { error = 1, message = ex.Message });
+    }
+});
+
 // Database and roles are ensured earlier before app start
 
 RecurringJob.AddOrUpdate<DueDateCheckerJob>(
