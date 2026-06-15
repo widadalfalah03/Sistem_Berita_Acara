@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -43,12 +44,53 @@ public class DocumentService : IDocumentService
         using (var wordDoc = WordprocessingDocument.Open(physicalPath, true))
         {
             var mainPart = wordDoc.MainDocumentPart!;
-            
+
             // 1. Replace Simple Placeholders
+            var idCulture = new CultureInfo("id-ID");
+
+            // Jenis perangkat: join semua nama barang dari list (untuk heading tabel)
+            var jenisPerangkatStr = (ba.Perangkat != null && ba.Perangkat.Any())
+                ? string.Join(", ", ba.Perangkat.Select(p => p.Barang?.NamaBarang ?? "-").Distinct())
+                : "-";
+
+            // Tanggal kembali: kosong untuk Alokasi, isi untuk Peminjaman
+            var tanggalKembaliStr = (ba.Jenis == "Peminjaman" && ba.TanggalKembali.HasValue)
+                ? ba.TanggalKembali.Value.ToString("dd MMMM yyyy", idCulture)
+                : string.Empty;
+
+            // ── PRE-PROCESS: Hapus konten sel "Tanggal Pengembalian" untuk non-Peminjaman ──
+            // JANGAN hapus seluruh row (row juga berisi Tiket SSC),
+            // cukup kosongkan sel/paragraf yang mengandung placeholder {{TanggalKembali}}
+            if (ba.Jenis != "Peminjaman")
+            {
+                // Cari TableCell yang mengandung {{TanggalKembali}} dan kosongkan seluruh isinya
+                var tanggalCells = mainPart.Document.Body!
+                    .Descendants<TableCell>()
+                    .Where(cell => cell.Descendants<Text>().Any(t => t.Text.Contains("{{TanggalKembali}}")))
+                    .ToList();
+
+                foreach (var cell in tanggalCells)
+                {
+                    // Hapus semua paragraf dalam sel, ganti dengan paragraf kosong
+                    cell.RemoveAllChildren<Paragraph>();
+                    cell.Append(new Paragraph());
+                }
+
+                // Cari juga paragraf di luar tabel (fallback)
+                var tanggalParas = mainPart.Document.Body!
+                    .Descendants<Paragraph>()
+                    .Where(p => !p.Ancestors<TableCell>().Any()
+                             && p.Descendants<Text>().Any(t => t.Text.Contains("{{TanggalKembali}}")))
+                    .ToList();
+
+                foreach (var para in tanggalParas)
+                    para.Remove();
+            }
+
             var replacements = new Dictionary<string, string>
             {
                 { "{{NomorSurat}}", ba.NomorSurat ?? "Draft" },
-                { "{{Tanggal}}", ba.Tanggal.ToString("dd MMMM yyyy") },
+                { "{{Tanggal}}", ba.Tanggal.ToString("dd MMMM yyyy", idCulture) },
                 { "{{NamaPJ}}", ba.Pj?.Nama ?? "-" },
                 { "{{CostCenter}}", ba.Pj?.CostCenter ?? "-" },
                 { "{{JabatanPJ}}", ba.Pj?.Jabatan ?? "-" },
@@ -57,7 +99,9 @@ public class DocumentService : IDocumentService
                 { "{{NoPekerjaPJ}}", ba.Pj?.NoPekerja ?? "-" },
                 { "{{NoTelpPJ}}", ba.Pj?.NoTelp ?? "-" },
                 { "{{Menyerahkan}}", ba.Menyerahkan?.Nama ?? "-" },
-                { "{{Approver}}", ba.Mengetahui?.Nama ?? "-" }
+                { "{{Approver}}", ba.Mengetahui?.Nama ?? "-" },
+                { "{{JenisPerangkat}}", jenisPerangkatStr },
+                { "{{TanggalKembali}}", tanggalKembaliStr },
             };
 
             foreach (var text in mainPart.Document.Body!.Descendants<Text>())
@@ -82,8 +126,7 @@ public class DocumentService : IDocumentService
                 {
                     var newRow = (TableRow)templateRow.CloneNode(true);
                     
-                    // Ganti kolom NO. (Angka 1 di template dummy ada di kolom pertama, tapi saya tidak set placeholder untuk NO)
-                    // Cari Text yang isinya "1" dan ganti jadi index
+                    // Ganti kolom NO.
                     var firstCellText = newRow.Elements<TableCell>().FirstOrDefault()?.Descendants<Text>().FirstOrDefault(t => t.Text == "1");
                     if (firstCellText != null) firstCellText.Text = idx.ToString();
 
@@ -105,6 +148,70 @@ public class DocumentService : IDocumentService
                     idx++;
                 }
                 templateRow.Remove();
+            }
+
+            // 3. Ganti placeholder foto (kotak abu-abu = Drawing shape di template)
+            var drawingParas = mainPart.Document.Body!.Descendants<Paragraph>()
+                .Where(p => p.Descendants<Drawing>().Any())
+                .ToList();
+
+            if (drawingParas.Any())
+            {
+                foreach (var drawPara in drawingParas)
+                    drawPara.Remove();
+
+                if (ba.BuktiFotos != null && ba.BuktiFotos.Any())
+                {
+                    uint imgId = 100U;
+                    foreach (var foto in ba.BuktiFotos)
+                    {
+                        var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                        if (!File.Exists(fotoPhysical)) continue;
+
+                        var ext = Path.GetExtension(fotoPhysical).ToLowerInvariant();
+                        var imgPart = ext switch
+                        {
+                            ".png"  => mainPart.AddImagePart(ImagePartType.Png),
+                            ".jpg" or ".jpeg" => mainPart.AddImagePart(ImagePartType.Jpeg),
+                            _ => mainPart.AddImagePart(ImagePartType.Jpeg)
+                        };
+                        using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
+
+                        var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), 5400000L, 3960000L, Path.GetFileName(fotoPhysical), imgId++);
+                        var imgPara = new Paragraph(new Run(drawing));
+                        imgPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
+                        mainPart.Document.Body!.Append(imgPara);
+                    }
+                }
+            }
+            else if (ba.BuktiFotos != null && ba.BuktiFotos.Any())
+            {
+                mainPart.Document.Body!.Append(new Paragraph(new Run(new Break { Type = BreakValues.Page })));
+                mainPart.Document.Body!.Append(new Paragraph(new Run(new Text("Bukti Foto Serah Terima")))
+                {
+                    ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center })
+                });
+
+                uint imgId = 200U;
+                foreach (var foto in ba.BuktiFotos)
+                {
+                    var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (!File.Exists(fotoPhysical)) continue;
+
+                    var ext = Path.GetExtension(fotoPhysical).ToLowerInvariant();
+                    var imgPart = ext switch
+                    {
+                        ".png"  => mainPart.AddImagePart(ImagePartType.Png),
+                        ".jpg" or ".jpeg" => mainPart.AddImagePart(ImagePartType.Jpeg),
+                        _ => mainPart.AddImagePart(ImagePartType.Jpeg)
+                    };
+                    using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
+
+                    var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), 5400000L, 3960000L, Path.GetFileName(fotoPhysical), imgId++);
+                    var imgPara = new Paragraph(new Run(drawing));
+                    imgPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
+                    mainPart.Document.Body!.Append(imgPara);
+                }
             }
 
             mainPart.Document.Save();
@@ -204,10 +311,13 @@ public class DocumentService : IDocumentService
     }
 
     private static Drawing CreateImageDrawing(string relationshipId, long widthEmu, long heightEmu, string name)
+        => CreateImageDrawingWithId(relationshipId, widthEmu, heightEmu, name, 1U);
+
+    private static Drawing CreateImageDrawingWithId(string relationshipId, long widthEmu, long heightEmu, string name, uint id)
     {
         var picture = new PIC.Picture(
             new PIC.NonVisualPictureProperties(
-                new PIC.NonVisualDrawingProperties { Id = (UInt32Value)0U, Name = name },
+                new PIC.NonVisualDrawingProperties { Id = (UInt32Value)id, Name = name },
                 new PIC.NonVisualPictureDrawingProperties()),
             new PIC.BlipFill(
                 new A.Blip { Embed = relationshipId },
@@ -224,7 +334,7 @@ public class DocumentService : IDocumentService
         var inline = new DW.Inline(
             new DW.Extent { Cx = widthEmu, Cy = heightEmu },
             new DW.EffectExtent { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
-            new DW.DocProperties { Id = (UInt32Value)1U, Name = name },
+            new DW.DocProperties { Id = (UInt32Value)id, Name = name },
             new DW.NonVisualGraphicFrameDrawingProperties(new A.GraphicFrameLocks { NoChangeAspect = true }),
             graphic)
         {

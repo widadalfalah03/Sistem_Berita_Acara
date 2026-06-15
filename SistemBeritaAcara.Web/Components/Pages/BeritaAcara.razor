@@ -49,7 +49,9 @@
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label">Jenis Berita Acara <span style="color:var(--danger)">*</span></label>
-                <select class="form-control form-select" @bind="model.Jenis">
+                <select class="form-control form-select"
+                        value="@model.Jenis"
+                        @onchange="OnJenisSelectChanged">
                     <option value="Alokasi">Alokasi</option>
                     <option value="Peminjaman">Peminjaman</option>
                     <option value="Lainnya">Lainnya</option>
@@ -399,6 +401,14 @@
         }
     }
 
+    private void OnJenisSelectChanged(ChangeEventArgs e)
+    {
+        model.Jenis = e.Value?.ToString() ?? "Alokasi";
+        // Hapus tanggal kembali jika bukan Peminjaman
+        if (model.Jenis != "Peminjaman")
+            model.TanggalKembali = null;
+    }
+
     private void OnPjSearchInput(ChangeEventArgs e)
     {
         pjSearch = e.Value?.ToString() ?? string.Empty;
@@ -492,6 +502,44 @@
                         NoSerial = p.NoSerial,
                         Keterangan = p.Keterangan
                     }).ToList();
+
+                // Update BuktiFoto: ganti foto lama jika ada foto baru dipilih
+                if (photoFiles.Any())
+                {
+                    // Hapus foto lama dari DB dan filesystem
+                    var oldPhotos = await DbContext.BuktiFoto
+                        .Where(f => f.BaId == existing.Id)
+                        .ToListAsync();
+
+                    foreach (var oldPhoto in oldPhotos)
+                    {
+                        var oldPhysical = Path.Combine(
+                            Directory.GetCurrentDirectory(), "wwwroot",
+                            oldPhoto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                        if (File.Exists(oldPhysical))
+                            File.Delete(oldPhysical);
+                    }
+                    DbContext.BuktiFoto.RemoveRange(oldPhotos);
+
+                    // Simpan foto baru
+                    var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
+                    Directory.CreateDirectory(photoFolder);
+                    int photoIdx = 1;
+                    foreach (var file in photoFiles)
+                    {
+                        var ext = Path.GetExtension(file.Name);
+                        var saveName = $"ba-{existing.Id}-photo-{photoIdx}{ext}";
+                        await using var fs = File.Create(Path.Combine(photoFolder, saveName));
+                        await file.OpenReadStream(5_000_000).CopyToAsync(fs);
+                        DbContext.BuktiFoto.Add(new BuktiFoto
+                        {
+                            BaId = existing.Id,
+                            BeritaAcara = existing,
+                            FilePath = $"files/photos/{saveName}"
+                        });
+                        photoIdx++;
+                    }
+                }
 
                 await DbContext.SaveChangesAsync();
                 savedBaId = existing.Id;
