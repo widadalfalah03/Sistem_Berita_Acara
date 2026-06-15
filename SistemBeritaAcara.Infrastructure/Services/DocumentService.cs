@@ -59,11 +59,8 @@ public class DocumentService : IDocumentService
                 : string.Empty;
 
             // ── PRE-PROCESS: Hapus konten sel "Tanggal Pengembalian" untuk non-Peminjaman ──
-            // JANGAN hapus seluruh row (row juga berisi Tiket SSC),
-            // cukup kosongkan sel/paragraf yang mengandung placeholder {{TanggalKembali}}
             if (ba.Jenis != "Peminjaman")
             {
-                // Cari TableCell yang mengandung {{TanggalKembali}} dan kosongkan seluruh isinya
                 var tanggalCells = mainPart.Document.Body!
                     .Descendants<TableCell>()
                     .Where(cell => cell.Descendants<Text>().Any(t => t.Text.Contains("{{TanggalKembali}}")))
@@ -71,12 +68,10 @@ public class DocumentService : IDocumentService
 
                 foreach (var cell in tanggalCells)
                 {
-                    // Hapus semua paragraf dalam sel, ganti dengan paragraf kosong
                     cell.RemoveAllChildren<Paragraph>();
                     cell.Append(new Paragraph());
                 }
 
-                // Cari juga paragraf di luar tabel (fallback)
                 var tanggalParas = mainPart.Document.Body!
                     .Descendants<Paragraph>()
                     .Where(p => !p.Ancestors<TableCell>().Any()
@@ -126,14 +121,13 @@ public class DocumentService : IDocumentService
                 {
                     var newRow = (TableRow)templateRow.CloneNode(true);
                     
-                    // Ganti kolom NO.
                     var firstCellText = newRow.Elements<TableCell>().FirstOrDefault()?.Descendants<Text>().FirstOrDefault(t => t.Text == "1");
                     if (firstCellText != null) firstCellText.Text = idx.ToString();
 
                     foreach (var text in newRow.Descendants<Text>())
                     {
                         if (text.Text.Contains("{{PerangkatNama}}"))
-                            text.Text = text.Text.Replace("{{PerangkatNama}}", $"{(p.Barang?.NamaBarang ?? "-")} {(p.Keterangan ?? string.Empty)}".Trim());
+                            text.Text = text.Text.Replace("{{PerangkatNama}}", string.IsNullOrWhiteSpace(p.Keterangan) ? "-" : p.Keterangan);
                         if (text.Text.Contains("{{PerangkatSN}}"))
                             text.Text = text.Text.Replace("{{PerangkatSN}}", string.IsNullOrWhiteSpace(p.NoSerial) ? "-" : p.NoSerial);
                         if (text.Text.Contains("{{PerangkatJumlah}}"))
@@ -151,8 +145,9 @@ public class DocumentService : IDocumentService
             }
 
             // 3. Ganti placeholder foto (kotak abu-abu = Drawing shape di template)
+            // HANYA hapus paragraph drawing yang TIDAK memiliki teks di dalamnya (untuk menghindari penghapusan Logo Pertamina)
             var drawingParas = mainPart.Document.Body!.Descendants<Paragraph>()
-                .Where(p => p.Descendants<Drawing>().Any())
+                .Where(p => p.Descendants<Drawing>().Any() && string.IsNullOrWhiteSpace(p.InnerText))
                 .ToList();
 
             if (drawingParas.Any())
@@ -228,7 +223,6 @@ public class DocumentService : IDocumentService
         }
         catch (Exception ex)
         {
-            // Jika gagal generate PDF, minimal DOCX tetap ada
             Console.WriteLine($"Gagal membuat PDF preview: {ex.Message}");
         }
 
@@ -241,9 +235,18 @@ public class DocumentService : IDocumentService
         string physicalPath = GetPhysicalPath(ba.DocxPath!);
         EnsureFileExists(physicalPath);
 
-        using var wordDoc = WordprocessingDocument.Open(physicalPath, true);
-        AppendSignatureImage(wordDoc, ttdPath, "Tanda Tangan Yang Menyerahkan");
-        wordDoc.MainDocumentPart!.Document.Save();
+        EmbedSignatureSpire(physicalPath, ttdPath, "{{SIG_MENYERAHKAN}}");
+
+        return ba.DocxPath!;
+    }
+
+    public async Task<string> EmbedTtdPreviewApproverAsync(int baId, string ttdPath)
+    {
+        var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
+        string physicalPath = GetPhysicalPath(ba.DocxPath!);
+        EnsureFileExists(physicalPath);
+
+        EmbedSignatureSpire(physicalPath, ttdPath, "{{SIG_APPROVER}}");
 
         return ba.DocxPath!;
     }
@@ -254,9 +257,7 @@ public class DocumentService : IDocumentService
         string physicalPath = GetPhysicalPath(ba.DocxPath!);
         EnsureFileExists(physicalPath);
 
-        using var wordDoc = WordprocessingDocument.Open(physicalPath, true);
-        AppendSignatureImage(wordDoc, ttdPath, "Tanda Tangan PJ");
-        wordDoc.MainDocumentPart!.Document.Save();
+        EmbedSignatureSpire(physicalPath, ttdPath, "{{SIG_PJ}}");
 
         ba.TtdPjPath = Path.Combine("files", "signatures", Path.GetFileName(ttdPath)).Replace("\\", "/");
         await _db.SaveChangesAsync();
@@ -274,14 +275,38 @@ public class DocumentService : IDocumentService
         string finalPhysicalPath = GetPhysicalPath(finalRelativePath);
         File.Copy(draftPhysicalPath, finalPhysicalPath, true);
 
-        using var wordDoc = WordprocessingDocument.Open(finalPhysicalPath, true);
-        AppendSignatureImage(wordDoc, ttdPath, "Tanda Tangan Approver");
-        wordDoc.MainDocumentPart!.Document.Save();
+        EmbedSignatureSpire(finalPhysicalPath, ttdPath, "{{SIG_APPROVER}}");
 
         ba.DocxFinalPath = finalRelativePath;
         await _db.SaveChangesAsync();
 
         return finalRelativePath;
+    }
+
+    private static void EmbedSignatureSpire(string docPath, string imagePath, string placeholder)
+    {
+        if (!File.Exists(imagePath)) throw new FileNotFoundException("File tanda tangan tidak ditemukan.", imagePath);
+
+        using var document = new Spire.Doc.Document();
+        document.LoadFromFile(docPath);
+
+        Spire.Doc.Documents.TextSelection[] selections = document.FindAllString(placeholder, false, true);
+        if (selections != null && selections.Length > 0)
+        {
+            foreach (var selection in selections)
+            {
+                var textRange = selection.GetAsOneRange();
+                var para = textRange.OwnerParagraph;
+                var pic = para.AppendPicture(imagePath);
+                pic.Width = 100;
+                pic.Height = 50;
+                para.ChildObjects.Insert(para.ChildObjects.IndexOf(textRange), pic);
+                para.ChildObjects.Remove(textRange);
+            }
+            document.SaveToFile(docPath, Spire.Doc.FileFormat.Docx);
+            string pdfPath = docPath.Replace(".docx", ".pdf");
+            document.SaveToFile(pdfPath, Spire.Doc.FileFormat.PDF);
+        }
     }
 
     private string GetRelativePath(string fileName) => Path.Combine("files", "documents", fileName).Replace("\\", "/");
@@ -292,26 +317,18 @@ public class DocumentService : IDocumentService
         if (!File.Exists(path)) throw new FileNotFoundException("File DOCX tidak ditemukan.", path);
     }
 
-    private static void AppendSignatureImage(WordprocessingDocument wordDoc, string imagePath, string caption)
+    private static string Terbilang(int angka)
     {
-        if (!File.Exists(imagePath)) throw new FileNotFoundException("File tanda tangan tidak ditemukan.", imagePath);
-
-        var mainPart = wordDoc.MainDocumentPart ?? wordDoc.AddMainDocumentPart();
-        var imagePart = Path.GetExtension(imagePath).ToLowerInvariant() switch
-        {
-            ".png" => mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Png),
-            ".jpg" or ".jpeg" => mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Jpeg),
-            _ => mainPart.AddImagePart(DocumentFormat.OpenXml.Packaging.ImagePartType.Png)
-        };
-        using (var stream = File.OpenRead(imagePath)) { imagePart.FeedData(stream); }
-
-        var element = CreateImageDrawing(mainPart.GetIdOfPart(imagePart), 990000L, 330000L, Path.GetFileName(imagePath));
-        mainPart.Document.Body!.Append(new Paragraph(new Run(new Text(caption))) { ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center }) });
-        mainPart.Document.Body!.Append(new Paragraph(new Run(element)));
+        string[] huruf = { "", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas" };
+        if (angka < 12) return huruf[angka];
+        if (angka < 20) return Terbilang(angka - 10) + " Belas";
+        if (angka < 100) return Terbilang(angka / 10) + " Puluh " + Terbilang(angka % 10);
+        if (angka < 200) return "Seratus " + Terbilang(angka - 100);
+        if (angka < 1000) return Terbilang(angka / 100) + " Ratus " + Terbilang(angka % 100);
+        if (angka < 2000) return "Seribu " + Terbilang(angka - 1000);
+        if (angka < 1000000) return Terbilang(angka / 1000) + " Ribu " + Terbilang(angka % 1000);
+        return angka.ToString();
     }
-
-    private static Drawing CreateImageDrawing(string relationshipId, long widthEmu, long heightEmu, string name)
-        => CreateImageDrawingWithId(relationshipId, widthEmu, heightEmu, name, 1U);
 
     private static Drawing CreateImageDrawingWithId(string relationshipId, long widthEmu, long heightEmu, string name, uint id)
     {
@@ -343,14 +360,5 @@ public class DocumentService : IDocumentService
         };
 
         return new Drawing(inline);
-    }
-
-    private static string Terbilang(int angka)
-    {
-        string[] huruf = { "", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas" };
-        if (angka < 12) return huruf[angka];
-        if (angka < 20) return Terbilang(angka - 10) + " Belas";
-        if (angka < 100) return Terbilang(angka / 10) + " Puluh " + Terbilang(angka % 10);
-        return angka.ToString(); // Simplified for basic amounts
     }
 }

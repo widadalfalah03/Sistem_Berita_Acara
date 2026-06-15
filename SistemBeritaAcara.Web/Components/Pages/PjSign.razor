@@ -145,8 +145,10 @@
             Directory.CreateDirectory(folder);
             var fname = $"ba-{ba!.Id}-pj{ext}";
             var fpath = Path.Combine(folder, fname);
-            await using var fs = File.Create(fpath);
-            await selectedFile.OpenReadStream(5_000_000).CopyToAsync(fs);
+            await using (var fs = File.Create(fpath))
+            {
+                await selectedFile.OpenReadStream(5_000_000).CopyToAsync(fs);
+            }
 
             ba.TtdPjPath = $"files/signatures/{fname}";
             ba.Status = "WaitingApproval";

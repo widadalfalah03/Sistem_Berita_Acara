@@ -188,6 +188,14 @@ else
             try
             {
                 ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+
+                var currentUser = await DbContext.Users.FindAsync(_currentUserId);
+                if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
+                {
+                    var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
+                }
+
                 await DbContext.SaveChangesAsync();
             }
             catch (Exception ex)
@@ -207,6 +215,14 @@ else
 
         try
         {
+            var currentUser = await DbContext.Users.FindAsync(_currentUserId);
+            if (currentUser == null || string.IsNullOrEmpty(currentUser.TtdPath))
+            {
+                errorMessage = "Gagal Submit: Anda belum mengunggah Tanda Tangan. Silakan unggah di Profil terlebih dahulu.";
+                isSubmitting = false;
+                return;
+            }
+
             // 1. Generate nomor surat (atomic increment)
             if (string.IsNullOrEmpty(ba.NomorSurat))
             {
@@ -227,12 +243,19 @@ else
                 CreatedAt = DateTime.Now
             });
 
-            // 3. Update status → WaitingPJSign
+            // 3. Generate ulang dokumen agar NomorSurat masuk ke PDF/DOCX
+            ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+
+            // 3.5 Embed tanda tangan Admin Gudang (Yang Menyerahkan)
+            var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+            await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
+
+            // 4. Update status → WaitingPJSign
             ba.Status = "WaitingPJSign";
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
 
-            // 4. Kirim email magic link ke PJ
+            // 5. Kirim email magic link ke PJ
             await EmailService.SendMagicLinkAsync(
                 ba.Pj!.Email ?? string.Empty,
                 ba.Pj.Nama,
@@ -240,7 +263,7 @@ else
                 tokenValue
             );
 
-            // 5. Kirim notifikasi in-app ke AdminGudangBarang
+            // 6. Kirim notifikasi in-app ke AdminGudangBarang
             await NotificationService.SendAsync(
                 _currentUserId,
                 "WAITING_PJ_SIGN",

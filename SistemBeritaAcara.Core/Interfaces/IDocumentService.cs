@@ -6,6 +6,7 @@ public interface IDocumentService
 {
     Task<string> GenerateDocxAsync(BeritaAcara ba);
     Task<string> EmbedTtdMenyerahkanAsync(int baId, string ttdPath);
+    Task<string> EmbedTtdPreviewApproverAsync(int baId, string ttdPath);
     Task<string> EmbedTtdPjAsync(int baId, string ttdPath);
     Task<string> EmbedTtdMengetahuiAsync(int baId, string ttdPath);
 }
