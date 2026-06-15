@@ -14,7 +14,11 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
         int added = 0, updated = 0, deactivated = 0;
         var errors = new List<string>();
 
-        using var workbook = new XLWorkbook(excelStream);
+        using var ms = new MemoryStream();
+        await excelStream.CopyToAsync(ms);
+        ms.Position = 0;
+
+        using var workbook = new XLWorkbook(ms);
         var sheet = workbook.Worksheet(1);
         var rows = sheet.RowsUsed().Skip(1).ToList();
 
@@ -22,15 +26,22 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
 
         foreach (var row in rows)
         {
-            string nama = row.Cell(1).GetString().Trim();
-            string noPekerja = row.Cell(2).GetString().Trim();
-            string jabatan = row.Cell(3).GetString().Trim();
-            string fungsi = row.Cell(4).GetString().Trim();
-            string email = row.Cell(5).GetString().Trim();
-            string costCenter = row.Cell(6).GetString().Trim();
+            string nama = row.Cell(1).Value.ToString().Trim();
+            string noPekerja = row.Cell(2).Value.ToString().Trim();
+            string jabatan = row.Cell(3).Value.ToString().Trim();
+            string fungsi = row.Cell(4).Value.ToString().Trim();
+            string email = row.Cell(5).Value.ToString().Trim();
+            string costCenter = row.Cell(6).Value.ToString().Trim();
 
             if (string.IsNullOrEmpty(noPekerja)) continue;
-            noPekerjaInExcel.Add(noPekerja);
+            if (!noPekerjaInExcel.Add(noPekerja)) continue; // Skip duplicates within the file
+
+            if (nama.Length > 100) nama = nama.Substring(0, 100);
+            if (noPekerja.Length > 20) noPekerja = noPekerja.Substring(0, 20);
+            if (jabatan.Length > 100) jabatan = jabatan.Substring(0, 100);
+            if (fungsi.Length > 100) fungsi = fungsi.Substring(0, 100);
+            if (email.Length > 150) email = email.Substring(0, 150);
+            if (costCenter.Length > 50) costCenter = costCenter.Substring(0, 50);
 
             var existing = await db.Pegawai.FirstOrDefaultAsync(p => p.NoPekerja == noPekerja);
             if (existing is null)
@@ -58,6 +69,13 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
                 existing.IsAktif = true;
                 existing.LastSync = DateTime.Now;
                 updated++;
+
+                var linkedUsers = await db.Users.Where(u => u.PegawaiId == existing.Id && u.IsDeleted).ToListAsync();
+                foreach (var user in linkedUsers)
+                {
+                    user.IsDeleted = false;
+                    user.DeletedAt = null;
+                }
             }
         }
 
@@ -92,7 +110,11 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
         int added = 0, updated = 0, deactivated = 0;
         var errors = new List<string>();
 
-        using var workbook = new XLWorkbook(excelStream);
+        using var ms = new MemoryStream();
+        await excelStream.CopyToAsync(ms);
+        ms.Position = 0;
+
+        using var workbook = new XLWorkbook(ms);
         var sheet = workbook.Worksheet(1);
         var rows = sheet.RowsUsed().Skip(1).ToList();
 
@@ -100,15 +122,48 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
 
         foreach (var row in rows)
         {
-            string kode = row.Cell(1).GetString().Trim();
-            string nama = row.Cell(2).GetString().Trim();
+            string col1 = row.Cell(1).Value.ToString().Trim();
+            string col2 = row.Cell(2).Value.ToString().Trim();
 
-            if (string.IsNullOrEmpty(kode)) continue;
-            kodeInExcel.Add(kode);
+            if (string.IsNullOrEmpty(col1) && string.IsNullOrEmpty(col2)) continue;
 
-            var existing = await db.MasterBarang.FirstOrDefaultAsync(b => b.KodeBarang == kode);
+            string kode = "";
+            string nama = "";
+
+            if (!string.IsNullOrEmpty(col2))
+            {
+                // Format lama: Kolom 1 = Kode, Kolom 2 = Nama
+                kode = col1;
+                nama = col2;
+            }
+            else
+            {
+                // Format baru: Kolom 1 = Nama, Kode di-generate otomatis
+                nama = col1;
+            }
+
+            if (nama.Length > 100) nama = nama.Substring(0, 100);
+
+            MasterBarang? existing = null;
+            if (!string.IsNullOrEmpty(kode))
+            {
+                existing = await db.MasterBarang.FirstOrDefaultAsync(b => b.KodeBarang == kode);
+            }
+            else
+            {
+                existing = await db.MasterBarang.FirstOrDefaultAsync(b => b.NamaBarang == nama);
+            }
+
             if (existing is null)
             {
+                if (string.IsNullOrEmpty(kode))
+                {
+                    kode = $"BRG-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}";
+                }
+                if (kode.Length > 20) kode = kode.Substring(0, 20);
+
+                if (!kodeInExcel.Add(kode)) continue;
+
                 db.MasterBarang.Add(new MasterBarang
                 {
                     KodeBarang = kode,
@@ -122,6 +177,7 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
                 existing.NamaBarang = nama;
                 existing.IsAktif = true;
                 updated++;
+                kodeInExcel.Add(existing.KodeBarang);
             }
         }
 

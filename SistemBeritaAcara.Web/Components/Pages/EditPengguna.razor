@@ -108,7 +108,8 @@ else
                         @(appUser.IsDeleted ? "Nonaktif" : "Aktif")
                     </span>
                     <div class="toggle-switch @(appUser.IsDeleted ? "" : "active")"
-                         @onclick="ToggleStatusAsync" style="cursor:pointer;"></div>
+                         @onclick="ToggleStatusAsync" 
+                         style="cursor:@(appUser.IsDeleted && pegawai is not null && !pegawai.IsAktif ? "not-allowed" : "pointer"); opacity:@(appUser.IsDeleted && pegawai is not null && !pegawai.IsAktif ? "0.5" : "1");"></div>
                 </div>
                 <div style="font-size:13px;color:var(--text-muted);">
                     @(appUser.IsDeleted ? "Pengguna tidak dapat login" : "Pengguna dapat mengakses sistem")
@@ -218,6 +219,14 @@ else
     private async Task ToggleStatusAsync()
     {
         if (appUser is null) return;
+        
+        if (appUser.IsDeleted && pegawai is not null && !pegawai.IsAktif)
+        {
+            errorMsg = "Tidak dapat mengaktifkan akun karena status Pegawai sedang nonaktif. Silakan aktifkan Pegawai melalui Excel terlebih dahulu.";
+            successMsg = string.Empty;
+            return;
+        }
+
         appUser.IsDeleted = !appUser.IsDeleted;
         if (appUser.IsDeleted)
         {
