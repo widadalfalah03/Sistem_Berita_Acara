@@ -6,110 +6,254 @@
 @inject IDocumentService DocumentService
 @inject INotificationService NotificationService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 @layout EmptyLayout
 @rendermode InteractiveServer
 
-<PageTitle>Tanda Tangan Berita Acara — Sistem Berita Acara</PageTitle>
+<PageTitle>Tanda Tangan Berita Acara — Pertamina Patra Niaga</PageTitle>
 
-<div class="login-page" style="background:var(--bg);">
-    <div style="width:100%;max-width:600px;">
-        <!-- Header card -->
-        <div style="background:var(--primary);border-radius:var(--radius-xl) var(--radius-xl) 0 0;padding:24px 32px;color:white;">
-            <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;opacity:0.8;margin-bottom:4px;">Pertamina Patra Niaga</div>
-            <div style="font-size:22px;font-weight:800;">Tanda Tangan Berita Acara</div>
+<style>
+    .pj-layout { display:grid; grid-template-columns:1fr 420px; min-height:100vh; }
+    .pj-preview { background:#E8EAF0; position:sticky; top:0; height:100vh; overflow:hidden; }
+    .pj-preview iframe { width:100%; height:100%; border:none; display:block; }
+    .pj-form-wrap { overflow-y:auto; padding:32px; background:var(--bg); min-height:100vh; }
+    .pj-header { background:var(--primary); border-radius:var(--radius-xl); padding:20px 24px; color:white; margin-bottom:24px; }
+    .pj-header-sub { font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; opacity:0.75; margin-bottom:2px; }
+    .pj-header-title { font-size:20px; font-weight:800; }
+    .ba-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:20px; }
+    .ba-info-item label { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.04em; display:block; margin-bottom:2px; }
+    .ba-info-item span { font-size:14px; font-weight:700; color:var(--text-primary); }
+    .tab-bar { display:flex; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:16px; }
+    .tab-btn { flex:1; padding:10px 8px; font-size:13px; font-weight:600; border:none; background:none; cursor:pointer; color:var(--text-secondary); transition:all .15s; }
+    .tab-btn.active { background:var(--primary); color:white; }
+    .canvas-wrap { border:2px dashed var(--border); border-radius:var(--radius); background:white; overflow:hidden; margin-bottom:8px; }
+    .canvas-wrap canvas { width:100%; height:160px; display:block; touch-action:none; cursor:crosshair; }
+    .success-box { text-align:center; padding:40px 24px; }
+    .success-icon { width:72px; height:72px; border-radius:50%; background:#F0FDF4; color:#22C55E; display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 20px; }
+    .error-box { background:var(--danger-light); border:1px solid var(--danger); border-radius:var(--radius); padding:12px 16px; margin-bottom:16px; color:var(--danger); font-size:14px; }
+    @@media (max-width: 900px) {
+        .pj-layout { grid-template-columns:1fr; }
+        .pj-preview { display:none; }
+    }
+</style>
+
+@if (isLoading)
+{
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;background:var(--bg);">
+        <div class="spinner" style="width:40px;height:40px;border-width:4px;"></div>
+        <div style="color:var(--text-secondary);">Memvalidasi link...</div>
+    </div>
+}
+else if (!isValidToken)
+{
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);">
+        <div style="text-align:center;max-width:400px;padding:40px;">
+            <div style="width:72px;height:72px;border-radius:50%;background:var(--danger-light);color:var(--danger);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px;">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div style="font-size:22px;font-weight:800;margin-bottom:12px;">Link Tidak Valid</div>
+            <div style="font-size:14px;color:var(--text-secondary);line-height:1.6;">
+                Link ini sudah kadaluarsa atau telah digunakan sebelumnya.<br>
+                Silakan hubungi Admin Gudang & Barang untuk mendapatkan link baru.
+            </div>
         </div>
-
-        <div style="background:var(--surface);border-radius:0 0 var(--radius-xl) var(--radius-xl);padding:32px;box-shadow:var(--shadow-lg);">
-            @if (isLoading)
+    </div>
+}
+else if (alreadySigned)
+{
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);">
+        <div class="success-box" style="max-width:400px;">
+            <div class="success-icon"><i class="bi bi-check-circle-fill"></i></div>
+            <div style="font-size:22px;font-weight:800;margin-bottom:12px;">Tanda Tangan Berhasil!</div>
+            <div style="font-size:14px;color:var(--text-secondary);line-height:1.6;">
+                Berita Acara <strong>@ba!.NomorSurat</strong> telah berhasil Anda tandatangani
+                dan diteruskan ke Approver untuk persetujuan.
+            </div>
+            <div style="margin-top:24px;font-size:12px;color:var(--text-muted);">
+                Anda dapat menutup halaman ini.
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="pj-layout">
+        <!-- ═══ LEFT: PDF Preview ═══ -->
+        <div class="pj-preview">
+            @if (!string.IsNullOrEmpty(pdfPath))
             {
-                <div class="loading-spinner"><div class="spinner"></div><span>Memvalidasi token...</span></div>
+                <iframe src="/@pdfPath?v=@cacheBreaker#toolbar=1&navpanes=0" title="Pratinjau Berita Acara"></iframe>
             }
-            else if (!isValidToken)
+            else
             {
-                <div style="text-align:center;padding:32px 0;">
-                    <div style="width:64px;height:64px;border-radius:50%;background:var(--danger-light);color:var(--danger);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;">
-                        <i class="bi bi-exclamation-triangle"></i>
-                    </div>
-                    <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Token Tidak Valid</div>
-                    <div style="font-size:14px;color:var(--text-secondary);">
-                        Link ini sudah kadaluarsa atau telah digunakan sebelumnya.<br>Hubungi Admin Gudang untuk mendapatkan link baru.
-                    </div>
+                <div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:12px;color:var(--text-muted);">
+                    <i class="bi bi-file-earmark-pdf" style="font-size:48px;"></i>
+                    <div>Dokumen belum tersedia</div>
                 </div>
             }
-            else if (alreadySigned)
+        </div>
+
+        <!-- ═══ RIGHT: Form TTD ═══ -->
+        <div class="pj-form-wrap">
+            <div class="pj-header">
+                <div class="pj-header-sub">Pertamina Patra Niaga</div>
+                <div class="pj-header-title">Tanda Tangan Berita Acara</div>
+            </div>
+
+            <!-- BA Info -->
+            <div class="ba-info-grid">
+                <div class="ba-info-item">
+                    <label>No. Surat</label>
+                    <span>@ba!.NomorSurat</span>
+                </div>
+                <div class="ba-info-item">
+                    <label>Jenis</label>
+                    <span>@ba.Jenis</span>
+                </div>
+                <div class="ba-info-item">
+                    <label>Tanggal</label>
+                    <span>@ba.Tanggal.ToString("dd MMMM yyyy")</span>
+                </div>
+                <div class="ba-info-item">
+                    <label>Penerima (PJ)</label>
+                    <span>@ba.Pj?.Nama</span>
+                </div>
+            </div>
+
+            <div style="font-size:13px;color:var(--text-secondary);background:var(--primary-light);border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
+                <i class="bi bi-info-circle" style="color:var(--primary);margin-top:1px;flex-shrink:0;"></i>
+                <span>Silakan review dokumen di sebelah kiri, lalu berikan tanda tangan Anda di bawah ini.</span>
+            </div>
+
+            @if (!string.IsNullOrEmpty(actionMessage))
             {
-                <div style="text-align:center;padding:32px 0;">
-                    <div style="width:64px;height:64px;border-radius:50%;background:#F0FDF4;color:#22C55E;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                    <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Tanda Tangan Berhasil</div>
-                    <div style="font-size:14px;color:var(--text-secondary);">
-                        Berita Acara <strong>@ba!.NomorSurat</strong> telah berhasil ditandatangani dan diteruskan ke Approver.
-                    </div>
+                <div class="error-box"><i class="bi bi-exclamation-circle-fill"></i> @actionMessage</div>
+            }
+
+            <!-- Tab -->
+            <div class="tab-bar">
+                <button class="tab-btn @(activeTab == "draw" ? "active" : "")" @onclick='() => SwitchTab("draw")'>
+                    <i class="bi bi-pen" style="margin-right:6px;"></i>Gambar TTD
+                </button>
+                <button class="tab-btn @(activeTab == "upload" ? "active" : "")" @onclick='() => SwitchTab("upload")'>
+                    <i class="bi bi-upload" style="margin-right:6px;"></i>Upload File
+                </button>
+            </div>
+
+            @if (activeTab == "draw")
+            {
+                <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">Gambar tanda tangan Anda di kotak ini:</div>
+                <div class="canvas-wrap">
+                    <canvas id="pjSignCanvas" width="800" height="200"
+                            style="height:160px;"
+                            @onmousedown="OnCanvasMouseDown"
+                            @onmousemove="OnCanvasMouseMove"
+                            @onmouseup="OnMouseUp"
+                            @onmouseleave="OnMouseUp"
+                            @ontouchstart="OnTouchStart"
+                            @ontouchmove="OnTouchMove"
+                            @ontouchend="OnTouchEnd"></canvas>
+                </div>
+                <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+                    <button type="button" class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
+                        <i class="bi bi-trash"></i> Bersihkan
+                    </button>
                 </div>
             }
             else
             {
-                <!-- BA Info -->
-                <div style="background:var(--bg);border-radius:var(--radius);padding:16px;margin-bottom:24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);">No. Surat</div>
-                        <div style="font-weight:700;">@ba!.NomorSurat</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);">Jenis</div>
-                        <div style="font-weight:700;">@ba.Jenis</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);">Tanggal</div>
-                        <div style="font-weight:700;">@ba.Tanggal.ToString("dd MMMM yyyy")</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);">Penerima (PJ)</div>
-                        <div style="font-weight:700;">@ba.Pj?.Nama</div>
-                    </div>
-                </div>
-
-                @if (!string.IsNullOrEmpty(actionMessage))
-                {
-                    <div class="login-error" style="margin-bottom:16px;">@actionMessage</div>
-                }
-
-                <div style="font-size:16px;font-weight:700;margin-bottom:16px;">
-                    Upload Tanda Tangan Anda
-                </div>
-
                 <div class="upload-area" style="cursor:default;margin-bottom:20px;">
-                    <i class="bi bi-pen"></i>
+                    <i class="bi bi-image"></i>
                     <div class="upload-text">Upload File Tanda Tangan</div>
-                    <div class="upload-hint">PNG, JPG · Latar belakang transparan lebih baik · Maks 5MB</div>
+                    <div class="upload-hint">PNG dengan latar transparan lebih baik · Maks 5MB</div>
                     <div style="margin-top:16px;">
-                        <InputFile OnChange="OnFileSelected" accept="image/*"
-                                   style="display:block;margin:0 auto;font-size:13px;" />
+                        <InputFile OnChange="OnFileSelected" accept="image/*" style="display:block;margin:0 auto;font-size:13px;" />
                     </div>
                 </div>
-
                 @if (selectedFile is not null)
                 {
-                    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#F0FDF4;border-radius:var(--radius);margin-bottom:20px;font-size:14px;color:#16A34A;">
-                        <i class="bi bi-check-circle-fill"></i>
-                        File dipilih: <strong>@selectedFile.Name</strong>
+                    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#F0FDF4;border-radius:var(--radius);margin-bottom:20px;font-size:13px;color:#16A34A;">
+                        <i class="bi bi-check-circle-fill"></i> <strong>@selectedFile.Name</strong>
                     </div>
                 }
-
-                <button class="login-btn" @onclick="SubmitSignatureAsync" disabled="@(selectedFile is null || isSubmitting)">
-                    @if (isSubmitting) { <span>Mengirim...</span> }
-                    else { <span><i class="bi bi-send" style="margin-right:8px;"></i>Kirim Tanda Tangan</span> }
-                </button>
             }
+
+            <button class="btn btn-primary" style="width:100%;padding:14px;" @onclick="SubmitSignatureAsync" disabled="@isSubmitting">
+                @if (isSubmitting)
+                {
+                    <span class="spinner" style="width:18px;height:18px;border-width:2px;border-color:white;border-top-color:transparent;display:inline-block;margin-right:10px;"></span>
+                    <span>Mengirim Tanda Tangan...</span>
+                }
+                else
+                {
+                    <i class="bi bi-send-fill" style="margin-right:8px;"></i>
+                    <span>Kirim Tanda Tangan</span>
+                }
+            </button>
+
+            <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--text-muted);">
+                Dengan mengirim tanda tangan, Anda menyatakan menyetujui isi Berita Acara ini.
+            </div>
         </div>
     </div>
-</div>
+}
+
+<script>
+    window.pjCanvas = {
+        _drawing: false,
+        init() {
+            var c = document.getElementById('pjSignCanvas');
+            if (!c) return;
+            var ctx = c.getContext('2d');
+            ctx.clearRect(0, 0, c.width, c.height);
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        },
+        _pos(c, e) {
+            var r = c.getBoundingClientRect();
+            var sx = c.width / r.width, sy = c.height / r.height;
+            var src = e.touches ? e.touches[0] : e;
+            return { x: (src.clientX - r.left) * sx, y: (src.clientY - r.top) * sy };
+        },
+        start(e) {
+            var c = document.getElementById('pjSignCanvas'); if (!c) return;
+            this._drawing = true;
+            var p = this._pos(c, e);
+            var ctx = c.getContext('2d');
+            ctx.beginPath(); ctx.moveTo(p.x, p.y);
+        },
+        move(e) {
+            if (!this._drawing) return;
+            var c = document.getElementById('pjSignCanvas'); if (!c) return;
+            var p = this._pos(c, e);
+            var ctx = c.getContext('2d');
+            ctx.lineTo(p.x, p.y); ctx.stroke();
+        },
+        stop() { this._drawing = false; },
+        clear() {
+            var c = document.getElementById('pjSignCanvas'); if (!c) return;
+            c.getContext('2d').clearRect(0, 0, c.width, c.height);
+        },
+        isEmpty() {
+            var c = document.getElementById('pjSignCanvas'); if (!c) return true;
+            var d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+            for (var i = 3; i < d.length; i += 4) { if (d[i] > 0) return false; }
+            return true;
+        },
+        getDataUrl() {
+            var c = document.getElementById('pjSignCanvas');
+            return c ? c.toDataURL('image/png') : null;
+        }
+    };
+</script>
 
 @code {
     [Parameter] public string Token { get; set; } = string.Empty;
 
     private BeritaAcaraEntity? ba;
+    private SistemBeritaAcara.Core.Entities.ApplicationUser? approverUser;
     private ApprovalToken? approvalToken;
     private bool isLoading = true;
     private bool isValidToken;
@@ -117,48 +261,152 @@
     private bool isSubmitting;
     private string actionMessage = string.Empty;
     private IBrowserFile? selectedFile;
+    private string activeTab = "draw";
+    private string? pdfPath;
+    private long cacheBreaker;
+
+    private bool _isDrawing = false;
 
     protected override async Task OnInitializedAsync()
     {
         approvalToken = await DbContext.ApprovalToken
             .Include(t => t.BeritaAcara).ThenInclude(b => b.Pj)
+            .Include(t => t.BeritaAcara).ThenInclude(b => b.Mengetahui)
             .FirstOrDefaultAsync(t => t.Token == Token && t.UsedAt == null && t.ExpiresAt > DateTime.Now);
 
         if (approvalToken is null) { isValidToken = false; isLoading = false; return; }
 
         ba = approvalToken.BeritaAcara;
         isValidToken = ba is not null;
+        approverUser = ba?.Mengetahui;
+
+        if (ba?.DocxPath != null)
+        {
+            var pdfRelative = ba.DocxPath.Replace(".docx", ".pdf");
+            var pdfPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                pdfRelative.Replace("/", Path.DirectorySeparatorChar.ToString()));
+            if (File.Exists(pdfPhysical))
+            {
+                pdfPath = pdfRelative;
+                cacheBreaker = DateTime.Now.Ticks;
+            }
+        }
+
         isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && isValidToken && !alreadySigned)
+            await JS.InvokeVoidAsync("pjCanvas.init");
+    }
+
+    private async Task SwitchTab(string tab)
+    {
+        activeTab = tab;
+        if (tab == "draw")
+        {
+            await Task.Delay(50);
+            await JS.InvokeVoidAsync("pjCanvas.init");
+        }
     }
 
     private void OnFileSelected(InputFileChangeEventArgs e) => selectedFile = e.File;
 
+    private async Task OnCanvasMouseDown(MouseEventArgs e)
+    {
+        _isDrawing = true;
+        await JS.InvokeVoidAsync("pjCanvas.start", e);
+    }
+    private async Task OnCanvasMouseMove(MouseEventArgs e)
+    {
+        if (!_isDrawing) return;
+        await JS.InvokeVoidAsync("pjCanvas.move", e);
+    }
+    private void OnMouseUp(MouseEventArgs e) => _isDrawing = false;
+    private void OnTouchEnd(TouchEventArgs e) => _isDrawing = false;
+
+    private async Task OnTouchStart(TouchEventArgs e)
+    {
+        _isDrawing = true;
+        await JS.InvokeVoidAsync("pjCanvas.start", e);
+    }
+    private async Task OnTouchMove(TouchEventArgs e)
+    {
+        if (!_isDrawing) return;
+        await JS.InvokeVoidAsync("pjCanvas.move", e);
+    }
+
+    private async Task ClearCanvasAsync()
+        => await JS.InvokeVoidAsync("pjCanvas.clear");
+
     private async Task SubmitSignatureAsync()
     {
-        if (selectedFile is null) return;
         isSubmitting = true;
         actionMessage = string.Empty;
         try
         {
-            var ext = Path.GetExtension(selectedFile.Name);
             var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
             Directory.CreateDirectory(folder);
-            var fname = $"ba-{ba!.Id}-pj{ext}";
-            var fpath = Path.Combine(folder, fname);
-            await using (var fs = File.Create(fpath))
+            string fpath;
+            string fname;
+
+            if (activeTab == "draw")
             {
+                bool isEmpty = await JS.InvokeAsync<bool>("pjCanvas.isEmpty");
+                if (isEmpty)
+                {
+                    actionMessage = "Silakan gambar tanda tangan Anda terlebih dahulu.";
+                    isSubmitting = false;
+                    return;
+                }
+                var dataUrl = await JS.InvokeAsync<string>("pjCanvas.getDataUrl");
+                var bytes = Convert.FromBase64String(dataUrl.Split(',')[1]);
+                fname = $"ba-{ba!.Id}-pj.png";
+                fpath = Path.Combine(folder, fname);
+                await File.WriteAllBytesAsync(fpath, bytes);
+            }
+            else
+            {
+                if (selectedFile is null)
+                {
+                    actionMessage = "Silakan pilih file tanda tangan terlebih dahulu.";
+                    isSubmitting = false;
+                    return;
+                }
+                var ext = Path.GetExtension(selectedFile.Name);
+                fname = $"ba-{ba!.Id}-pj{ext}";
+                fpath = Path.Combine(folder, fname);
+                await using var fs = File.Create(fpath);
                 await selectedFile.OpenReadStream(5_000_000).CopyToAsync(fs);
             }
 
-            ba.TtdPjPath = $"files/signatures/{fname}";
+            ba!.TtdPjPath = $"files/signatures/{fname}";
             ba.Status = "WaitingApproval";
             ba.PjSignedAt = DateTime.Now;
             approvalToken!.UsedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
 
             await DocumentService.EmbedTtdPjAsync(ba.Id, fpath);
-            await NotificationService.SendToRoleAsync("Approver", "WAITING_APPROVAL", $"BA {ba.NomorSurat} menunggu approval.", ba.Id);
-            await NotificationService.SendToRoleAsync("AdminGudangBarang", "PJ_SIGNED", $"BA {ba.NomorSurat} telah ditandatangani PJ.", ba.Id);
+
+            // Auto-embed approver preview so draft PDF is ready for the approver
+            if (approverUser != null && !string.IsNullOrWhiteSpace(approverUser.TtdPath))
+            {
+                var approverTtdPhysical = Path.Combine(
+                    Directory.GetCurrentDirectory(), "wwwroot",
+                    approverUser.TtdPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(approverTtdPhysical))
+                {
+                    try { await DocumentService.EmbedTtdPreviewApproverAsync(ba.Id, approverTtdPhysical); }
+                    catch { /* non-critical */ }
+                }
+            }
+
+            await NotificationService.SendToRoleAsync("Approver", "WAITING_APPROVAL",
+                $"BA {ba.NomorSurat} menunggu approval Anda.", ba.Id);
+            await NotificationService.SendToRoleAsync("AdminGudangBarang", "PJ_SIGNED",
+                $"BA {ba.NomorSurat} telah ditandatangani PJ ({ba.Pj?.Nama}).", ba.Id);
+
             alreadySigned = true;
         }
         catch (Exception ex) { actionMessage = $"Gagal: {ex.Message}"; }

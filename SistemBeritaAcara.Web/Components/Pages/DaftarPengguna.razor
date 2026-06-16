@@ -1,0 +1,197 @@
+@page "/pengguna"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using SistemBeritaAcara.Core.Entities
+@using SistemBeritaAcara.Infrastructure.Data
+@inject AppDbContext DbCtx
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
+
+@if (isLoading)
+{
+    <div class="page-loading">
+        <div class="spinner"></div>
+        <p>Memuat data pengguna...</p>
+    </div>
+}
+else
+{
+    <div class="page-header d-flex align-center justify-between">
+        <div>
+            <h1 class="page-title">Daftar Pengguna</h1>
+            <p class="page-subtitle">Kelola akun pengguna sistem Berita Acara</p>
+        </div>
+        <NavLink class="btn btn-primary" href="/tambah-pengguna">
+            <i class="bi bi-plus-lg"></i>
+            Tambah Pengguna
+        </NavLink>
+    </div>
+
+    <div class="stat-cards" style="margin-bottom:24px;">
+        <div class="stat-card">
+            <div class="stat-card-icon total"><i class="bi bi-people"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Total Pengguna</div>
+                <div class="stat-card-value">@stats.Total</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon neutral"><i class="bi bi-shield-lock"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Admin IT</div>
+                <div class="stat-card-value">@stats.AdminIT</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Admin Gudang</div>
+                <div class="stat-card-value green">@stats.AdminGudang</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon progress"><i class="bi bi-person-check"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Approver</div>
+                <div class="stat-card-value blue">@stats.Approver</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-bar">
+        <div class="search-input" style="max-width:320px;">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Cari nama atau email..."
+                   @bind="userSearch" @bind:event="oninput" />
+        </div>
+        <select class="filter-select" @bind="roleFilter">
+            <option value="">Semua Role</option>
+            <option value="AdminIT">Admin IT</option>
+            <option value="AdminGudangBarang">Admin Gudang</option>
+            <option value="Approver">Approver</option>
+        </select>
+        <label class="toggle-wrapper" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">
+            <div class="toggle-switch @(showInactive ? "active" : "")" @onclick="() => showInactive = !showInactive"></div>
+            <span>Tampilkan Non-Aktif</span>
+        </label>
+    </div>
+
+    <div class="card">
+        @if (!FilteredUsers.Any())
+        {
+            <div style="text-align:center;padding:48px;color:var(--text-muted);">
+                <i class="bi bi-people" style="font-size:36px;display:block;margin-bottom:12px;"></i>
+                <div style="font-weight:600;margin-bottom:4px;">Tidak ada pengguna ditemukan</div>
+                <div style="font-size:13px;">Coba ubah filter pencarian atau tambah pengguna baru.</div>
+            </div>
+        }
+        else
+        {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nama / NIP</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>TTD</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in FilteredUsers)
+                    {
+                        <tr>
+                            <td>
+                                <div class="cell-main">@u.Nama</div>
+                                <div class="cell-sub">NIP: @(u.Pegawai?.NoPekerja ?? "-")</div>
+                            </td>
+                            <td>@u.Email</td>
+                            <td>
+                                <span class="pill @GetRolePill(u.Role)">@GetRoleLabel(u.Role)</span>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(u.TtdPath))
+                                {
+                                    <span class="status-dot active" style="font-size:12px;">
+                                        <i class="bi bi-check-circle-fill"></i> Ada
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="status-dot inactive" style="font-size:12px;">
+                                        <i class="bi bi-x-circle"></i> Belum
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                @if (!u.IsDeleted)
+                                {
+                                    <span class="status-dot active">Aktif</span>
+                                }
+                                else
+                                {
+                                    <span class="status-dot inactive">Nonaktif</span>
+                                }
+                            </td>
+                            <td style="text-align:right;">
+                                <NavLink href="@($"/edit-pengguna/{u.Id}")" class="btn btn-secondary btn-sm">
+                                    <i class="bi bi-pencil"></i>
+                                    Edit
+                                </NavLink>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private List<ApplicationUser> allUsers = new();
+    private string userSearch = string.Empty;
+    private string roleFilter = string.Empty;
+    private bool showInactive = false;
+    private (int Total, int AdminIT, int AdminGudang, int Approver) stats;
+
+    private IEnumerable<ApplicationUser> FilteredUsers => allUsers
+        .Where(u => showInactive || !u.IsDeleted)
+        .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
+        .Where(u => string.IsNullOrEmpty(userSearch) ||
+                    u.Nama.Contains(userSearch, StringComparison.OrdinalIgnoreCase) ||
+                    (u.Email ?? "").Contains(userSearch, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        allUsers = await DbCtx.Users
+            .Include(u => u.Pegawai)
+            .OrderBy(u => u.Nama)
+            .ToListAsync();
+
+        stats.Total = allUsers.Count(u => !u.IsDeleted);
+        stats.AdminIT = allUsers.Count(u => u.Role == "AdminIT" && !u.IsDeleted);
+        stats.AdminGudang = allUsers.Count(u => u.Role == "AdminGudangBarang" && !u.IsDeleted);
+        stats.Approver = allUsers.Count(u => u.Role == "Approver" && !u.IsDeleted);
+
+        isLoading = false;
+    }
+
+    private static string GetRolePill(string role) => role switch
+    {
+        "AdminIT" => "pill-admin-it",
+        "AdminGudangBarang" => "pill-admin-gudang",
+        "Approver" => "pill-approver",
+        _ => "pill-draft"
+    };
+
+    private static string GetRoleLabel(string role) => role switch
+    {
+        "AdminIT" => "Admin IT",
+        "AdminGudangBarang" => "Admin Gudang",
+        "Approver" => "Approver",
+        _ => role
+    };
+}

@@ -343,13 +343,16 @@ else
         {
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
             var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
-            if (currentUser is null || string.IsNullOrWhiteSpace(currentUser.TtdPath) || !File.Exists(currentUser.TtdPath))
+            var approverTtdPhysical = string.IsNullOrWhiteSpace(currentUser?.TtdPath)
+                ? null
+                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            if (currentUser is null || approverTtdPhysical is null || !File.Exists(approverTtdPhysical))
             {
-                actionMessage = "Gagal: Approver belum memiliki file TTD yang valid. Hubungi Admin IT.";
+                actionMessage = "Gagal: Approver belum memiliki file TTD yang valid. Silakan setup TTD di halaman Profil terlebih dahulu.";
                 isProcessing = false;
                 return;
             }
-            await DocumentService.EmbedTtdMengetahuiAsync(ba!.Id, currentUser.TtdPath);
+            await DocumentService.EmbedTtdMengetahuiAsync(ba!.Id, approverTtdPhysical);
             ba!.Status = "Approved";
             ba.ApprovedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();

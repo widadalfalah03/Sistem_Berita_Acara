@@ -302,24 +302,20 @@ else if (currentRole == "Approver")
 }
 else if (currentRole == "AdminIT")
 {
-    <!-- ════ DASHBOARD ADMIN IT (Daftar Pengguna) ════ -->
-    <div class="page-header d-flex align-center justify-between">
-        <div>
-            <h1 class="page-title">Daftar Pengguna</h1>
-            <p class="page-subtitle">Kelola akun pengguna sistem Berita Acara</p>
-        </div>
-        <NavLink class="btn btn-primary" href="/tambah-pengguna">
-            <i class="bi bi-plus-lg"></i>
-            Tambah Pengguna
-        </NavLink>
+    <!-- ════ DASHBOARD ADMIN IT ════ -->
+    <div class="page-header">
+        <h1 class="page-title">Dashboard Admin IT</h1>
+        <p class="page-subtitle">Ringkasan sistem dan aktivitas Berita Acara Pertamina Patra Niaga</p>
     </div>
 
-    <div class="stat-cards">
+    <!-- Stat Cards row 1: Pengguna -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;">
         <div class="stat-card">
-            <div class="stat-card-icon total"><i class="bi bi-people"></i></div>
+            <div class="stat-card-icon total"><i class="bi bi-people-fill"></i></div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Total Pengguna</div>
+                <div class="stat-card-label">Total Pengguna Sistem</div>
                 <div class="stat-card-value">@userStats.Total</div>
+                <div class="stat-card-desc">Akun aktif</div>
             </div>
         </div>
         <div class="stat-card">
@@ -327,6 +323,7 @@ else if (currentRole == "AdminIT")
             <div class="stat-card-info">
                 <div class="stat-card-label">Admin IT</div>
                 <div class="stat-card-value">@userStats.AdminIT</div>
+                <div class="stat-card-desc">Superadmin sistem</div>
             </div>
         </div>
         <div class="stat-card">
@@ -334,80 +331,124 @@ else if (currentRole == "AdminIT")
             <div class="stat-card-info">
                 <div class="stat-card-label">Admin Gudang</div>
                 <div class="stat-card-value green">@userStats.AdminGudang</div>
+                <div class="stat-card-desc">Pembuat Berita Acara</div>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-card-icon progress"><i class="bi bi-person-check"></i></div>
+            <div class="stat-card-icon progress"><i class="bi bi-person-check-fill"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Approver</div>
                 <div class="stat-card-value blue">@userStats.Approver</div>
+                <div class="stat-card-desc">Penanda tangan akhir</div>
             </div>
         </div>
     </div>
 
-    <!-- Search & Filter -->
-    <div class="search-bar">
-        <div class="search-input" style="max-width:320px;">
-            <i class="bi bi-search"></i>
-            <input type="text" placeholder="Cari nama atau email..."
-                   @bind="userSearch" @bind:event="oninput" />
+    <!-- Stat Cards row 2: Data Master -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+        <div class="stat-card">
+            <div class="stat-card-icon draft"><i class="bi bi-person-badge-fill"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Total Pegawai</div>
+                <div class="stat-card-value">@itStats.TotalPegawai</div>
+                <div class="stat-card-desc">Data master pegawai</div>
+            </div>
         </div>
-        <select class="filter-select" @bind="roleFilter">
-            <option value="">Semua Role</option>
-            <option value="AdminIT">Admin IT</option>
-            <option value="AdminGudangBarang">Admin Gudang</option>
-            <option value="Approver">Approver</option>
-        </select>
-        <div class="toggle-wrapper" @onclick="() => { showInactive = !showInactive; }">
-            <div class="toggle-switch @(showInactive ? "active" : "")"></div>
-            <span>Tampilkan Non-Aktif</span>
+        <div class="stat-card">
+            <div class="stat-card-icon neutral"><i class="bi bi-cpu-fill"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Jenis Perangkat</div>
+                <div class="stat-card-value">@itStats.TotalBarang</div>
+                <div class="stat-card-desc">Data master barang</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon approved"><i class="bi bi-file-earmark-check-fill"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Total BA Disetujui</div>
+                <div class="stat-card-value green">@itStats.TotalApproved</div>
+                <div class="stat-card-desc">Seluruh sistem</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon progress"><i class="bi bi-hourglass-split"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">BA Sedang Diproses</div>
+                <div class="stat-card-value blue">@itStats.TotalProgress</div>
+                <div class="stat-card-desc">Menunggu TTD / Approval</div>
+            </div>
         </div>
     </div>
 
+    <!-- Quick Access Cards -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+        <NavLink href="/pengguna" class="stat-card" style="text-decoration:none;display:flex;cursor:pointer;transition:box-shadow 0.2s;"
+                 onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''">
+            <div class="stat-card-icon total"><i class="bi bi-people"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label" style="font-size:14px;font-weight:700;color:var(--text-primary);">Kelola Pengguna</div>
+                <div class="stat-card-desc">Tambah, edit, atau nonaktifkan akun pengguna sistem →</div>
+            </div>
+        </NavLink>
+        <NavLink href="/data-pegawai" class="stat-card" style="text-decoration:none;display:flex;cursor:pointer;transition:box-shadow 0.2s;"
+                 onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''">
+            <div class="stat-card-icon draft"><i class="bi bi-person-badge"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label" style="font-size:14px;font-weight:700;color:var(--text-primary);">Data Pegawai</div>
+                <div class="stat-card-desc">Import & kelola data master pegawai dari Excel →</div>
+            </div>
+        </NavLink>
+        <NavLink href="/data-barang" class="stat-card" style="text-decoration:none;display:flex;cursor:pointer;transition:box-shadow 0.2s;"
+                 onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''">
+            <div class="stat-card-icon neutral"><i class="bi bi-box-seam"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label" style="font-size:14px;font-weight:700;color:var(--text-primary);">Data Barang</div>
+                <div class="stat-card-desc">Import & kelola master perangkat keras →</div>
+            </div>
+        </NavLink>
+    </div>
+
+    <!-- Recent Activity -->
     <div class="card">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Nama / NIP</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Tanggal Dibuat</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var u in FilteredUsers)
-                {
+        <div class="card-header">
+            <h3>Aktivitas Berita Acara Terbaru</h3>
+            <span style="font-size:13px;color:var(--text-muted);">Seluruh sistem</span>
+        </div>
+        @if (!itStats.RecentBA.Any())
+        {
+            <div style="text-align:center;padding:40px;color:var(--text-muted);">
+                <i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:12px;"></i>
+                Belum ada aktivitas Berita Acara
+            </div>
+        }
+        else
+        {
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <td>
-                            <div class="cell-main">@u.Nama</div>
-                            <div class="cell-sub">NIP: @(u.Pegawai?.NoPekerja ?? "-")</div>
-                        </td>
-                        <td>@u.Email</td>
-                        <td>
-                            <span class="pill @GetRolePill(u.Role)">@GetRoleLabel(u.Role)</span>
-                        </td>
-                        <td>-</td>
-                        <td>
-                            @if (!u.IsDeleted)
-                            {
-                                <span class="status-dot active">Aktif</span>
-                            }
-                            else
-                            {
-                                <span class="status-dot inactive">Nonaktif</span>
-                            }
-                        </td>
-                        <td>
-                            <NavLink href="@($"/edit-pengguna/{u.Id}")" class="btn-icon">
-                                <i class="bi bi-pencil"></i>
-                            </NavLink>
-                        </td>
+                        <th>No. Surat</th>
+                        <th>Jenis</th>
+                        <th>Penanggung Jawab</th>
+                        <th>Dibuat Oleh</th>
+                        <th>Tanggal</th>
+                        <th>Status</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var ba in itStats.RecentBA)
+                    {
+                        <tr>
+                            <td class="fw-semibold text-primary">@(ba.NomorSurat ?? "Draft")</td>
+                            <td><span class="pill @GetJenisPill(ba.Jenis)" style="font-size:11px;">@ba.Jenis</span></td>
+                            <td>@ba.Pj?.Nama</td>
+                            <td>@ba.Creator?.Nama</td>
+                            <td>@ba.Tanggal.ToString("dd MMM yyyy")</td>
+                            <td><span class="pill @GetStatusPill(ba.Status)" style="font-size:11px;">@GetStatusLabel(ba.Status)</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
     </div>
 }
 
@@ -428,19 +469,18 @@ else if (currentRole == "AdminIT")
 
     // AdminIT stats
     private (int Total, int AdminIT, int AdminGudang, int Approver) userStats;
-    private List<ApplicationUser> allUsers = new();
-    private string userSearch = string.Empty;
-    private string roleFilter = string.Empty;
-    private bool showInactive = false;
+    private AdminITStats itStats = new();
+
+    private sealed class AdminITStats
+    {
+        public int TotalPegawai { get; set; }
+        public int TotalBarang { get; set; }
+        public int TotalApproved { get; set; }
+        public int TotalProgress { get; set; }
+        public List<BAEntity> RecentBA { get; set; } = new();
+    }
 
     [Inject] private AppDbContext DbCtx { get; set; } = null!;
-
-    private IEnumerable<ApplicationUser> FilteredUsers => allUsers
-        .Where(u => showInactive || !u.IsDeleted)
-        .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
-        .Where(u => string.IsNullOrEmpty(userSearch) ||
-                    u.Nama.Contains(userSearch, StringComparison.OrdinalIgnoreCase) ||
-                    (u.Email ?? "").Contains(userSearch, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
@@ -548,15 +588,24 @@ else if (currentRole == "AdminIT")
 
     private async Task LoadAdminITDataAsync()
     {
-        allUsers = await DbCtx.Users
-            .Include(u => u.Pegawai)
-            .OrderBy(u => u.Nama)
-            .ToListAsync();
-
+        var allUsers = await DbCtx.Users.ToListAsync();
         userStats.Total = allUsers.Count(u => !u.IsDeleted);
         userStats.AdminIT = allUsers.Count(u => u.Role == "AdminIT" && !u.IsDeleted);
         userStats.AdminGudang = allUsers.Count(u => u.Role == "AdminGudangBarang" && !u.IsDeleted);
         userStats.Approver = allUsers.Count(u => u.Role == "Approver" && !u.IsDeleted);
+
+        itStats.TotalPegawai = await DbCtx.Pegawai.CountAsync();
+        itStats.TotalBarang = await DbCtx.MasterBarang.CountAsync();
+        itStats.TotalApproved = await DbCtx.Set<BAEntity>().CountAsync(b => b.Status == "Approved");
+        itStats.TotalProgress = await DbCtx.Set<BAEntity>()
+            .CountAsync(b => b.Status == "WaitingPJSign" || b.Status == "WaitingApproval");
+
+        itStats.RecentBA = await DbCtx.Set<BAEntity>()
+            .Include(b => b.Pj)
+            .Include(b => b.Creator)
+            .OrderByDescending(b => b.CreatedAt)
+            .Take(10)
+            .ToListAsync();
     }
 
     private string[] GetLast6MonthLabels()
@@ -603,19 +652,22 @@ else if (currentRole == "AdminIT")
         _ => "pill-lainnya"
     };
 
-    private static string GetRolePill(string role) => role switch
+    private static string GetStatusPill(string status) => status switch
     {
-        "AdminIT" => "pill-admin-it",
-        "AdminGudangBarang" => "pill-admin-gudang",
-        "Approver" => "pill-approver",
+        "Approved" => "pill-approved",
+        "Rejected" => "pill-rejected",
+        "WaitingApproval" => "pill-waiting-approval",
+        "WaitingPJSign" => "pill-waiting-pj",
         _ => "pill-draft"
     };
 
-    private static string GetRoleLabel(string role) => role switch
+    private static string GetStatusLabel(string status) => status switch
     {
-        "AdminIT" => "Admin IT",
-        "AdminGudangBarang" => "Admin Gudang",
-        "Approver" => "Approver",
-        _ => role
+        "Approved" => "Disetujui",
+        "Rejected" => "Ditolak",
+        "WaitingApproval" => "Menunggu Approval",
+        "WaitingPJSign" => "Menunggu TTD PJ",
+        "Draft" => "Draft",
+        _ => status
     };
 }

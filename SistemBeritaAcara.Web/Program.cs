@@ -1,5 +1,6 @@
 using Hangfire;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Infrastructure;
 using SistemBeritaAcara.Infrastructure.Data;
@@ -19,6 +20,12 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
 {
     var db = preScope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+
+    // Add columns that may be missing when DB was created before the entity was updated
+    await db.Database.ExecuteSqlRawAsync(@"
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'ProfilePicPath')
+            ALTER TABLE [Users] ADD [ProfilePicPath] nvarchar(500) NULL;
+    ");
 
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
     var userManager = preScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -88,6 +95,13 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
 
     // Approver 3 — Steve Rogers (no pekerja 5)
     await CreateUserIfMissing("wddalfalah01@gmail.com", "Steve Rogers", "Approver", getPegawaiId("5"));
+
+    // Sync Jabatan dari Pegawai ke ApplicationUser (untuk user yang Jabatan-nya masih null)
+    var usersNeedJabatan = db.Users.Include(u => u.Pegawai).Where(u => u.Jabatan == null && u.PegawaiId != null).ToList();
+    foreach (var u in usersNeedJabatan)
+        u.Jabatan = u.Pegawai?.Jabatan;
+    if (usersNeedJabatan.Any())
+        await db.SaveChangesAsync();
 
     // ── 4. Seed MasterBarang (54 item dari data Excel dummy, kode brg-1 s/d brg-54) ──
     if (!db.MasterBarang.Any())

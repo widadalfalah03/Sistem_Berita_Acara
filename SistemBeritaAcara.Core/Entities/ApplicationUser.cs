@@ -12,6 +12,7 @@ public class ApplicationUser : IdentityUser<int>
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
     public int? PegawaiId { get; set; }
+    public string? ProfilePicPath { get; set; }
 
     public Pegawai? Pegawai { get; set; }
     public ICollection<BeritaAcara> BeritaAcaraCreated { get; set; } = [];

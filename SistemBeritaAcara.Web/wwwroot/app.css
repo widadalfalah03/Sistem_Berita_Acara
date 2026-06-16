@@ -1711,6 +1711,85 @@ a:hover { color: var(--primary-hover); }
 .invalid { outline: 1px solid var(--danger); }
 .validation-message { color: var(--danger); font-size: 12px; margin-top: 4px; }
 
+/* ── Sidebar User Card (bottom) ────────────────────────────────── */
+.sidebar-user-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin: 4px 8px 4px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: var(--transition);
+    color: var(--text-primary);
+}
+
+.sidebar-user-card:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.sidebar-user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.sidebar-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sidebar-user-role { font-size: 11px; color: var(--text-muted); }
+
+/* ── Topbar upgrade ─────────────────────────────────────────────── */
+.topbar-left {
+    flex: 1;
+}
+
+.topbar-page-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    transition: var(--transition);
+}
+
+.topbar-user:hover {
+    background: var(--bg);
+    color: var(--text-primary);
+}
+
 /* ── Responsive ────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
     .stat-cards { grid-template-columns: repeat(2, 1fr); }

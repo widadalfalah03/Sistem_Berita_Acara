@@ -1,0 +1,610 @@
+@page "/profil"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject AppDbContext DbContext
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@rendermode InteractiveServer
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+<PageTitle>Profil — Sistem Berita Acara</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat profil...</span></div>
+}
+else if (currentUser is null)
+{
+    <div style="text-align:center;padding:60px;color:var(--text-muted);">
+        <i class="bi bi-person-x" style="font-size:48px;display:block;margin-bottom:16px;"></i>
+        <div>Pengguna tidak ditemukan.</div>
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <h1 class="page-title">Profil Saya</h1>
+        <p class="page-subtitle">Kelola informasi profil, tanda tangan, dan keamanan akun kamu</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(globalMessage))
+    {
+        var isErr = globalMessage.StartsWith("Gagal");
+        <div style="background:@(isErr?"var(--danger-light)":"#F0FDF4");border:1px solid @(isErr?"var(--danger)":"#22C55E");border-radius:var(--radius);padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:10px;color:@(isErr?"var(--danger)":"#16A34A");">
+            <i class="bi @(isErr?"bi-exclamation-circle-fill":"bi-check-circle-fill")"></i>
+            @globalMessage
+        </div>
+    }
+
+    <!-- First-login reminder banner -->
+    @if (string.IsNullOrEmpty(currentUser.TtdPath) && currentUser.Role != "AdminIT")
+    {
+        <div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:var(--radius);padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;">
+            <i class="bi bi-exclamation-triangle-fill" style="color:#D97706;font-size:20px;flex-shrink:0;"></i>
+            <div>
+                <div style="font-weight:700;color:#92400E;">Tanda Tangan Belum Disetel</div>
+                <div style="font-size:13px;color:#92400E;margin-top:2px;">Gambar tanda tangan Anda di bagian <strong>Tanda Tangan</strong> di bawah agar bisa memproses Berita Acara.</div>
+            </div>
+        </div>
+    }
+
+    <div class="edit-layout" style="grid-template-columns:1fr 340px;">
+
+        <!-- ── Kolom Kiri ── -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+
+            <!-- Informasi Akun -->
+            <div class="form-section" style="margin-bottom:0;">
+                <div class="form-section-title">Informasi Akun</div>
+
+                <!-- Profile pic + name row -->
+                <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;padding:20px;background:var(--bg);border-radius:var(--radius);">
+                    <div style="position:relative;">
+                        <div style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:3px solid var(--primary-light);">
+                            @if (!string.IsNullOrEmpty(currentUser.ProfilePicPath))
+                            {
+                                <img src="/@currentUser.ProfilePicPath" alt="Foto Profil" style="width:100%;height:100%;object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <span style="font-size:28px;font-weight:800;color:white;">@GetInitials(currentUser.Nama)</span>
+                            }
+                        </div>
+                        <label for="pic-upload" style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;font-size:11px;">
+                            <i class="bi bi-camera-fill"></i>
+                        </label>
+                        <InputFile id="pic-upload" OnChange="OnProfilePicSelected" accept="image/*" style="display:none;" />
+                    </div>
+                    <div>
+                        <div style="font-size:20px;font-weight:800;color:var(--text-primary);">@currentUser.Nama</div>
+                        <div style="margin-top:4px;">
+                            <span class="pill @GetRolePill(currentUser.Role)" style="font-size:12px;">@GetRoleLabel(currentUser.Role)</span>
+                        </div>
+                        @if (profilePicFile is not null)
+                        {
+                            <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+                                <span style="font-size:13px;color:var(--text-secondary);">
+                                    <i class="bi bi-image"></i> @profilePicFile.Name
+                                </span>
+                                <button class="btn btn-primary btn-sm" @onclick="SaveProfilePicAsync" disabled="@isSavingPic" style="padding:5px 12px;font-size:12px;">
+                                    @if (isSavingPic) { <span class="spinner" style="width:12px;height:12px;border-width:2px;"></span> }
+                                    else { <span>Simpan Foto</span> }
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nama Lengkap</label>
+                        <input class="form-control readonly" readonly value="@currentUser.Nama" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input class="form-control readonly" readonly value="@(currentUser.Email ?? "-")" />
+                    </div>
+                </div>
+
+                @if (linkedPegawai is not null)
+                {
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">No. Pekerja</label>
+                            <input class="form-control readonly" readonly value="@linkedPegawai.NoPekerja" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Jabatan</label>
+                            <input class="form-control readonly" readonly value="@(linkedPegawai.Jabatan ?? "-")" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Fungsi / Direktorat</label>
+                            <input class="form-control readonly" readonly value="@(linkedPegawai.FungsiDirektorat ?? "-")" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cost Center</label>
+                            <input class="form-control readonly" readonly value="@(linkedPegawai.CostCenter ?? "-")" />
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(linkedPegawai.NoTelp))
+                    {
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">No. Telp / HP</label>
+                                <input class="form-control readonly" readonly value="@linkedPegawai.NoTelp" />
+                            </div>
+                            <div></div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- Tanda Tangan -->
+            @if (currentUser.Role != "AdminIT")
+            {
+                <div class="form-section" style="margin-bottom:0;">
+                    <div class="form-section-title">Tanda Tangan Digital</div>
+                    <p style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">
+                        Tanda tangan ini akan otomatis ter-embed ke dokumen Berita Acara setiap kali Anda memproses dokumen.
+                    </p>
+
+                    <!-- Current TTD preview -->
+                    @if (!string.IsNullOrEmpty(currentUser.TtdPath))
+                    {
+                        <div style="margin-bottom:20px;">
+                            <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">TTD Saat Ini</div>
+                            <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:inline-block;">
+                                <img src="/@currentUser.TtdPath" alt="Tanda Tangan" style="max-height:80px;max-width:300px;object-fit:contain;" />
+                            </div>
+                        </div>
+                    }
+
+                    <!-- TTD Tabs -->
+                    <div style="display:flex;gap:8px;margin-bottom:16px;">
+                        <button class="@(ttdMode=="draw"?"btn btn-primary btn-sm":"btn btn-outline btn-sm")" @onclick='()=>ttdMode="draw"'>
+                            <i class="bi bi-pen"></i> Gambar TTD
+                        </button>
+                        <button class="@(ttdMode=="upload"?"btn btn-primary btn-sm":"btn btn-outline btn-sm")" @onclick='()=>ttdMode="upload"'>
+                            <i class="bi bi-upload"></i> Upload File
+                        </button>
+                    </div>
+
+                    @if (ttdMode == "draw")
+                    {
+                        <div>
+                            <div style="border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white;margin-bottom:12px;position:relative;">
+                                <canvas id="ttd-canvas" width="600" height="180"
+                                        style="width:100%;height:180px;cursor:crosshair;touch-action:none;"
+                                        @onmousedown="OnCanvasMouseDown"
+                                        @onmouseup="OnCanvasMouseUp"
+                                        @onmousemove="OnCanvasMouseMove"
+                                        @onmouseleave="OnCanvasMouseUp"
+                                        @ontouchstart:preventDefault="true" @ontouchend:preventDefault="true">
+                                </canvas>
+                                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:@(isCanvasEmpty?"0.3":"0");">
+                                    <span style="font-size:14px;color:var(--text-muted);">Gambar tanda tangan Anda di sini</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;margin-bottom:16px;">
+                                <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Hapus
+                                </button>
+                            </div>
+                            <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@(isCanvasEmpty || isSavingTtd)">
+                                @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> <span>Menyimpan...</span> }
+                                else { <i class="bi bi-save"></i> <span>Simpan Tanda Tangan</span> }
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <div class="upload-area" style="padding:32px 24px;cursor:default;margin-bottom:16px;">
+                                <i class="bi bi-pen" style="font-size:32px;"></i>
+                                <div class="upload-text">Upload File Tanda Tangan</div>
+                                <div class="upload-hint">PNG dengan latar transparan atau JPG · Maks 5MB</div>
+                                <div style="margin-top:16px;">
+                                    <InputFile OnChange="OnTtdFileSelected" accept="image/*"
+                                               style="display:block;margin:0 auto;font-size:13px;" />
+                                </div>
+                            </div>
+                            @if (ttdUploadFile is not null)
+                            {
+                                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#F0FDF4;border-radius:var(--radius);margin-bottom:16px;font-size:14px;color:#16A34A;">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    File dipilih: <strong>@ttdUploadFile.Name</strong>
+                                </div>
+                            }
+                            <button class="btn btn-primary" @onclick="SaveUploadedTtdAsync"
+                                    disabled="@(ttdUploadFile is null || isSavingTtd)">
+                                @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> <span>Menyimpan...</span> }
+                                else { <i class="bi bi-save"></i> <span>Simpan Tanda Tangan</span> }
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- ── Kolom Kanan (Ganti Password) ── -->
+        <div class="side-cards">
+            <div class="side-card">
+                <h4><i class="bi bi-lock" style="color:var(--primary);margin-right:6px;"></i>Ganti Password</h4>
+                <p>Buat password baru yang kuat dan mudah diingat.</p>
+
+                @if (!string.IsNullOrEmpty(pwMessage))
+                {
+                    var isErr = pwMessage.StartsWith("Gagal");
+                    <div style="background:@(isErr?"var(--danger-light)":"#F0FDF4");color:@(isErr?"var(--danger)":"#16A34A");padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                        <i class="bi @(isErr?"bi-exclamation-circle":"bi-check-circle")"></i>
+                        @pwMessage
+                    </div>
+                }
+
+                <div class="form-group">
+                    <label class="form-label" style="font-size:12px;">Password Lama</label>
+                    <input type="password" class="form-control" @bind="pwOld" style="font-size:13px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:12px;">Password Baru</label>
+                    <input type="password" class="form-control" @bind="pwNew" style="font-size:13px;" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:12px;">Konfirmasi Password Baru</label>
+                    <input type="password" class="form-control" @bind="pwConfirm" style="font-size:13px;" />
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-top:4px;" @onclick="ChangePasswordAsync" disabled="@isChangingPw">
+                    @if (isChangingPw) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> <span>Menyimpan...</span> }
+                    else { <i class="bi bi-shield-check"></i> <span>Simpan Password</span> }
+                </button>
+            </div>
+
+            <div class="side-card" style="background:var(--bg);">
+                <h4 style="font-size:14px;color:var(--text-secondary);">Info Akun</h4>
+                <div style="font-size:13px;color:var(--text-muted);line-height:1.7;">
+                    <div><strong>Role:</strong> @GetRoleLabel(currentUser.Role)</div>
+                    <div style="margin-top:4px;"><strong>Status:</strong>
+                        @if (currentUser.IsDeleted)
+                        {
+                            <span style="color:var(--danger);">Nonaktif</span>
+                        }
+                        else
+                        {
+                            <span style="color:#16A34A;">Aktif</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(currentUser.TtdPath))
+                    {
+                        <div style="margin-top:4px;">
+                            <span style="color:#16A34A;"><i class="bi bi-check-circle-fill"></i> TTD sudah disetel</span>
+                        </div>
+                    }
+                    else if (currentUser.Role != "AdminIT")
+                    {
+                        <div style="margin-top:4px;">
+                            <span style="color:#D97706;"><i class="bi bi-exclamation-triangle-fill"></i> TTD belum disetel</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Canvas drawing JS -->
+<script>
+    window.ttdCanvas = {
+        ctx: null,
+        isDrawing: false,
+        isEmpty: true,
+
+        init: function () {
+            const canvas = document.getElementById('ttd-canvas');
+            if (!canvas) return;
+            this.ctx = canvas.getContext('2d');
+            this.ctx.strokeStyle = '#1a1a2e';
+            this.ctx.lineWidth = 2.5;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.isEmpty = true;
+
+            // Touch support
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const t = e.touches[0];
+                const r = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / r.width;
+                const scaleY = canvas.height / r.height;
+                this.isDrawing = true;
+                this.ctx.beginPath();
+                this.ctx.moveTo((t.clientX - r.left) * scaleX, (t.clientY - r.top) * scaleY);
+            });
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!this.isDrawing) return;
+                const t = e.touches[0];
+                const r = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / r.width;
+                const scaleY = canvas.height / r.height;
+                this.ctx.lineTo((t.clientX - r.left) * scaleX, (t.clientY - r.top) * scaleY);
+                this.ctx.stroke();
+                this.isEmpty = false;
+            });
+            canvas.addEventListener('touchend', (e) => { e.preventDefault(); this.isDrawing = false; });
+        },
+
+        startDraw: function (x, y) {
+            if (!this.ctx) return;
+            const canvas = document.getElementById('ttd-canvas');
+            if (!canvas) return;
+            const r = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / r.width;
+            const scaleY = canvas.height / r.height;
+            this.isDrawing = true;
+            this.ctx.beginPath();
+            this.ctx.moveTo((x - r.left) * scaleX, (y - r.top) * scaleY);
+        },
+
+        draw: function (x, y) {
+            if (!this.isDrawing || !this.ctx) return;
+            const canvas = document.getElementById('ttd-canvas');
+            if (!canvas) return;
+            const r = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / r.width;
+            const scaleY = canvas.height / r.height;
+            this.ctx.lineTo((x - r.left) * scaleX, (y - r.top) * scaleY);
+            this.ctx.stroke();
+            this.isEmpty = false;
+        },
+
+        stopDraw: function () { this.isDrawing = false; },
+
+        clear: function () {
+            if (!this.ctx) return;
+            const canvas = document.getElementById('ttd-canvas');
+            if (!canvas) return;
+            this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+            this.isEmpty = true;
+        },
+
+        isEmpty_check: function () { return this.isEmpty; },
+
+        getDataUrl: function () {
+            const canvas = document.getElementById('ttd-canvas');
+            if (!canvas) return null;
+            return canvas.toDataURL('image/png');
+        }
+    };
+</script>
+
+@code {
+    private ApplicationUser? currentUser;
+    private SistemBeritaAcara.Core.Entities.Pegawai? linkedPegawai;
+    private bool isLoading = true;
+    private string globalMessage = string.Empty;
+
+    // Profile pic
+    private IBrowserFile? profilePicFile;
+    private bool isSavingPic;
+
+    // TTD
+    private string ttdMode = "draw";
+    private IBrowserFile? ttdUploadFile;
+    private bool isSavingTtd;
+    private bool isCanvasEmpty = true;
+    private bool isDrawingActive = false;
+
+    // Password
+    private string pwOld = string.Empty;
+    private string pwNew = string.Empty;
+    private string pwConfirm = string.Empty;
+    private string pwMessage = string.Empty;
+    private bool isChangingPw;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var email = auth.User.Identity?.Name;
+        if (email is null) { Navigation.NavigateTo("/login", true); return; }
+
+        currentUser = await UserManager.FindByEmailAsync(email);
+        if (currentUser?.PegawaiId is not null)
+            linkedPegawai = await DbContext.Pegawai.FindAsync(currentUser.PegawaiId);
+
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && currentUser?.Role != "AdminIT")
+        {
+            await JS.InvokeVoidAsync("ttdCanvas.init");
+        }
+    }
+
+    // ── Canvas drawing events ──
+
+    private async Task OnCanvasMouseDown(MouseEventArgs e)
+    {
+        isDrawingActive = true;
+        await JS.InvokeVoidAsync("ttdCanvas.startDraw", e.ClientX, e.ClientY);
+    }
+
+    private async Task OnCanvasMouseMove(MouseEventArgs e)
+    {
+        if (!isDrawingActive) return;
+        await JS.InvokeVoidAsync("ttdCanvas.draw", e.ClientX, e.ClientY);
+        if (isCanvasEmpty) { isCanvasEmpty = false; StateHasChanged(); }
+    }
+
+    private async Task OnCanvasMouseUp(MouseEventArgs e)
+    {
+        if (!isDrawingActive) return;
+        isDrawingActive = false;
+        await JS.InvokeVoidAsync("ttdCanvas.stopDraw");
+        isCanvasEmpty = await JS.InvokeAsync<bool>("ttdCanvas.isEmpty_check");
+        StateHasChanged();
+    }
+
+    private async Task ClearCanvasAsync()
+    {
+        await JS.InvokeVoidAsync("ttdCanvas.clear");
+        isCanvasEmpty = true;
+    }
+
+    // ── Save drawn TTD ──
+
+    private async Task SaveDrawnTtdAsync()
+    {
+        isSavingTtd = true;
+        globalMessage = string.Empty;
+        try
+        {
+            var dataUrl = await JS.InvokeAsync<string>("ttdCanvas.getDataUrl");
+            if (string.IsNullOrEmpty(dataUrl)) { globalMessage = "Gagal membaca canvas TTD."; return; }
+
+            // dataUrl format: "data:image/png;base64,XXXXX"
+            var base64 = dataUrl.Split(',')[1];
+            var bytes = Convert.FromBase64String(base64);
+
+            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
+            Directory.CreateDirectory(folder);
+            var fname = $"ttd-user-{currentUser!.Id}.png";
+            var fpath = Path.Combine(folder, fname);
+            await File.WriteAllBytesAsync(fpath, bytes);
+
+            currentUser.TtdPath = $"files/signatures/{fname}";
+            currentUser.MustChangePw = false;
+            await UserManager.UpdateAsync(currentUser);
+            globalMessage = "Tanda tangan berhasil disimpan!";
+            await ClearCanvasAsync();
+        }
+        catch (Exception ex) { globalMessage = $"Gagal menyimpan TTD: {ex.Message}"; }
+        finally { isSavingTtd = false; }
+    }
+
+    // ── Upload TTD ──
+
+    private void OnTtdFileSelected(InputFileChangeEventArgs e) => ttdUploadFile = e.File;
+
+    private async Task SaveUploadedTtdAsync()
+    {
+        if (ttdUploadFile is null) return;
+        isSavingTtd = true;
+        globalMessage = string.Empty;
+        try
+        {
+            var ext = Path.GetExtension(ttdUploadFile.Name);
+            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
+            Directory.CreateDirectory(folder);
+            var fname = $"ttd-user-{currentUser!.Id}{ext}";
+            var fpath = Path.Combine(folder, fname);
+            await using (var fs = File.Create(fpath))
+            {
+                await ttdUploadFile.OpenReadStream(5_000_000).CopyToAsync(fs);
+            }
+            currentUser.TtdPath = $"files/signatures/{fname}";
+            currentUser.MustChangePw = false;
+            await UserManager.UpdateAsync(currentUser);
+            globalMessage = "Tanda tangan berhasil disimpan!";
+            ttdUploadFile = null;
+        }
+        catch (Exception ex) { globalMessage = $"Gagal menyimpan TTD: {ex.Message}"; }
+        finally { isSavingTtd = false; }
+    }
+
+    // ── Profile Picture ──
+
+    private void OnProfilePicSelected(InputFileChangeEventArgs e) => profilePicFile = e.File;
+
+    private async Task SaveProfilePicAsync()
+    {
+        if (profilePicFile is null) return;
+        isSavingPic = true;
+        globalMessage = string.Empty;
+        try
+        {
+            var ext = Path.GetExtension(profilePicFile.Name);
+            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "profiles");
+            Directory.CreateDirectory(folder);
+            var fname = $"profile-{currentUser!.Id}{ext}";
+            var fpath = Path.Combine(folder, fname);
+            await using (var fs = File.Create(fpath))
+            {
+                await profilePicFile.OpenReadStream(5_000_000).CopyToAsync(fs);
+            }
+            currentUser.ProfilePicPath = $"files/profiles/{fname}";
+            await UserManager.UpdateAsync(currentUser);
+            globalMessage = "Foto profil berhasil disimpan!";
+            profilePicFile = null;
+        }
+        catch (Exception ex) { globalMessage = $"Gagal menyimpan foto profil: {ex.Message}"; }
+        finally { isSavingPic = false; }
+    }
+
+    // ── Change Password ──
+
+    private async Task ChangePasswordAsync()
+    {
+        pwMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(pwOld) || string.IsNullOrWhiteSpace(pwNew))
+        {
+            pwMessage = "Gagal: Semua kolom password wajib diisi."; return;
+        }
+        if (pwNew != pwConfirm)
+        {
+            pwMessage = "Gagal: Konfirmasi password tidak cocok."; return;
+        }
+        if (pwNew.Length < 8)
+        {
+            pwMessage = "Gagal: Password baru minimal 8 karakter."; return;
+        }
+        isChangingPw = true;
+        try
+        {
+            var result = await UserManager.ChangePasswordAsync(currentUser!, pwOld, pwNew);
+            if (result.Succeeded)
+            {
+                currentUser!.MustChangePw = false;
+                await UserManager.UpdateAsync(currentUser);
+                pwMessage = "Password berhasil diubah!";
+                pwOld = pwNew = pwConfirm = string.Empty;
+            }
+            else
+            {
+                pwMessage = "Gagal: " + string.Join("; ", result.Errors.Select(e => e.Description));
+            }
+        }
+        catch (Exception ex) { pwMessage = $"Gagal: {ex.Message}"; }
+        finally { isChangingPw = false; }
+    }
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 1 ? parts[0][0].ToString().ToUpper() : (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpper();
+    }
+
+    private static string GetRoleLabel(string role) => role switch
+    {
+        "AdminIT" => "Admin IT",
+        "AdminGudangBarang" => "Admin Gudang & Barang",
+        "Approver" => "Approver",
+        _ => role
+    };
+
+    private static string GetRolePill(string role) => role switch
+    {
+        "AdminIT" => "pill-admin-it",
+        "AdminGudangBarang" => "pill-admin-gudang",
+        "Approver" => "pill-approver",
+        _ => "pill-draft"
+    };
+}

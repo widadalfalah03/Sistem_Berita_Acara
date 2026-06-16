@@ -12,6 +12,12 @@
 }
 else
 {
+    <!-- First-login: redirect to change password -->
+    @if (mustChangePw && !Navigation.Uri.Contains("/profil"))
+    {
+        Navigation.NavigateTo("/profil", true);
+    }
+
     <div class="app-layout">
         <aside class="sidebar">
             <!-- Logo -->
@@ -110,6 +116,10 @@ else
                 else if (currentRole == "AdminIT")
                 {
                     <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
+                    </NavLink>
+                    <NavLink class="nav-link" href="/pengguna">
                         <i class="bi bi-people"></i>
                         <span>Daftar Pengguna</span>
                     </NavLink>
@@ -126,13 +136,28 @@ else
 
             <!-- Footer -->
             <div class="sidebar-footer">
-                <a class="nav-link" href="#">
-                    <i class="bi bi-question-circle"></i>
-                    <span>Bantuan</span>
-                </a>
+                <!-- Profile user card -->
+                <NavLink class="sidebar-user-card" href="/profil">
+                    <div class="sidebar-user-avatar">
+                        @if (!string.IsNullOrEmpty(profilePicPath))
+                        {
+                            <img src="/@profilePicPath" alt="Foto Profil" />
+                        }
+                        else
+                        {
+                            @initials
+                        }
+                    </div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name">@currentUserName</div>
+                        <div class="sidebar-user-role">@currentRoleLabel</div>
+                    </div>
+                    <i class="bi bi-chevron-right" style="font-size:12px;color:var(--text-muted);margin-left:auto;"></i>
+                </NavLink>
+
                 <form method="post" action="/account/logout" style="margin:0;">
                     <AntiforgeryToken />
-                    <button type="submit" class="nav-link" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;cursor:pointer;">
+                    <button type="submit" class="nav-link" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;cursor:pointer;color:var(--danger);">
                         <i class="bi bi-box-arrow-right"></i>
                         <span>Keluar</span>
                     </button>
@@ -143,22 +168,38 @@ else
         <div class="main-content">
             <!-- Topbar -->
             <header class="topbar">
-                <div class="topbar-actions">
-                    <NavLink class="topbar-notif" href="/notifikasi">
-                        <i class="bi bi-bell"></i>
-                        @if (unreadCount > 0)
-                        {
-                            <span class="notif-badge">@unreadCount</span>
-                        }
-                    </NavLink>
+                <div class="topbar-left">
+                    <div class="topbar-page-title">@pageTitle</div>
                 </div>
-                <div class="topbar-user">
-                    <div class="topbar-avatar">@initials</div>
+                <div class="topbar-actions">
+                    @if (currentRole != "AdminIT")
+                    {
+                        <NavLink class="topbar-notif" href="/notifikasi">
+                            <i class="bi bi-bell"></i>
+                            @if (unreadCount > 0)
+                            {
+                                <span class="notif-badge">@unreadCount</span>
+                            }
+                        </NavLink>
+                    }
+                </div>
+                <NavLink class="topbar-user" href="/profil">
+                    <div class="topbar-avatar">
+                        @if (!string.IsNullOrEmpty(profilePicPath))
+                        {
+                            <img src="/@profilePicPath" alt="Foto Profil" />
+                        }
+                        else
+                        {
+                            @initials
+                        }
+                    </div>
                     <div>
                         <div class="topbar-username">@currentUserName</div>
                         <div class="topbar-dropdown">@currentRoleLabel</div>
                     </div>
-                </div>
+                    <i class="bi bi-chevron-down" style="font-size:12px;color:var(--text-muted);margin-left:4px;"></i>
+                </NavLink>
             </header>
 
             <!-- Content -->
@@ -179,10 +220,13 @@ else
     private string currentRoleLabel = string.Empty;
     private string currentUserName = string.Empty;
     private string initials = string.Empty;
+    private string? profilePicPath;
+    private string pageTitle = string.Empty;
     private int unreadCount;
     private int draftCount;
     private int progressCount;
     private bool isLoginPage;
+    private bool mustChangePw;
     private int _currentUserId;
 
     [Inject] private AppDbContext DbContext { get; set; } = null!;
@@ -197,8 +241,6 @@ else
 
         if (principal.Identity?.IsAuthenticated == true)
         {
-            // Baca dari claims — TIDAK ada DB call di sini
-            // "nama" dan "app_role" ditambahkan oleh AppClaimsPrincipalFactory saat login
             currentUserName = principal.FindFirst("nama")?.Value
                            ?? principal.Identity.Name
                            ?? string.Empty;
@@ -218,14 +260,21 @@ else
                 "Approver"           => "Approver",
                 _                    => currentRole
             };
+
+            pageTitle = GetPageTitle(Navigation.Uri);
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Hanya jalan setelah circuit interaktif terbentuk
-        // Tidak ada risiko concurrency dengan page OnInitializedAsync
         if (!firstRender || isLoginPage || _currentUserId == 0) return;
+
+        var user = await DbContext.Users.FindAsync(_currentUserId);
+        if (user is not null)
+        {
+            profilePicPath = user.ProfilePicPath;
+            mustChangePw = user.MustChangePw;
+        }
 
         unreadCount = await DbContext.Notification
             .CountAsync(n => n.UserId == _currentUserId && !n.IsRead);
@@ -253,5 +302,25 @@ else
         var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
         return (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpper();
+    }
+
+    private static string GetPageTitle(string uri)
+    {
+        return uri switch
+        {
+            var u when u.Contains("/dashboard") => "Dashboard",
+            var u when u.Contains("/notifikasi") => "Inbox",
+            var u when u.Contains("/draft") => "Draft",
+            var u when u.Contains("/progress") => "Progress",
+            var u when u.Contains("/rejected") => "Ditolak",
+            var u when u.Contains("/archive") => "Arsip",
+            var u when u.Contains("/profil") => "Profil",
+            var u when u.Contains("/buat-ba") => "Buat Berita Acara",
+            var u when u.Contains("/editor") => "Editor Dokumen",
+            var u when u.Contains("/pengguna") => "Daftar Pengguna",
+            var u when u.Contains("/data-pegawai") => "Data Pegawai",
+            var u when u.Contains("/data-barang") => "Data Barang",
+            _ => "Sistem Berita Acara"
+        };
     }
 }

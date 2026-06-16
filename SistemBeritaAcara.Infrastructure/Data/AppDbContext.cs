@@ -30,6 +30,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
             e.Property(u => u.Jabatan).HasMaxLength(100);
             e.Property(u => u.Role).HasMaxLength(20).IsRequired();
             e.Property(u => u.TtdPath).HasMaxLength(500);
+            e.Property(u => u.ProfilePicPath).HasMaxLength(500);
             e.HasOne(u => u.Pegawai)
                 .WithMany(p => p.Users)
                 .HasForeignKey(u => u.PegawaiId)

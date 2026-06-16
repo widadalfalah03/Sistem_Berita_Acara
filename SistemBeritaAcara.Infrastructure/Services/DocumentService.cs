@@ -16,22 +16,30 @@ public class DocumentService : IDocumentService
 {
     private readonly AppDbContext _db;
     private readonly string _outputRoot;
-    private readonly string _templatePath;
+    private readonly string _templatesDir;
 
     public DocumentService(AppDbContext db)
     {
         _db = db;
         _outputRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
-        _templatePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "templates", "BA_Template.docx");
+        _templatesDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "templates");
         Directory.CreateDirectory(_outputRoot);
+        Directory.CreateDirectory(_templatesDir);
         Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures"));
+    }
+
+    private string GetTemplatePath(string jenis)
+    {
+        var fileName = jenis == "Peminjaman" ? "BA_Template_Peminjaman.docx" : "BA_Template_Alokasi.docx";
+        return Path.Combine(_templatesDir, fileName);
     }
 
     public Task<string> GenerateDocxAsync(BeritaAcara ba)
     {
-        if (!File.Exists(_templatePath))
+        var templatePath = GetTemplatePath(ba.Jenis ?? "Alokasi");
+        if (!File.Exists(templatePath))
         {
-            throw new FileNotFoundException("Template DOCX tidak ditemukan. Pastikan file BA_Template.docx ada di wwwroot/files/templates/");
+            throw new FileNotFoundException($"Template DOCX tidak ditemukan: {Path.GetFileName(templatePath)}. Pastikan file ada di wwwroot/files/templates/");
         }
 
         string relativePath = GetRelativePath($"ba-{ba.Id}-draft.docx");
@@ -39,7 +47,7 @@ public class DocumentService : IDocumentService
         Directory.CreateDirectory(Path.GetDirectoryName(physicalPath)!);
 
         // Copy template ke file draft
-        File.Copy(_templatePath, physicalPath, true);
+        File.Copy(templatePath, physicalPath, true);
 
         using (var wordDoc = WordprocessingDocument.Open(physicalPath, true))
         {
@@ -53,39 +61,44 @@ public class DocumentService : IDocumentService
                 ? string.Join(", ", ba.Perangkat.Select(p => p.Barang?.NamaBarang ?? "-").Distinct())
                 : "-";
 
-            // Tanggal kembali: kosong untuk Alokasi, isi untuk Peminjaman
+            // Tanggal kembali (Peminjaman only)
             var tanggalKembaliStr = (ba.Jenis == "Peminjaman" && ba.TanggalKembali.HasValue)
                 ? ba.TanggalKembali.Value.ToString("dd MMMM yyyy", idCulture)
                 : string.Empty;
 
-            // ── PRE-PROCESS: Hapus konten sel "Tanggal Pengembalian" untuk non-Peminjaman ──
-            if (ba.Jenis != "Peminjaman")
+            // Jabatan approver — prefer Pegawai.Jabatan (loaded via DB if ApplicationUser.Jabatan is null)
+            string jabatanApprover;
+            if (!string.IsNullOrWhiteSpace(ba.Mengetahui?.Jabatan))
             {
-                var tanggalCells = mainPart.Document.Body!
-                    .Descendants<TableCell>()
-                    .Where(cell => cell.Descendants<Text>().Any(t => t.Text.Contains("{{TanggalKembali}}")))
-                    .ToList();
-
-                foreach (var cell in tanggalCells)
-                {
-                    cell.RemoveAllChildren<Paragraph>();
-                    cell.Append(new Paragraph());
-                }
-
-                var tanggalParas = mainPart.Document.Body!
-                    .Descendants<Paragraph>()
-                    .Where(p => !p.Ancestors<TableCell>().Any()
-                             && p.Descendants<Text>().Any(t => t.Text.Contains("{{TanggalKembali}}")))
-                    .ToList();
-
-                foreach (var para in tanggalParas)
-                    para.Remove();
+                jabatanApprover = ba.Mengetahui.Jabatan;
             }
+            else if (ba.MengetahuiId > 0)
+            {
+                var mengetahuiUser = _db.Users
+                    .Join(_db.Pegawai, u => u.PegawaiId, p => p.Id, (u, p) => new { u, p })
+                    .Where(x => x.u.Id == ba.MengetahuiId)
+                    .Select(x => new { x.u.Jabatan, PegawaiJabatan = x.p.Jabatan })
+                    .FirstOrDefault();
+                jabatanApprover = mengetahuiUser?.Jabatan
+                               ?? mengetahuiUser?.PegawaiJabatan
+                               ?? "-";
+            }
+            else
+            {
+                jabatanApprover = "-";
+            }
+
+            // Tujuan BA: approver's jabatan (where the BA is addressed to)
+            var tujuanStr = !string.IsNullOrWhiteSpace(jabatanApprover) ? jabatanApprover : "-";
 
             var replacements = new Dictionary<string, string>
             {
                 { "{{NomorSurat}}", ba.NomorSurat ?? "Draft" },
                 { "{{Tanggal}}", ba.Tanggal.ToString("dd MMMM yyyy", idCulture) },
+                { "{{HariTanggal}}", ba.Tanggal.ToString("dddd", idCulture) },
+                { "{{TanggalAngka}}", ba.Tanggal.Day.ToString() },
+                { "{{BulanTanggal}}", ba.Tanggal.ToString("MMMM", idCulture) },
+                { "{{TahunTanggal}}", ba.Tanggal.Year.ToString() },
                 { "{{NamaPJ}}", ba.Pj?.Nama ?? "-" },
                 { "{{CostCenter}}", ba.Pj?.CostCenter ?? "-" },
                 { "{{JabatanPJ}}", ba.Pj?.Jabatan ?? "-" },
@@ -95,7 +108,10 @@ public class DocumentService : IDocumentService
                 { "{{NoTelpPJ}}", ba.Pj?.NoTelp ?? "-" },
                 { "{{Menyerahkan}}", ba.Menyerahkan?.Nama ?? "-" },
                 { "{{Approver}}", ba.Mengetahui?.Nama ?? "-" },
+                { "{{JabatanApprover}}", jabatanApprover },
+                { "{{TujuanBA}}", tujuanStr },
                 { "{{JenisPerangkat}}", jenisPerangkatStr },
+                { "{{TiketSscNo}}", ba.TiketSscNo ?? "-" },
                 { "{{TanggalKembali}}", tanggalKembaliStr },
             };
 
@@ -111,8 +127,9 @@ public class DocumentService : IDocumentService
             }
 
             // 2. Replace Table Rows for Perangkat
+            // Template row identified by {{PerangkatJumlah}} placeholder
             var templateRow = mainPart.Document.Body.Descendants<TableRow>()
-                .FirstOrDefault(r => r.Descendants<Text>().Any(t => t.Text.Contains("{{PerangkatNama}}")));
+                .FirstOrDefault(r => r.Descendants<Text>().Any(t => t.Text.Contains("{{PerangkatJumlah}}")));
 
             if (templateRow != null && ba.Perangkat != null)
             {
@@ -120,34 +137,44 @@ public class DocumentService : IDocumentService
                 foreach (var p in ba.Perangkat)
                 {
                     var newRow = (TableRow)templateRow.CloneNode(true);
-                    
-                    var firstCellText = newRow.Elements<TableCell>().FirstOrDefault()?.Descendants<Text>().FirstOrDefault(t => t.Text == "1");
-                    if (firstCellText != null) firstCellText.Text = idx.ToString();
+
+                    // Row number: template cell has "{{PerangkatNo}}." — replace the placeholder part
+                    var noCell = newRow.Elements<TableCell>().FirstOrDefault();
+                    if (noCell != null)
+                    {
+                        foreach (var t in noCell.Descendants<Text>())
+                        {
+                            if (t.Text.Contains("{{PerangkatNo}}"))
+                                t.Text = t.Text.Replace("{{PerangkatNo}}", idx.ToString());
+                        }
+                    }
 
                     foreach (var text in newRow.Descendants<Text>())
                     {
-                        if (text.Text.Contains("{{PerangkatNama}}"))
-                            text.Text = text.Text.Replace("{{PerangkatNama}}", string.IsNullOrWhiteSpace(p.Keterangan) ? "-" : p.Keterangan);
-                        if (text.Text.Contains("{{PerangkatSN}}"))
-                            text.Text = text.Text.Replace("{{PerangkatSN}}", string.IsNullOrWhiteSpace(p.NoSerial) ? "-" : p.NoSerial);
                         if (text.Text.Contains("{{PerangkatJumlah}}"))
                             text.Text = text.Text.Replace("{{PerangkatJumlah}}", p.Jumlah.ToString());
                         if (text.Text.Contains("{{PerangkatTerbilang}}"))
                             text.Text = text.Text.Replace("{{PerangkatTerbilang}}", Terbilang(p.Jumlah));
                         if (text.Text.Contains("{{PerangkatSatuan}}"))
                             text.Text = text.Text.Replace("{{PerangkatSatuan}}", p.Satuan ?? "Pcs");
+                        if (text.Text.Contains("{{PerangkatSN}}"))
+                            text.Text = text.Text.Replace("{{PerangkatSN}}", string.IsNullOrWhiteSpace(p.NoSerial) ? "-" : p.NoSerial);
+                        if (text.Text.Contains("{{PerangkatKeterangan}}"))
+                            text.Text = text.Text.Replace("{{PerangkatKeterangan}}", p.Keterangan ?? "-");
                     }
-                    
+
                     templateRow.InsertBeforeSelf(newRow);
                     idx++;
                 }
                 templateRow.Remove();
             }
 
-            // 3. Ganti placeholder foto (kotak abu-abu = Drawing shape di template)
-            // HANYA hapus paragraph drawing yang TIDAK memiliki teks di dalamnya (untuk menghindari penghapusan Logo Pertamina)
+            // 3. Ganti placeholder foto — hapus Drawing di luar tabel (bukti foto sample),
+            //    tapi JANGAN hapus Drawing di dalam <w:tc> (logo Pertamina di header tabel)
             var drawingParas = mainPart.Document.Body!.Descendants<Paragraph>()
-                .Where(p => p.Descendants<Drawing>().Any() && string.IsNullOrWhiteSpace(p.InnerText))
+                .Where(p => p.Descendants<Drawing>().Any()
+                         && string.IsNullOrWhiteSpace(p.InnerText)
+                         && !p.Ancestors<TableCell>().Any())
                 .ToList();
 
             if (drawingParas.Any())
@@ -287,26 +314,105 @@ public class DocumentService : IDocumentService
     {
         if (!File.Exists(imagePath)) throw new FileNotFoundException("File tanda tangan tidak ditemukan.", imagePath);
 
-        using var document = new Spire.Doc.Document();
-        document.LoadFromFile(docPath);
-
-        Spire.Doc.Documents.TextSelection[] selections = document.FindAllString(placeholder, false, true);
-        if (selections != null && selections.Length > 0)
+        // Embed image with OpenXML SDK agar distL/distR = 0 (Spire.Doc menambah distL=114300 EMUs
+        // secara default, yang membuat TTD selalu bergeser ke kanan dari nama di bawahnya).
+        using (var wordDoc = WordprocessingDocument.Open(docPath, true))
         {
-            foreach (var selection in selections)
+            var mainPart = wordDoc.MainDocumentPart!;
+
+            var ext = Path.GetExtension(imagePath).ToLowerInvariant();
+            var imgPartType = ext == ".png" ? ImagePartType.Png : ImagePartType.Jpeg;
+            var imgPart = mainPart.AddImagePart(imgPartType);
+            using (var fs = File.OpenRead(imagePath)) imgPart.FeedData(fs);
+            var imgId = mainPart.GetIdOfPart(imgPart);
+
+            // 160pt × 80pt → EMU (1 pt = 12700 EMU)
+            long cx = 160L * 12700L;
+            long cy =  80L * 12700L;
+
+            var drawing = new Drawing(
+                new DW.Inline(
+                    new DW.Extent { Cx = cx, Cy = cy },
+                    new DW.EffectExtent { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
+                    new DW.DocProperties { Id = 500U, Name = "signature" },
+                    new DW.NonVisualGraphicFrameDrawingProperties(
+                        new A.GraphicFrameLocks { NoChangeAspect = true }),
+                    new A.Graphic(
+                        new A.GraphicData(
+                            new PIC.Picture(
+                                new PIC.NonVisualPictureProperties(
+                                    new PIC.NonVisualDrawingProperties { Id = 0U, Name = "sig.png" },
+                                    new PIC.NonVisualPictureDrawingProperties()),
+                                new PIC.BlipFill(
+                                    new A.Blip { Embed = imgId },
+                                    new A.Stretch(new A.FillRectangle())),
+                                new PIC.ShapeProperties(
+                                    new A.Transform2D(
+                                        new A.Offset { X = 0L, Y = 0L },
+                                        new A.Extents { Cx = cx, Cy = cy }),
+                                    new A.PresetGeometry(new A.AdjustValueList())
+                                        { Preset = A.ShapeTypeValues.Rectangle })))
+                        { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" }))
+                {
+                    DistanceFromTop    = 0U,
+                    DistanceFromBottom = 0U,
+                    DistanceFromLeft   = 0U,   // ← kunci: tidak ada offset kiri
+                    DistanceFromRight  = 0U
+                });
+
+            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
             {
-                var textRange = selection.GetAsOneRange();
-                var para = textRange.OwnerParagraph;
-                var pic = para.AppendPicture(imagePath);
-                pic.Width = 100;
-                pic.Height = 50;
-                para.ChildObjects.Insert(para.ChildObjects.IndexOf(textRange), pic);
-                para.ChildObjects.Remove(textRange);
+                var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
+                if (!fullText.Contains(placeholder)) continue;
+
+                // Gabungkan image ke dalam paragraf nama (sibling berikutnya dalam cell yang sama),
+                // dipisah line break — ini menjamin image & nama selalu sejajar kiri karena satu <w:p>.
+                var namePara = para.NextSibling<Paragraph>();
+                if (namePara != null)
+                {
+                    var imgRun = new Run((Drawing)drawing.CloneNode(true));
+                    // Line break tanpa underline agar baris kosong antara TTD dan nama tidak bergaris bawah
+                    var brRun = new Run(
+                        new RunProperties(new Underline { Val = UnderlineValues.None }),
+                        new Break());
+
+                    var firstNameRun = namePara.Elements<Run>().FirstOrDefault();
+                    if (firstNameRun != null)
+                    {
+                        firstNameRun.InsertBeforeSelf(brRun);
+                        firstNameRun.InsertBeforeSelf(imgRun);
+                    }
+                    else
+                    {
+                        namePara.Append(imgRun);
+                        namePara.Append(brRun);
+                    }
+
+                    // Hapus paragraf SIG yang sudah tidak diperlukan
+                    para.Remove();
+                }
+                else
+                {
+                    // Fallback: embed langsung di paragraf SIG (tidak ada name paragraph)
+                    var runWithPh = para.Descendants<Run>()
+                        .FirstOrDefault(r => r.Descendants<Text>().Any(t => t.Text.Contains(placeholder)));
+                    if (runWithPh != null)
+                    {
+                        runWithPh.InsertBeforeSelf(new Run((Drawing)drawing.CloneNode(true)));
+                        runWithPh.Remove();
+                    }
+                }
+                break;
             }
-            document.SaveToFile(docPath, Spire.Doc.FileFormat.Docx);
-            string pdfPath = docPath.Replace(".docx", ".pdf");
-            document.SaveToFile(pdfPath, Spire.Doc.FileFormat.PDF);
+
+            mainPart.Document.Save();
         }
+
+        // Konversi DOCX → PDF menggunakan Spire.Doc
+        var spireDoc = new Spire.Doc.Document();
+        spireDoc.LoadFromFile(docPath);
+        spireDoc.SaveToFile(docPath.Replace(".docx", ".pdf"), Spire.Doc.FileFormat.PDF);
+        spireDoc.Close();
     }
 
     private string GetRelativePath(string fileName) => Path.Combine("files", "documents", fileName).Replace("\\", "/");
