@@ -115,13 +115,59 @@ public class DocumentService : IDocumentService
                 { "{{TanggalKembali}}", tanggalKembaliStr },
             };
 
-            foreach (var text in mainPart.Document.Body!.Descendants<Text>())
+            // Mencegah isu "split runs" di OpenXML di mana placeholder (misal {{HariTanggal}}) terpecah ke beberapa tag <w:t>
+            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
             {
-                foreach (var r in replacements)
+                var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
+                bool hasPlaceholder = replacements.Keys.Any(k => fullText.Contains(k));
+
+                if (hasPlaceholder)
                 {
-                    if (text.Text.Contains(r.Key))
+                    bool anySplit = replacements.Keys.Any(k => fullText.Contains(k) && !para.Descendants<Text>().Any(t => t.Text.Contains(k)));
+
+                    if (anySplit)
                     {
-                        text.Text = text.Text.Replace(r.Key, r.Value);
+                        var texts = para.Descendants<Text>().ToList();
+                        if (texts.Any())
+                        {
+                            var mergedText = string.Concat(texts.Select(t => t.Text));
+                            foreach (var r in replacements)
+                            {
+                                mergedText = mergedText.Replace(r.Key, r.Value);
+                            }
+                            texts[0].Text = mergedText;
+                            for (int i = 1; i < texts.Count; i++)
+                            {
+                                texts[i].Text = string.Empty;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach (var text in para.Descendants<Text>())
+                        {
+                            foreach (var r in replacements)
+                            {
+                                if (text.Text.Contains(r.Key))
+                                {
+                                    text.Text = text.Text.Replace(r.Key, r.Value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Menyembunyikan placeholder tanda tangan ({{SIG_...}}) dengan mengubah warna font menjadi putih
+            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
+            {
+                var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
+                if (fullText.Contains("{{SIG_"))
+                {
+                    foreach (var run in para.Descendants<Run>())
+                    {
+                        if (run.RunProperties == null) run.RunProperties = new RunProperties();
+                        run.RunProperties.Color = new Color { Val = "FFFFFF" };
                     }
                 }
             }
