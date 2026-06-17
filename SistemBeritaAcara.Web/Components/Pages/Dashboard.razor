@@ -150,14 +150,14 @@ else if (currentRole == "AdminGudangBarang")
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>No. Surat</th>
-                            <th>PJ</th>
-                            <th>Tgl Kembali</th>
-                            <th>Status</th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortDue("No. Surat"))">No. Surat <i class="bi @GetDueSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortDue("PJ"))">PJ <i class="bi @GetDueSortIcon("PJ")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortDue("Tgl Kembali"))">Tgl Kembali <i class="bi @GetDueSortIcon("Tgl Kembali")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortDue("Status"))">Status <i class="bi @GetDueSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var d in dueDates)
+                        @foreach (var d in SortedDueDates)
                         {
                             var daysLeft = (d.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
                             <tr>
@@ -270,15 +270,15 @@ else if (currentRole == "Approver")
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>No. Surat</th>
-                        <th>Jenis BA</th>
-                        <th>Penanggung Jawab</th>
-                        <th>Tanggal Submit</th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("No. Surat"))">No. Surat <i class="bi @GetApproverSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Jenis BA"))">Jenis BA <i class="bi @GetApproverSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetApproverSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Tanggal Submit"))">Tanggal Submit <i class="bi @GetApproverSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var ba in approverQueue)
+                    @foreach (var ba in SortedApproverQueue)
                     {
                         <tr>
                             <td><span class="fw-semibold text-primary">@ba.NomorSurat</span></td>
@@ -426,16 +426,16 @@ else if (currentRole == "AdminIT")
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>No. Surat</th>
-                        <th>Jenis</th>
-                        <th>Penanggung Jawab</th>
-                        <th>Dibuat Oleh</th>
-                        <th>Tanggal</th>
-                        <th>Status</th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortIT("No. Surat"))">No. Surat <i class="bi @GetITSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Jenis"))">Jenis <i class="bi @GetITSortIcon("Jenis")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetITSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Dibuat Oleh"))">Dibuat Oleh <i class="bi @GetITSortIcon("Dibuat Oleh")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Tanggal"))">Tanggal <i class="bi @GetITSortIcon("Tanggal")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Status"))">Status <i class="bi @GetITSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var ba in itStats.RecentBA)
+                    @foreach (var ba in SortedRecentBA)
                     {
                         <tr>
                             <td class="fw-semibold text-primary">@(ba.NomorSurat ?? "Draft")</td>
@@ -669,5 +669,49 @@ else if (currentRole == "AdminIT")
         "WaitingPJSign" => "Menunggu TTD PJ",
         "Draft" => "Draft",
         _ => status
+    };
+
+    // Sort variables and logic for Admin Gudang (Due Dates)
+    private string sortDueCol = "Tgl Kembali";
+    private bool sortDueAsc = true;
+    private void SortDue(string col) { if (sortDueCol == col) sortDueAsc = !sortDueAsc; else { sortDueCol = col; sortDueAsc = true; } }
+    private string GetDueSortIcon(string col) => sortDueCol != col ? "bi-arrow-down-up" : sortDueAsc ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+    private IEnumerable<BAEntity> SortedDueDates => sortDueCol switch
+    {
+        "No. Surat" => sortDueAsc ? dueDates.OrderBy(b => b.NomorSurat) : dueDates.OrderByDescending(b => b.NomorSurat),
+        "PJ" => sortDueAsc ? dueDates.OrderBy(b => b.Pj?.Nama) : dueDates.OrderByDescending(b => b.Pj?.Nama),
+        "Tgl Kembali" => sortDueAsc ? dueDates.OrderBy(b => b.TanggalKembali) : dueDates.OrderByDescending(b => b.TanggalKembali),
+        "Status" => sortDueAsc ? dueDates.OrderBy(b => (b.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days) : dueDates.OrderByDescending(b => (b.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days),
+        _ => dueDates
+    };
+
+    // Sort variables and logic for Approver
+    private string sortAppCol = "Tanggal Submit";
+    private bool sortAppAsc = true;
+    private void SortApprover(string col) { if (sortAppCol == col) sortAppAsc = !sortAppAsc; else { sortAppCol = col; sortAppAsc = true; } }
+    private string GetApproverSortIcon(string col) => sortAppCol != col ? "bi-arrow-down-up" : sortAppAsc ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+    private IEnumerable<BAEntity> SortedApproverQueue => sortAppCol switch
+    {
+        "No. Surat" => sortAppAsc ? approverQueue.OrderBy(b => b.NomorSurat) : approverQueue.OrderByDescending(b => b.NomorSurat),
+        "Jenis BA" => sortAppAsc ? approverQueue.OrderBy(b => b.Jenis) : approverQueue.OrderByDescending(b => b.Jenis),
+        "Penanggung Jawab" => sortAppAsc ? approverQueue.OrderBy(b => b.Pj?.Nama) : approverQueue.OrderByDescending(b => b.Pj?.Nama),
+        "Tanggal Submit" => sortAppAsc ? approverQueue.OrderBy(b => b.SubmittedAt) : approverQueue.OrderByDescending(b => b.SubmittedAt),
+        _ => approverQueue
+    };
+
+    // Sort variables and logic for Admin IT
+    private string sortITCol = "Tanggal";
+    private bool sortITAsc = false; // Descending by default
+    private void SortIT(string col) { if (sortITCol == col) sortITAsc = !sortITAsc; else { sortITCol = col; sortITAsc = true; } }
+    private string GetITSortIcon(string col) => sortITCol != col ? "bi-arrow-down-up" : sortITAsc ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+    private IEnumerable<BAEntity> SortedRecentBA => sortITCol switch
+    {
+        "No. Surat" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.NomorSurat) : itStats.RecentBA.OrderByDescending(b => b.NomorSurat),
+        "Jenis" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Jenis) : itStats.RecentBA.OrderByDescending(b => b.Jenis),
+        "Penanggung Jawab" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Pj?.Nama) : itStats.RecentBA.OrderByDescending(b => b.Pj?.Nama),
+        "Dibuat Oleh" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Creator?.Nama) : itStats.RecentBA.OrderByDescending(b => b.Creator?.Nama),
+        "Tanggal" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Tanggal) : itStats.RecentBA.OrderByDescending(b => b.Tanggal),
+        "Status" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Status) : itStats.RecentBA.OrderByDescending(b => b.Status),
+        _ => itStats.RecentBA
     };
 }

@@ -182,15 +182,15 @@ else
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Perangkat</th>
-                            <th>Jumlah</th>
-                            <th>Satuan</th>
-                            <th>No. Serial</th>
-                            <th>Keterangan</th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortTable("Perangkat"))">Perangkat <i class="bi @GetSortIcon("Perangkat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortTable("Jumlah"))">Jumlah <i class="bi @GetSortIcon("Jumlah")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortTable("Satuan"))">Satuan <i class="bi @GetSortIcon("Satuan")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortTable("No. Serial"))">No. Serial <i class="bi @GetSortIcon("No. Serial")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortTable("Keterangan"))">Keterangan <i class="bi @GetSortIcon("Keterangan")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var p in ba.Perangkat)
+                        @foreach (var p in SortedPerangkat)
                         {
                             <tr>
                                 <td class="fw-semibold">@p.Barang?.NamaBarang</td>
@@ -274,12 +274,40 @@ else
     private bool isLoading = true;
     private bool notFound;
     private bool isApprover;
-    private bool showRejectModal;
+    private bool showRejectModal = false;
     private string rejectReason = string.Empty;
     private string rejectError = string.Empty;
     private string actionMessage = string.Empty;
     private string currentRole = string.Empty;
     private bool isProcessing = false;
+
+    private string sortColumn = "Perangkat";
+    private bool sortAscending = true;
+
+    private void SortTable(string column)
+    {
+        if (sortColumn == column) sortAscending = !sortAscending;
+        else { sortColumn = column; sortAscending = true; }
+    }
+
+    private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+
+    private IEnumerable<PerangkatBA> SortedPerangkat
+    {
+        get
+        {
+            if (ba?.Perangkat == null) return Enumerable.Empty<PerangkatBA>();
+            return sortColumn switch
+            {
+                "Perangkat" => sortAscending ? ba.Perangkat.OrderBy(p => p.Barang?.NamaBarang) : ba.Perangkat.OrderByDescending(p => p.Barang?.NamaBarang),
+                "Jumlah" => sortAscending ? ba.Perangkat.OrderBy(p => p.Jumlah) : ba.Perangkat.OrderByDescending(p => p.Jumlah),
+                "Satuan" => sortAscending ? ba.Perangkat.OrderBy(p => p.Satuan) : ba.Perangkat.OrderByDescending(p => p.Satuan),
+                "No. Serial" => sortAscending ? ba.Perangkat.OrderBy(p => p.NoSerial) : ba.Perangkat.OrderByDescending(p => p.NoSerial),
+                "Keterangan" => sortAscending ? ba.Perangkat.OrderBy(p => p.Keterangan) : ba.Perangkat.OrderByDescending(p => p.Keterangan),
+                _ => ba.Perangkat
+            };
+        }
+    }
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 

@@ -78,9 +78,9 @@ else
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Kode Barang</th>
-                    <th>Jenis / Nama Barang</th>
-                    <th>Status</th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Kode Barang"))">Kode Barang <i class="bi @GetSortIcon("Kode Barang")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis / Nama Barang"))">Jenis / Nama Barang <i class="bi @GetSortIcon("Jenis / Nama Barang")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                 </tr>
             </thead>
             <tbody>
@@ -153,11 +153,47 @@ else
     private string search = string.Empty;
     private string importResult = string.Empty;
 
-    private IEnumerable<MasterBarangEntity> FilteredBarang => allBarang
-        .Where(b => showInactive || b.IsAktif)
-        .Where(b => string.IsNullOrEmpty(search) ||
-                    b.NamaBarang.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    b.KodeBarang.Contains(search, StringComparison.OrdinalIgnoreCase));
+    private string sortColumn = "Kode Barang";
+    private bool sortAscending = true;
+
+    private void SortTable(string column)
+    {
+        if (sortColumn == column)
+        {
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            sortColumn = column;
+            sortAscending = true;
+        }
+    }
+
+    private string GetSortIcon(string column)
+    {
+        if (sortColumn != column) return "bi-arrow-down-up";
+        return sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+    }
+
+    private IEnumerable<MasterBarangEntity> FilteredBarang
+    {
+        get
+        {
+            var query = allBarang
+                .Where(b => showInactive || b.IsAktif)
+                .Where(b => string.IsNullOrEmpty(search) ||
+                            b.NamaBarang.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                            b.KodeBarang.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+            return sortColumn switch
+            {
+                "Kode Barang" => sortAscending ? query.OrderBy(b => b.KodeBarang) : query.OrderByDescending(b => b.KodeBarang),
+                "Jenis / Nama Barang" => sortAscending ? query.OrderBy(b => b.NamaBarang) : query.OrderByDescending(b => b.NamaBarang),
+                "Status" => sortAscending ? query.OrderByDescending(b => b.IsAktif) : query.OrderBy(b => b.IsAktif),
+                _ => query
+            };
+        }
+    }
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 

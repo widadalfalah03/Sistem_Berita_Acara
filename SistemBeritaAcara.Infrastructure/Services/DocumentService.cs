@@ -115,48 +115,13 @@ public class DocumentService : IDocumentService
                 { "{{TanggalKembali}}", tanggalKembaliStr },
             };
 
-            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
+            foreach (var text in mainPart.Document.Body!.Descendants<Text>())
             {
-                var textNodes = para.Descendants<Text>().ToList();
-                if (!textNodes.Any()) continue;
-
-                var fullText = string.Concat(textNodes.Select(t => t.Text));
-                bool modified = false;
-
                 foreach (var r in replacements)
                 {
-                    if (fullText.Contains(r.Key))
+                    if (text.Text.Contains(r.Key))
                     {
-                        fullText = fullText.Replace(r.Key, r.Value);
-                        modified = true;
-                    }
-                }
-
-                if (modified)
-                {
-                    textNodes[0].Text = fullText;
-                    for (int i = 1; i < textNodes.Count; i++)
-                    {
-                        textNodes[i].Text = string.Empty;
-                    }
-                }
-            }
-
-            // 1.5. Sembunyikan placeholder tanda tangan ({{SIG_...}}) agar tidak terlihat sebelum ditandatangani
-            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
-            {
-                var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
-                if (fullText.Contains("{{SIG_MENYERAHKAN}}") || 
-                    fullText.Contains("{{SIG_APPROVER}}") || 
-                    fullText.Contains("{{SIG_PJ}}"))
-                {
-                    foreach (var run in para.Descendants<Run>())
-                    {
-                        if (run.RunProperties == null)
-                        {
-                            run.InsertAt(new RunProperties(), 0);
-                        }
-                        run.RunProperties.Color = new Color { Val = "FFFFFF" };
+                        text.Text = text.Text.Replace(r.Key, r.Value);
                     }
                 }
             }

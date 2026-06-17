@@ -48,15 +48,15 @@ else
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>No. Surat</th>
-                    <th>Jenis Berita Acara</th>
-                    <th>Penanggung Jawab</th>
-                    <th>Terakhir Diupdate</th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("No. Surat"))">No. Surat <i class="bi @GetSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis Berita Acara"))">Jenis Berita Acara <i class="bi @GetSortIcon("Jenis Berita Acara")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Terakhir Diupdate"))">Terakhir Diupdate <i class="bi @GetSortIcon("Terakhir Diupdate")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     <th>Aksi</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var ba in drafts)
+                @foreach (var ba in SortedDrafts)
                 {
                     <tr>
                         <td>
@@ -128,6 +128,26 @@ else
     private int? deleteConfirmId;
     private string deleteMsg = string.Empty;
     private int currentUserId;
+
+    private string sortColumn = "Terakhir Diupdate";
+    private bool sortAscending = false;
+
+    private void SortTable(string column)
+    {
+        if (sortColumn == column) sortAscending = !sortAscending;
+        else { sortColumn = column; sortAscending = true; }
+    }
+
+    private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+
+    private IEnumerable<BeritaAcaraEntity> SortedDrafts => sortColumn switch
+    {
+        "No. Surat" => sortAscending ? drafts.OrderBy(b => b.NomorSurat) : drafts.OrderByDescending(b => b.NomorSurat),
+        "Jenis Berita Acara" => sortAscending ? drafts.OrderBy(b => b.Jenis) : drafts.OrderByDescending(b => b.Jenis),
+        "Penanggung Jawab" => sortAscending ? drafts.OrderBy(b => b.Pj?.Nama) : drafts.OrderByDescending(b => b.Pj?.Nama),
+        "Terakhir Diupdate" => sortAscending ? drafts.OrderBy(b => b.CreatedAt) : drafts.OrderByDescending(b => b.CreatedAt),
+        _ => drafts
+    };
 
     protected override async Task OnInitializedAsync()
     {

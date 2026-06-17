@@ -91,11 +91,11 @@ else
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Nama / NIP</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>TTD</th>
-                        <th>Status</th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama"))">Nama / NIP <i class="bi @GetSortIcon("Nama")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Email"))">Email <i class="bi @GetSortIcon("Email")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Role"))">Role <i class="bi @GetSortIcon("Role")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("TTD"))">TTD <i class="bi @GetSortIcon("TTD")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th></th>
                     </tr>
                 </thead>
@@ -157,12 +157,50 @@ else
     private bool showInactive = false;
     private (int Total, int AdminIT, int AdminGudang, int Approver) stats;
 
-    private IEnumerable<ApplicationUser> FilteredUsers => allUsers
-        .Where(u => showInactive || !u.IsDeleted)
-        .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
-        .Where(u => string.IsNullOrEmpty(userSearch) ||
-                    u.Nama.Contains(userSearch, StringComparison.OrdinalIgnoreCase) ||
-                    (u.Email ?? "").Contains(userSearch, StringComparison.OrdinalIgnoreCase));
+    private string sortColumn = "Nama";
+    private bool sortAscending = true;
+
+    private void SortTable(string column)
+    {
+        if (sortColumn == column)
+        {
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            sortColumn = column;
+            sortAscending = true;
+        }
+    }
+
+    private string GetSortIcon(string column)
+    {
+        if (sortColumn != column) return "bi-arrow-down-up";
+        return sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+    }
+
+    private IEnumerable<ApplicationUser> FilteredUsers 
+    {
+        get
+        {
+            var query = allUsers
+                .Where(u => showInactive || !u.IsDeleted)
+                .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
+                .Where(u => string.IsNullOrEmpty(userSearch) ||
+                            u.Nama.Contains(userSearch, StringComparison.OrdinalIgnoreCase) ||
+                            (u.Email ?? "").Contains(userSearch, StringComparison.OrdinalIgnoreCase));
+
+            return sortColumn switch
+            {
+                "Nama" => sortAscending ? query.OrderBy(u => u.Nama) : query.OrderByDescending(u => u.Nama),
+                "Email" => sortAscending ? query.OrderBy(u => u.Email) : query.OrderByDescending(u => u.Email),
+                "Role" => sortAscending ? query.OrderBy(u => u.Role) : query.OrderByDescending(u => u.Role),
+                "TTD" => sortAscending ? query.OrderBy(u => string.IsNullOrEmpty(u.TtdPath)) : query.OrderByDescending(u => string.IsNullOrEmpty(u.TtdPath)),
+                "Status" => sortAscending ? query.OrderBy(u => u.IsDeleted) : query.OrderByDescending(u => u.IsDeleted),
+                _ => query
+            };
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
