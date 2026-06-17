@@ -1440,7 +1440,7 @@ a:hover { color: var(--primary-hover); }
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: var(--bg);
+    background: #ffffff;
 }
 
 .login-card {
@@ -1450,6 +1450,7 @@ a:hover { color: var(--primary-hover); }
     width: 100%;
     max-width: 420px;
     overflow: hidden;
+    border: 2px solid var(--primary);
 }
 
 .login-card-bar {
@@ -1897,24 +1898,7 @@ a:hover { color: var(--primary-hover); }
     border-top: 1px solid var(--border-light);
     margin-top: 16px;
 }
-/* -- Login Page ------------------------------------------------- */
-.login-page {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 40%, #2563eb 100%);
-    padding: 24px;
-}
 
-.login-card {
-    width: 100%;
-    max-width: 420px;
-    background: var(--surface);
-    border-radius: 16px;
-    box-shadow: 0 24px 48px rgba(0,0,0,0.2);
-    overflow: hidden;
-}
 
 .login-card-bar {
     height: 4px;

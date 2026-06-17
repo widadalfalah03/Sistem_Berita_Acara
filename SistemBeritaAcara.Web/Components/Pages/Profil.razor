@@ -560,7 +560,15 @@ else
             var ext = Path.GetExtension(profilePicFile.Name);
             var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "profiles");
             Directory.CreateDirectory(folder);
-            var fname = $"profile-{currentUser!.Id}{ext}";
+
+            // Delete old picture if exists to prevent accumulating files
+            if (!string.IsNullOrEmpty(currentUser!.ProfilePicPath))
+            {
+                var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.ProfilePicPath.Replace("/", "\\"));
+                if (File.Exists(oldPath)) File.Delete(oldPath);
+            }
+
+            var fname = $"profile-{currentUser.Id}-{DateTime.UtcNow.Ticks}{ext}";
             var fpath = Path.Combine(folder, fname);
             await using (var fs = File.Create(fpath))
             {
@@ -570,6 +578,7 @@ else
             await UserManager.UpdateAsync(currentUser);
             globalMessage = "Foto profil berhasil disimpan!";
             profilePicFile = null;
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
         }
         catch (Exception ex) { globalMessage = $"Gagal menyimpan foto profil: {ex.Message}"; }
         finally { isSavingPic = false; }
