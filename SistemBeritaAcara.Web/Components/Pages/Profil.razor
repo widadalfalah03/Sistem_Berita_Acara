@@ -378,7 +378,34 @@ else
         getDataUrl: function () {
             const canvas = document.getElementById('ttd-canvas');
             if (!canvas) return null;
-            return canvas.toDataURL('image/png');
+            // Auto-crop: trim semua whitespace di sekitar tanda tangan.
+            const ctx = canvas.getContext('2d');
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const alpha = data[(y * canvas.width + x) * 4 + 3];
+                    if (alpha > 10) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+            if (maxX <= minX || maxY <= minY) return canvas.toDataURL('image/png');
+            const pad = 4;
+            minX = Math.max(0, minX - pad);
+            minY = Math.max(0, minY - pad);
+            maxX = Math.min(canvas.width - 1, maxX + pad);
+            maxY = Math.min(canvas.height - 1, maxY + pad);
+            const w = maxX - minX + 1;
+            const h = maxY - minY + 1;
+            const tmp = document.createElement('canvas');
+            tmp.width = w;
+            tmp.height = h;
+            tmp.getContext('2d').drawImage(canvas, minX, minY, w, h, 0, 0, w, h);
+            return tmp.toDataURL('image/png');
         }
     };
 </script>
