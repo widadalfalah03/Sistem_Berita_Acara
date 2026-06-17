@@ -115,26 +115,7 @@ else
                     @(appUser.IsDeleted ? "Pengguna tidak dapat login" : "Pengguna dapat mengakses sistem")
                 </div>
             </div>
-
-            <!-- TTD -->
-            <div class="side-card">
-                <h4>Tanda Tangan</h4>
-                <p>Upload file TTD untuk digunakan pada dokumen.</p>
-                @if (!string.IsNullOrEmpty(appUser.TtdPath))
-                {
-                    <div style="background:#F0FDF4;border-radius:var(--radius);padding:10px 12px;color:#16A34A;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-                        <i class="bi bi-check-circle-fill"></i> TTD tersedia
-                    </div>
-                }
-                <InputFile OnChange="OnTtdSelected" accept="image/*"
-                           style="display:block;width:100%;font-size:13px;" />
-                @if (ttdFile is not null)
-                {
-                    <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
-                        Dipilih: @ttdFile.Name
-                    </div>
-                }
-            </div>
+            
         </div>
     </div>
 
@@ -159,7 +140,6 @@ else
     private string successMsg = string.Empty;
     private string errorMsg = string.Empty;
     private string resetMsg = string.Empty;
-    private IBrowserFile? ttdFile;
 
     protected override async Task OnInitializedAsync()
     {
@@ -172,8 +152,6 @@ else
         isLoading = false;
     }
 
-    private void OnTtdSelected(InputFileChangeEventArgs e) => ttdFile = e.File;
-
     private async Task SaveAsync()
     {
         if (appUser is null) return;
@@ -182,18 +160,6 @@ else
         try
         {
             appUser.Role = editRole;
-
-            if (ttdFile is not null)
-            {
-                var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
-                Directory.CreateDirectory(folder);
-                var ext = Path.GetExtension(ttdFile.Name);
-                var fname = $"ttd-user-{appUser.Id}{ext}";
-                var path = Path.Combine(folder, fname);
-                await using var fs = File.Create(path);
-                await ttdFile.OpenReadStream(5_000_000).CopyToAsync(fs);
-                appUser.TtdPath = path;
-            }
 
             await UserManager.UpdateAsync(appUser);
             successMsg = "Perubahan berhasil disimpan.";
