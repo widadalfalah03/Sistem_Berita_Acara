@@ -314,8 +314,11 @@ public class DocumentService : IDocumentService
     {
         if (!File.Exists(imagePath)) throw new FileNotFoundException("File tanda tangan tidak ditemukan.", imagePath);
 
-        // Embed image with OpenXML SDK agar distL/distR = 0 (Spire.Doc menambah distL=114300 EMUs
-        // secara default, yang membuat TTD selalu bergeser ke kanan dari nama di bawahnya).
+        // Embed image dengan OpenXML SDK agar distL/distR = 0 sehingga TTD selalu align left
+        // sejajar tepat di atas nama penandatangan.
+        // Struktur template (3 row): Row1=label, Row2=SIG placeholder, Row3=nama
+        // → Gambar disisipkan langsung ke paragraf di Row2 (sel yang berisi {{SIG_*}}),
+        //   menggantikan teks placeholder tersebut.
         using (var wordDoc = WordprocessingDocument.Open(docPath, true))
         {
             var mainPart = wordDoc.MainDocumentPart!;
@@ -356,7 +359,7 @@ public class DocumentService : IDocumentService
                 {
                     DistanceFromTop    = 0U,
                     DistanceFromBottom = 0U,
-                    DistanceFromLeft   = 0U,   // ← kunci: tidak ada offset kiri
+                    DistanceFromLeft   = 0U,   // ← tidak ada offset kiri agar sejajar kiri sel
                     DistanceFromRight  = 0U
                 });
 
@@ -365,43 +368,33 @@ public class DocumentService : IDocumentService
                 var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
                 if (!fullText.Contains(placeholder)) continue;
 
-                // Gabungkan image ke dalam paragraf nama (sibling berikutnya dalam cell yang sama),
-                // dipisah line break — ini menjamin image & nama selalu sejajar kiri karena satu <w:p>.
-                var namePara = para.NextSibling<Paragraph>();
-                if (namePara != null)
-                {
-                    var imgRun = new Run((Drawing)drawing.CloneNode(true));
-                    // Line break tanpa underline agar baris kosong antara TTD dan nama tidak bergaris bawah
-                    var brRun = new Run(
-                        new RunProperties(new Underline { Val = UnderlineValues.None }),
-                        new Break());
+                // ── Strategi baru (template 3-row) ────────────────────────────────────────
+                // Paragraf placeholder berada di Row2 (sel SIG).
+                // Ganti SELURUH run di paragraf ini dengan satu run berisi gambar.
+                // Atur alignment eksplisit Left + Indentation 0 agar gambar selalu
+                // tepat sejajar kiri sel (di atas nama penandatangan di baris bawah).
 
-                    var firstNameRun = namePara.Elements<Run>().FirstOrDefault();
-                    if (firstNameRun != null)
-                    {
-                        firstNameRun.InsertBeforeSelf(brRun);
-                        firstNameRun.InsertBeforeSelf(imgRun);
-                    }
-                    else
-                    {
-                        namePara.Append(imgRun);
-                        namePara.Append(brRun);
-                    }
-
-                    // Hapus paragraf SIG yang sudah tidak diperlukan
-                    para.Remove();
-                }
-                else
+                var pPr = para.ParagraphProperties;
+                if (pPr != null)
                 {
-                    // Fallback: embed langsung di paragraf SIG (tidak ada name paragraph)
-                    var runWithPh = para.Descendants<Run>()
-                        .FirstOrDefault(r => r.Descendants<Text>().Any(t => t.Text.Contains(placeholder)));
-                    if (runWithPh != null)
-                    {
-                        runWithPh.InsertBeforeSelf(new Run((Drawing)drawing.CloneNode(true)));
-                        runWithPh.Remove();
-                    }
+                    pPr.Remove();
                 }
+
+                // Buat ParagraphProperties baru yang bersih agar urutan elemen (Indentation lalu Justification)
+                // valid menurut skema OpenXML. Ini mencegah Spire.Doc mengabaikan alignment.
+                para.ParagraphProperties = new ParagraphProperties(
+                    new Indentation { Left = "0" },
+                    new Justification { Val = JustificationValues.Left }
+                );
+
+                // Hapus semua run & text yang ada (termasuk run placeholder)
+                foreach (var run in para.Elements<Run>().ToList())
+                    run.Remove();
+
+                // Sisipkan run baru berisi gambar dengan RunProperties yang bersih
+                var imgRun = new Run((Drawing)drawing.CloneNode(true));
+                para.Append(imgRun);
+
                 break;
             }
 
