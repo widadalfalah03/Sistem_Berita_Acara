@@ -153,8 +153,10 @@
                 <div style="flex:1;min-width:180px;">
                     <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP <span style="color:var(--text-muted);font-weight:400;">(opsional)</span></div>
                     <input type="tel" class="form-control" style="font-size:13px;padding:6px 10px;"
-                           placeholder="Contoh: 0812-xxxx-xxxx"
-                           @bind="model.PjNoTelp" @bind:event="oninput" />
+                           placeholder="Contoh: 08123456789"
+                           inputmode="numeric" pattern="[0-9]*"
+                           value="@model.PjNoTelp"
+                           @oninput="OnNoTelpInput" />
                 </div>
             </div>
         }
@@ -432,6 +434,12 @@
             allPegawai.Where(p => p.Nama.Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase) ||
                                   p.NoPekerja.Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase))
                       .Take(6).ToList();
+    }
+
+    private void OnNoTelpInput(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString() ?? string.Empty;
+        model.PjNoTelp = new string(raw.Where(char.IsDigit).ToArray());
     }
 
     private void SelectPj(PegawaiEntity p)
