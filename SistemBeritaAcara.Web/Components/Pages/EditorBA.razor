@@ -187,23 +187,16 @@ else
         {
             try
             {
-                // Hanya generate ulang dari template jika file belum ada
-                // (jangan overwrite hasil edit manual dari ONLYOFFICE)
-                var existingPath = string.IsNullOrEmpty(ba.DocxPath) ? null
-                    : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", ba.DocxPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                if (existingPath == null || !File.Exists(existingPath))
+                ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+
+                var currentUser = await DbContext.Users.FindAsync(_currentUserId);
+                if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
                 {
-                    ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
-
-                    var currentUser = await DbContext.Users.FindAsync(_currentUserId);
-                    if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
-                    {
-                        var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                        await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
-                    }
-
-                    await DbContext.SaveChangesAsync();
+                    var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
                 }
+
+                await DbContext.SaveChangesAsync();
             }
             catch (Exception ex)
             {
