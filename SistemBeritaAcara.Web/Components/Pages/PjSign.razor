@@ -423,9 +423,8 @@ else
 
             await DocumentService.EmbedTtdPjAsync(ba.Id, fpath);
 
-            // Hapus file TTD PJ setelah di-embed — gambar TTD sudah tersimpan di dalam DOCX/PDF,
-            // file PNG sementara tidak perlu dipertahankan agar storage tidak menumpuk
-            try { File.Delete(fpath); } catch { /* abaikan jika gagal */ }
+            // File TTD PJ sengaja TIDAK dihapus di sini — dibutuhkan lagi saat Approve
+            // untuk di-embed ulang ke dokumen final (ApproveAsync akan menghapusnya setelah selesai)
 
             // Auto-embed approver preview so draft PDF is ready for the approver
             if (approverUser != null && !string.IsNullOrWhiteSpace(approverUser.TtdPath))

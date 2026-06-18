@@ -394,6 +394,30 @@ else
             // Regenerate dokumen final dengan nomor surat yang sudah ada
             ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
 
+            // Re-embed TTD Yang Menyerahkan (Admin Gudang yang membuat BA)
+            var creatorForTtd = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
+            if (!string.IsNullOrWhiteSpace(creatorForTtd?.TtdPath))
+            {
+                var menyerahkanTtdPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                    creatorForTtd.TtdPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(menyerahkanTtdPhysical))
+                    await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, menyerahkanTtdPhysical);
+            }
+
+            // Re-embed TTD PJ (Yang Menerima) — file masih ada, dihapus setelah ini
+            if (!string.IsNullOrWhiteSpace(ba.TtdPjPath))
+            {
+                var pjTtdPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                    ba.TtdPjPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(pjTtdPhysical))
+                {
+                    await DocumentService.EmbedTtdPjAsync(ba.Id, pjTtdPhysical);
+                    // Hapus file TTD PJ sekarang — sudah di-embed ke dokumen final
+                    try { File.Delete(pjTtdPhysical); } catch { }
+                }
+            }
+
+            // Embed TTD Yang Mengetahui (Approver)
             await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, approverTtdPhysical);
             ba.Status = "Approved";
             ba.ApprovedAt = DateTime.Now;
