@@ -115,15 +115,12 @@ public class DocumentService : IDocumentService
                 { "{{TanggalKembali}}", tanggalKembaliStr },
             };
 
-            foreach (var text in mainPart.Document.Body!.Descendants<Text>())
+            // Ganti placeholder — gunakan paragraph-level replacement agar
+            // placeholder yang terpecah oleh spellcheck Word (proofErr) ikut terganti.
+            // Contoh: {{HariTanggal}} bisa terpecah menjadi run "{{" + "HariTanggal" + "}}"
+            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
             {
-                foreach (var r in replacements)
-                {
-                    if (text.Text.Contains(r.Key))
-                    {
-                        text.Text = text.Text.Replace(r.Key, r.Value);
-                    }
-                }
+                NormalizeParagraphPlaceholders(para, replacements);
             }
 
             // 2. Replace Table Rows for Perangkat
@@ -423,6 +420,46 @@ public class DocumentService : IDocumentService
     private static void EnsureFileExists(string path)
     {
         if (!File.Exists(path)) throw new FileNotFoundException("File DOCX tidak ditemukan.", path);
+    }
+
+    /// <summary>
+    /// Menggabungkan teks dari semua Run dalam sebuah Paragraph, melakukan replace placeholder,
+    /// lalu meletakkan teks hasil replace ke Run pertama dan mengosongkan Run-Run lainnya.
+    /// Pendekatan ini menangani kasus di mana Word memecah placeholder seperti {{HariTanggal}}
+    /// menjadi beberapa run terpisah akibat proofErr (spell-checker).
+    /// </summary>
+    private static void NormalizeParagraphPlaceholders(Paragraph para, Dictionary<string, string> replacements)
+    {
+        var runs = para.Elements<Run>().ToList();
+        if (runs.Count == 0) return;
+
+        // Kumpulkan semua Text node beserta indeks run-nya
+        var textNodes = runs
+            .SelectMany((r, ri) => r.Elements<Text>().Select(t => (RunIndex: ri, TextNode: t)))
+            .ToList();
+
+        if (textNodes.Count == 0) return;
+
+        // Gabungkan semua teks dalam paragraf
+        var combined = string.Concat(textNodes.Select(x => x.TextNode.Text));
+
+        // Cek apakah ada placeholder yang perlu diganti
+        bool hasReplacement = replacements.Any(r => combined.Contains(r.Key));
+        if (!hasReplacement) return;
+
+        // Lakukan semua replace
+        foreach (var r in replacements)
+            combined = combined.Replace(r.Key, r.Value);
+
+        // Tempatkan hasil di Text node pertama, kosongkan yang lain
+        var firstText = textNodes[0].TextNode;
+        firstText.Text = combined;
+        // Pertahankan whitespace
+        if (combined.Length > 0 && (combined[0] == ' ' || combined[^1] == ' '))
+            firstText.Space = SpaceProcessingModeValues.Preserve;
+
+        for (int i = 1; i < textNodes.Count; i++)
+            textNodes[i].TextNode.Text = string.Empty;
     }
 
     private static string Terbilang(int angka)
