@@ -202,12 +202,13 @@ app.MapPost("/account/logout", async (
 app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
     int baId,
     HttpContext ctx,
-    SistemBeritaAcara.Infrastructure.Data.AppDbContext db) =>
+    SistemBeritaAcara.Infrastructure.Data.AppDbContext db,
+    SistemBeritaAcara.Core.Interfaces.IDocumentService documentService) =>
 {
     try
     {
         var payload = await ctx.Request.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-        
+
         // Status 2 = document is saved
         if (payload.TryGetProperty("status", out var statusProp) && (statusProp.GetInt32() == 2 || statusProp.GetInt32() == 6))
         {
@@ -219,17 +220,16 @@ app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
                     var ba = await db.BeritaAcara.FindAsync(baId);
                     if (ba != null && !string.IsNullOrEmpty(ba.DocxPath))
                     {
-                        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", ba.DocxPath.TrimStart('/'));
+                        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()));
                         using var httpClient = new System.Net.Http.HttpClient();
                         var response = await httpClient.GetAsync(downloadUrl);
                         if (response.IsSuccessStatusCode)
                         {
                             await using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
                             await response.Content.CopyToAsync(fs);
-                            
-                            // Hapus cache preview PDF jika digunakan
-                            var pdfPath = filePath.Replace(".docx", ".pdf");
-                            if (File.Exists(pdfPath)) File.Delete(pdfPath);
+
+                            // Regenerate PDF dari DOCX yang sudah diedit
+                            await documentService.ConvertDocxToPdfAsync(filePath);
                         }
                     }
                 }

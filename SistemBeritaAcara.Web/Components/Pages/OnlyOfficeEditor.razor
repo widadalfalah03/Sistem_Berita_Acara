@@ -5,6 +5,7 @@
 @using Microsoft.Extensions.Configuration
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
 @inject AppDbContext DbContext
+@inject IDocumentService DocumentService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -38,10 +39,26 @@ else
         </div>
     </div>
 
-    <!-- Container untuk ONLYOFFICE Editor -->
-    <div style="height: 800px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius);">
-        <div id="onlyoffice-placeholder"></div>
-    </div>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div style="background:var(--danger-light);border:1px solid var(--danger);border-radius:var(--radius);padding:14px 20px;margin-bottom:16px;color:var(--danger);">
+            <i class="bi bi-exclamation-circle-fill"></i> @errorMessage
+        </div>
+    }
+    else if (string.IsNullOrEmpty(ba.DocxPath))
+    {
+        <div style="text-align:center;padding:60px;color:var(--text-muted);">
+            <i class="bi bi-file-earmark-x" style="font-size:48px;display:block;margin-bottom:16px;"></i>
+            <div>Dokumen belum dibuat. Buka halaman <strong>Pratinjau</strong> terlebih dahulu.</div>
+        </div>
+    }
+    else
+    {
+        <!-- Container untuk ONLYOFFICE Editor -->
+        <div style="height: 800px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius);">
+            <div id="onlyoffice-placeholder"></div>
+        </div>
+    }
 }
 
 @code {
@@ -49,6 +66,7 @@ else
 
     private BeritaAcaraEntity? ba;
     private bool isLoading = true;
+    private string errorMessage = string.Empty;
     private int _currentUserId;
     private string _currentUserName = "";
 
@@ -60,7 +78,22 @@ else
         int.TryParse(userIdStr, out _currentUserId);
 
         ba = await DbContext.Set<BeritaAcaraEntity>()
+            .Include(b => b.Pj).Include(b => b.Menyerahkan).Include(b => b.Mengetahui)
+            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
             .FirstOrDefaultAsync(b => b.Id == Id && b.Status == "Draft" && b.CreatedBy == _currentUserId);
+
+        if (ba != null && string.IsNullOrEmpty(ba.DocxPath))
+        {
+            try
+            {
+                ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+                await DbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "Gagal generate dokumen: " + ex.Message;
+            }
+        }
 
         isLoading = false;
     }
@@ -69,19 +102,15 @@ else
     {
         if (firstRender && ba != null && !string.IsNullOrEmpty(ba.DocxPath))
         {
-            var onlyOfficeServerUrl = Configuration["OnlyOffice:ServerUrl"] ?? "http://localhost:8080";
+            var onlyOfficeServerUrl = Configuration["OnlyOffice:ServerUrl"] ?? "http://localhost:8081";
             var apiScriptUrl = $"{onlyOfficeServerUrl}/web-apps/apps/api/documents/api.js";
 
-            // Gunakan BaseUri dari Navigation, lalu ganti localhost dengan host.docker.internal 
-            // agar bisa diakses oleh ONLYOFFICE di dalam Docker
-            var baseUri = Navigation.BaseUri;
-            if (baseUri.Contains("localhost"))
-            {
-                baseUri = baseUri.Replace("localhost", "10.64.245.114");
-            }
+            // Gunakan App:BaseUrl dari config agar ONLYOFFICE di Docker bisa mengakses file
+            // App:BaseUrl menggunakan IP LAN (bukan localhost) sehingga bisa dijangkau dari dalam container
+            var appBaseUrl = (Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
 
-            var docUrl = $"{baseUri}{ba.DocxPath}";
-            var callbackUrl = $"{baseUri}api/onlyoffice/callback/{ba.Id}";
+            var docUrl = $"{appBaseUrl}/{ba.DocxPath}";
+            var callbackUrl = $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}";
             var key = $"{ba.Id}-{DateTime.Now.Ticks}"; // Key unik untuk memaksa reload/edit baru
 
             var config = new
@@ -103,7 +132,11 @@ else
                         name = _currentUserName
                     },
                     mode = "edit",
-                    lang = "id-ID"
+                    lang = "id-ID",
+                    customization = new
+                    {
+                        forcesave = true
+                    }
                 }
             };
 

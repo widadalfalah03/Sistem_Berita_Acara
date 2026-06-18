@@ -408,6 +408,15 @@ public class DocumentService : IDocumentService
         spireDoc.Close();
     }
 
+    public Task ConvertDocxToPdfAsync(string docxPhysicalPath)
+    {
+        var spireDoc = new Spire.Doc.Document();
+        spireDoc.LoadFromFile(docxPhysicalPath);
+        spireDoc.SaveToFile(docxPhysicalPath.Replace(".docx", ".pdf"), Spire.Doc.FileFormat.PDF);
+        spireDoc.Close();
+        return Task.CompletedTask;
+    }
+
     private string GetRelativePath(string fileName) => Path.Combine("files", "documents", fileName).Replace("\\", "/");
     private string GetPhysicalPath(string relativePath) => Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
 

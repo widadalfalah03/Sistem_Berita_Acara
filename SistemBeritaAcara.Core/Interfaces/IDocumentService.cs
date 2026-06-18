@@ -9,4 +9,5 @@ public interface IDocumentService
     Task<string> EmbedTtdPreviewApproverAsync(int baId, string ttdPath);
     Task<string> EmbedTtdPjAsync(int baId, string ttdPath);
     Task<string> EmbedTtdMengetahuiAsync(int baId, string ttdPath);
+    Task ConvertDocxToPdfAsync(string docxPhysicalPath);
 }
