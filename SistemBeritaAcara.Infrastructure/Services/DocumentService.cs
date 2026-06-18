@@ -105,7 +105,7 @@ public class DocumentService : IDocumentService
                 { "{{FungsiPJ}}", ba.Pj?.FungsiDirektorat ?? "-" },
                 { "{{EmailPJ}}", ba.Pj?.Email ?? "-" },
                 { "{{NoPekerjaPJ}}", ba.Pj?.NoPekerja ?? "-" },
-                { "{{NoTelpPJ}}", ba.Pj?.NoTelp ?? "-" },
+                { "{{NoTelpPJ}}", ba.PjNoTelp ?? ba.Pj?.NoTelp ?? "-" },
                 { "{{Menyerahkan}}", ba.Menyerahkan?.Nama ?? "-" },
                 { "{{Approver}}", ba.Mengetahui?.Nama ?? "-" },
                 { "{{JabatanApprover}}", jabatanApprover },
@@ -240,10 +240,7 @@ public class DocumentService : IDocumentService
         try
         {
             string pdfPhysicalPath = physicalPath.Replace(".docx", ".pdf");
-            var spireDoc = new Spire.Doc.Document();
-            spireDoc.LoadFromFile(physicalPath);
-            spireDoc.SaveToFile(pdfPhysicalPath, Spire.Doc.FileFormat.PDF);
-            spireDoc.Close();
+            ConvertDocxToPdfInternal(physicalPath, pdfPhysicalPath);
         }
         catch (Exception ex)
         {
@@ -399,19 +396,33 @@ public class DocumentService : IDocumentService
         }
 
         // Konversi DOCX → PDF menggunakan Spire.Doc
-        var spireDoc = new Spire.Doc.Document();
-        spireDoc.LoadFromFile(docPath);
-        spireDoc.SaveToFile(docPath.Replace(".docx", ".pdf"), Spire.Doc.FileFormat.PDF);
-        spireDoc.Close();
+        ConvertDocxToPdfInternal(docPath, docPath.Replace(".docx", ".pdf"));
     }
 
     public Task ConvertDocxToPdfAsync(string docxPhysicalPath)
     {
-        var spireDoc = new Spire.Doc.Document();
-        spireDoc.LoadFromFile(docxPhysicalPath);
-        spireDoc.SaveToFile(docxPhysicalPath.Replace(".docx", ".pdf"), Spire.Doc.FileFormat.PDF);
-        spireDoc.Close();
+        ConvertDocxToPdfInternal(docxPhysicalPath, docxPhysicalPath.Replace(".docx", ".pdf"));
         return Task.CompletedTask;
+    }
+
+    // Spire.Doc LoadFromFile pada Windows bisa menahan lock file setelah Close().
+    // Solusi: load dari SALINAN temp sehingga file asli (DOCX) tetap bebas untuk ditulis.
+    private static void ConvertDocxToPdfInternal(string docxPath, string pdfPath)
+    {
+        // Temp file harus berekstensi .docx agar Spire.Doc bisa mendeteksi format file
+        var tempPath = Path.Combine(Path.GetDirectoryName(docxPath)!, "_tmp_" + Path.GetFileName(docxPath));
+        File.Copy(docxPath, tempPath, overwrite: true);
+        try
+        {
+            var doc = new Spire.Doc.Document();
+            doc.LoadFromFile(tempPath);
+            doc.SaveToFile(pdfPath, Spire.Doc.FileFormat.PDF);
+            doc.Close();
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch { }
+        }
     }
 
     private string GetRelativePath(string fileName) => Path.Combine("files", "documents", fileName).Replace("\\", "/");

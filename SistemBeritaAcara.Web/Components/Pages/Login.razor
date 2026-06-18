@@ -9,6 +9,7 @@
     var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
     var errorParam = query["error"] ?? string.Empty;
     var errorMessage = errorParam == "invalid" ? "Email atau password tidak valid." : string.Empty;
+    var returnUrl = query["returnUrl"] ?? "/dashboard";
 }
 
 <div class="login-page">
@@ -41,7 +42,7 @@
             <!-- HTML form POST ke /account/login — wajib agar cookie auth bisa ditulis -->
             <form method="post" action="/account/login">
                 <AntiforgeryToken />
-                <input type="hidden" name="returnUrl" value="/dashboard" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
 
                 <div class="form-group">
                     <label class="form-label" for="login-email">Email</label>

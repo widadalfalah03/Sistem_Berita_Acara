@@ -8,6 +8,8 @@
 @inject IEmailService EmailService
 @inject INotificationService NotificationService
 @inject IExcelService ExcelService
+@inject IBACounterService BACounterService
+@inject IConfiguration Configuration
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
@@ -352,12 +354,34 @@ else
                 isProcessing = false;
                 return;
             }
-            await DocumentService.EmbedTtdMengetahuiAsync(ba!.Id, approverTtdPhysical);
-            ba!.Status = "Approved";
+
+            // Generate nomor surat saat approve
+            if (string.IsNullOrEmpty(ba!.NomorSurat))
+            {
+                var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal);
+                ba.CounterValue = next.counterValue;
+                ba.NomorSurat = next.nomorSurat;
+            }
+
+            // Regenerate dokumen final dengan nomor surat yang sudah ada
+            ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+
+            await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, approverTtdPhysical);
+            ba.Status = "Approved";
             ba.ApprovedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
             await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
             await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"BA {ba.NomorSurat} telah disetujui.", ba.Id);
+
+            // Email ke Admin Gudang & Barang (creator)
+            var creatorUser = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
+            if (!string.IsNullOrEmpty(creatorUser?.Email))
+                await EmailService.SendApprovalResultAsync(creatorUser.Email, creatorUser.Nama ?? creatorUser.Email, ba.NomorSurat!, true);
+
+            // Email ke PJ
+            if (!string.IsNullOrEmpty(ba.Pj?.Email))
+                await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.NomorSurat!, true);
+
             actionMessage = "Berita Acara berhasil disetujui!";
             await LoadAsync();
         }
@@ -375,7 +399,18 @@ else
             ba.AlasanReject = rejectReason;
             ba.ApprovedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
-            await NotificationService.SendAsync(ba.CreatedBy, "BA_REJECTED", $"BA {ba.NomorSurat} ditolak: {rejectReason}", ba.Id);
+            var label = ba.NomorSurat ?? "Draft";
+            await NotificationService.SendAsync(ba.CreatedBy, "BA_REJECTED", $"BA {label} ditolak: {rejectReason}", ba.Id);
+
+            // Email ke Admin Gudang & Barang (creator)
+            var creatorUser = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
+            if (!string.IsNullOrEmpty(creatorUser?.Email))
+                await EmailService.SendApprovalResultAsync(creatorUser.Email, creatorUser.Nama ?? creatorUser.Email, label, false, rejectReason);
+
+            // Email ke PJ
+            if (!string.IsNullOrEmpty(ba.Pj?.Email))
+                await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, label, false, rejectReason);
+
             showRejectModal = false;
             rejectReason = string.Empty;
             actionMessage = "Berita Acara telah ditolak.";

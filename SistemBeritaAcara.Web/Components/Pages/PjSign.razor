@@ -4,9 +4,11 @@
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
 @inject AppDbContext DbContext
 @inject IDocumentService DocumentService
+@inject IEmailService EmailService
 @inject INotificationService NotificationService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject IConfiguration Configuration
 @layout EmptyLayout
 @rendermode InteractiveServer
 
@@ -435,9 +437,16 @@ else
             }
 
             await NotificationService.SendToRoleAsync("Approver", "WAITING_APPROVAL",
-                $"BA {ba.NomorSurat} menunggu approval Anda.", ba.Id);
+                $"Draft BA telah ditandatangani PJ ({ba.Pj?.Nama}) dan menunggu approval Anda.", ba.Id);
             await NotificationService.SendToRoleAsync("AdminGudangBarang", "PJ_SIGNED",
-                $"BA {ba.NomorSurat} telah ditandatangani PJ ({ba.Pj?.Nama}).", ba.Id);
+                $"Draft BA telah ditandatangani PJ ({ba.Pj?.Nama}).", ba.Id);
+
+            // Email notifikasi ke Approver
+            if (approverUser != null && !string.IsNullOrEmpty(approverUser.Email))
+            {
+                var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+                await EmailService.SendApprovalRequestAsync(approverUser.Email, approverUser.Nama ?? approverUser.Email, baseUrl, ba.Id);
+            }
 
             alreadySigned = true;
         }

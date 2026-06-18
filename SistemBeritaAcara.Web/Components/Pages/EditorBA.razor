@@ -4,7 +4,6 @@
 @using System.Security.Claims
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
 @inject AppDbContext DbContext
-@inject IBACounterService BACounterService
 @inject IDocumentService DocumentService
 @inject IEmailService EmailService
 @inject INotificationService NotificationService
@@ -181,26 +180,31 @@ else
             .Include(b => b.Mengetahui)
             .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
             .Include(b => b.BuktiFotos)
-            .FirstOrDefaultAsync(b => b.Id == Id && b.Status == "Draft" && b.CreatedBy == _currentUserId);
+            .FirstOrDefaultAsync(b => b.Id == Id && (b.Status == "Draft" || b.Status == "Rejected") && b.CreatedBy == _currentUserId);
 
         if (ba != null)
         {
-            try
+            // Jika DocxPath sudah ada, jangan regenerasi dari template — bisa jadi sudah diedit via ONLYOFFICE
+            // Hanya generate jika belum ada sama sekali (BA baru pertama kali dibuka)
+            if (string.IsNullOrEmpty(ba.DocxPath))
             {
-                ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
-
-                var currentUser = await DbContext.Users.FindAsync(_currentUserId);
-                if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
+                try
                 {
-                    var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                    await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
-                }
+                    ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
 
-                await DbContext.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                errorMessage = "Gagal memuat pratinjau dokumen: " + ex.Message;
+                    var currentUser = await DbContext.Users.FindAsync(_currentUserId);
+                    if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
+                    {
+                        var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                        await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
+                    }
+
+                    await DbContext.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    errorMessage = "Gagal memuat pratinjau dokumen: " + ex.Message;
+                }
             }
         }
 
@@ -223,15 +227,7 @@ else
                 return;
             }
 
-            // 1. Generate nomor surat (atomic increment)
-            if (string.IsNullOrEmpty(ba.NomorSurat))
-            {
-                var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal);
-                ba.CounterValue = next.counterValue;
-                ba.NomorSurat = next.nomorSurat;
-            }
-
-            // 2. Buat ApprovalToken untuk magic link PJ
+            // 1. Buat ApprovalToken untuk magic link PJ
             var tokenValue = Guid.NewGuid().ToString("N");
             DbContext.ApprovalToken.Add(new ApprovalToken
             {
@@ -243,10 +239,14 @@ else
                 CreatedAt = DateTime.Now
             });
 
-            // 3. Generate ulang dokumen agar NomorSurat masuk ke PDF/DOCX
-            ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+            // Generate dokumen hanya jika belum ada — jika sudah ada berarti admin sudah
+            // edit manual via ONLYOFFICE, jangan timpa hasil editannya
+            if (string.IsNullOrEmpty(ba.DocxPath))
+            {
+                ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+            }
 
-            // 3.5 Embed tanda tangan Admin Gudang (Yang Menyerahkan)
+            // Embed tanda tangan Admin Gudang (Yang Menyerahkan)
             var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
             await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
 
@@ -263,11 +263,11 @@ else
                 tokenValue
             );
 
-            // 6. Kirim notifikasi in-app ke AdminGudangBarang
+            // 2. Kirim notifikasi in-app ke AdminGudangBarang
             await NotificationService.SendAsync(
                 _currentUserId,
                 "WAITING_PJ_SIGN",
-                $"BA {ba.NomorSurat} telah diajukan. Menunggu tanda tangan PJ ({ba.Pj.Nama}).",
+                $"Draft BA telah diajukan. Menunggu tanda tangan PJ ({ba.Pj.Nama}).",
                 ba.Id
             );
 

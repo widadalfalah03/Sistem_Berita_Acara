@@ -14,7 +14,7 @@
 <div class="page-header d-flex align-center justify-between">
     <div>
         <h1 class="page-title">Draft Dokumen</h1>
-        <p class="page-subtitle">Berita Acara yang belum diajukan untuk persetujuan</p>
+        <p class="page-subtitle">Berita Acara yang belum diajukan atau perlu direvisi</p>
     </div>
     <NavLink class="btn btn-primary" href="/buat-ba">
         <i class="bi bi-plus-lg"></i> Buat Baru
@@ -51,17 +51,19 @@ else
                     <th>No. Surat</th>
                     <th>Jenis Berita Acara</th>
                     <th>Penanggung Jawab</th>
-                    <th>Terakhir Diupdate</th>
+                    <th>Status / Keterangan</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var ba in drafts)
                 {
-                    <tr>
+                    var isRejected = ba.Status == "Rejected";
+                    <tr style="@(isRejected ? "background:var(--danger-light,#FEF2F2);" : "")">
                         <td>
                             <div style="display:flex;align-items:center;gap:10px;">
-                                <i class="bi bi-file-earmark-text" style="font-size:20px;color:var(--primary);"></i>
+                                <i class="bi @(isRejected ? "bi-file-earmark-x" : "bi-file-earmark-text")"
+                                   style="font-size:20px;color:@(isRejected ? "var(--danger)" : "var(--primary)");"></i>
                                 <div>
                                     <div class="cell-main">@(ba.NomorSurat ?? "(Draft)")</div>
                                     <div class="cell-sub">Dibuat @ba.CreatedAt.ToString("dd MMM yyyy")</div>
@@ -75,11 +77,28 @@ else
                             <div class="cell-main">@ba.Pj?.Nama</div>
                             <div class="cell-sub">@ba.Pj?.FungsiDirektorat</div>
                         </td>
-                        <td>@ba.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                        <td>
+                            @if (isRejected)
+                            {
+                                <span class="pill pill-rejected" style="font-size:11px;">Ditolak</span>
+                                @if (!string.IsNullOrEmpty(ba.AlasanReject))
+                                {
+                                    <div class="cell-sub" style="color:var(--danger);margin-top:2px;" title="@ba.AlasanReject">
+                                        @(ba.AlasanReject!.Length > 40 ? ba.AlasanReject[..40] + "…" : ba.AlasanReject)
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                @ba.CreatedAt.ToString("dd MMM yyyy HH:mm")
+                            }
+                        </td>
                         <td>
                             <div style="display:flex;gap:4px;">
-                                <NavLink class="btn-icon" href="@($"/buat-ba?edit={ba.Id}")" title="Edit Draft">
-                                    <i class="bi bi-pencil"></i>
+                                <NavLink class="btn-icon" href="@($"/buat-ba?edit={ba.Id}")"
+                                         title="@(isRejected ? "Revisi" : "Edit Draft")"
+                                         style="@(isRejected ? "color:var(--danger);" : "")">
+                                    <i class="bi @(isRejected ? "bi-arrow-counterclockwise" : "bi-pencil")"></i>
                                 </NavLink>
                                 <button class="btn-icon" title="Hapus"
                                         style="color:var(--danger);"
@@ -141,7 +160,7 @@ else
     {
         drafts = await DbContext.Set<BeritaAcaraEntity>()
             .Include(b => b.Pj)
-            .Where(b => b.CreatedBy == currentUserId && b.Status == "Draft")
+            .Where(b => b.CreatedBy == currentUserId && (b.Status == "Draft" || b.Status == "Rejected"))
             .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
         isLoading = false;

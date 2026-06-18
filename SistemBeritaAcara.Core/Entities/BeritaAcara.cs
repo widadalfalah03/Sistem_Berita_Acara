@@ -9,6 +9,7 @@ public class BeritaAcara
     public string Jenis { get; set; } = string.Empty;
     public string? JenisCustom { get; set; }
     public int PjId { get; set; }
+    public string? PjNoTelp { get; set; }
     public int MenyerahkanId { get; set; }
     public int MengetahuiId { get; set; }
     public string? TiketSscNo { get; set; }

@@ -13,7 +13,8 @@ public class EmailService(IConfiguration config) : IEmailService
     private readonly string _user = config["Email:Username"] ?? "";
     private readonly string _pass = config["Email:Password"] ?? "";
     private readonly string _from = config["Email:From"] ?? "noreply@pertamina.com";
-    private readonly string _baseUrl = config["App:BaseUrl"] ?? "http://localhost:5000";
+    // PublicUrl digunakan untuk link di email agar bisa diakses browser (bukan Docker-internal)
+    private readonly string _baseUrl = config["App:PublicUrl"] ?? config["App:BaseUrl"] ?? "http://localhost:5000";
 
     public async Task SendMagicLinkAsync(string toEmail, string toPjName, int baId, string token)
     {
@@ -50,6 +51,60 @@ public class EmailService(IConfiguration config) : IEmailService
             """;
 
         await SendEmailAsync(toEmail, $"Notifikasi Keamanan: Tanda Tangan Digunakan ({nomorSurat})", body);
+    }
+
+    public async Task SendApprovalRequestAsync(string toEmail, string approverName, string baseUrl, int baId)
+    {
+        // Link mengarah ke halaman login dengan returnUrl ke detail BA spesifik
+        // Setelah login sebagai Approver, langsung diarahkan ke BA yang perlu di-review
+        var returnUrl = Uri.EscapeDataString($"/berita-acara/{baId}");
+        var loginLink = $"{baseUrl}/login?returnUrl={returnUrl}";
+
+        string body = $"""
+            <h2 style="color: #0f172a;">Dokumen Berita Acara Menunggu Persetujuan Anda</h2>
+            <p>Halo <strong>{approverName}</strong>,</p>
+            <p>Penanggung Jawab (PJ) telah menandatangani Berita Acara dan dokumen tersebut kini menunggu persetujuan Anda.</p>
+
+            <div style="text-align: center; margin: 40px 0;">
+                <a href="{loginLink}" style="background-color: #0284c7; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #0369a1;">Login & Review Dokumen</a>
+            </div>
+
+            <p style="font-size: 13px; color: #64748b;"><em>Anda akan diarahkan ke halaman login. Setelah berhasil login sebagai Approver, sistem akan otomatis membuka dokumen yang perlu ditinjau.</em></p>
+            <br>
+            <p>Salam hangat,<br><strong>Sistem Berita Acara IT</strong></p>
+            """;
+
+        await SendEmailAsync(toEmail, "Tindakan Diperlukan: Review & Persetujuan Berita Acara", body);
+    }
+
+    public async Task SendApprovalResultAsync(string toEmail, string recipientName, string nomorSurat, bool approved, string? alasan = null)
+    {
+        string statusColor = approved ? "#16a34a" : "#dc2626";
+        string statusText = approved ? "DISETUJUI" : "DITOLAK";
+        string statusIcon = approved ? "✅" : "❌";
+        string alasanSection = (!approved && !string.IsNullOrEmpty(alasan))
+            ? $"""
+              <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;margin:20px 0;border-radius:4px;">
+                  <strong>Alasan Penolakan:</strong><br>
+                  <span style="color:#374151;">{alasan}</span>
+              </div>
+              """
+            : string.Empty;
+
+        string body = $"""
+            <h2 style="color: {statusColor};">{statusIcon} Berita Acara {statusText}</h2>
+            <p>Halo <strong>{recipientName}</strong>,</p>
+            <p>Berita Acara dengan nomor surat <strong>{nomorSurat}</strong> telah <strong style="color:{statusColor};">{statusText}</strong> oleh Approver.</p>
+            {alasanSection}
+            <br>
+            <p>Salam hangat,<br><strong>Sistem Berita Acara IT</strong></p>
+            """;
+
+        string subject = approved
+            ? $"Berita Acara {nomorSurat} Telah Disetujui"
+            : $"Berita Acara {nomorSurat} Ditolak";
+
+        await SendEmailAsync(toEmail, subject, body);
     }
 
     private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)

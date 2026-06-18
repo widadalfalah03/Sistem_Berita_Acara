@@ -16,14 +16,27 @@ window.onlyoffice = {
     init: function (apiScriptUrl, config) {
         this.loadScript(apiScriptUrl).then(() => {
             var placeholder = document.getElementById("onlyoffice-placeholder");
-            if (placeholder && typeof DocsAPI !== 'undefined') {
-                // Hancurkan editor lama jika ada
-                if (this.editor) {
-                    this.editor.destroyEditor();
-                }
-                this.editor = new DocsAPI.DocEditor("onlyoffice-placeholder", config);
+            if (!placeholder) {
+                console.error("ONLYOFFICE: #onlyoffice-placeholder not found in DOM");
+                return;
             }
-        }).catch(err => console.error("Failed to load ONLYOFFICE API", err));
+            if (typeof DocsAPI === 'undefined') {
+                console.error("ONLYOFFICE: DocsAPI is undefined — API script may have failed to load from " + apiScriptUrl);
+                return;
+            }
+            if (this.editor) {
+                this.editor.destroyEditor();
+                this.editor = null;
+            }
+            this.editor = new DocsAPI.DocEditor("onlyoffice-placeholder", config);
+        }).catch(err => {
+            console.error("ONLYOFFICE: Failed to load API script from " + apiScriptUrl, err);
+        });
+    },
+    forceSave: function () {
+        if (this.editor) {
+            this.editor.forceSave();
+        }
     },
     destroy: function () {
         if (this.editor) {

@@ -150,6 +150,12 @@
                     <div style="font-size:12px;color:var(--text-muted);">Cost Center</div>
                     <div style="font-weight:600;">@selectedPj.CostCenter</div>
                 </div>
+                <div style="flex:1;min-width:180px;">
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP <span style="color:var(--text-muted);font-weight:400;">(opsional)</span></div>
+                    <input type="tel" class="form-control" style="font-size:13px;padding:6px 10px;"
+                           placeholder="Contoh: 0812-xxxx-xxxx"
+                           @bind="model.PjNoTelp" @bind:event="oninput" />
+                </div>
             </div>
         }
     </div>
@@ -360,7 +366,7 @@
         {
             var existing = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Perangkat)
-                .FirstOrDefaultAsync(b => b.Id == editId.Value && b.Status == "Draft" && b.CreatedBy == _currentUserId);
+                .FirstOrDefaultAsync(b => b.Id == editId.Value && (b.Status == "Draft" || b.Status == "Rejected") && b.CreatedBy == _currentUserId);
 
             if (existing is not null)
             {
@@ -372,6 +378,7 @@
                     ? existing.TanggalKembali.Value.ToDateTime(TimeOnly.MinValue)
                     : null;
                 model.PjId = existing.PjId;
+                model.PjNoTelp = existing.PjNoTelp;
                 model.MenyerahkanId = existing.MenyerahkanId;
                 model.MengetahuiId = existing.MengetahuiId;
 
@@ -431,6 +438,7 @@
     {
         selectedPj = p;
         model.PjId = p.Id;
+        model.PjNoTelp = p.NoTelp; // pre-fill, admin can override
         pjSearch = p.Nama;
         pjResults.Clear();
     }
@@ -483,11 +491,24 @@
                 existing.Jenis = model.Jenis;
                 existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
                 existing.PjId = model.PjId;
+                existing.PjNoTelp = model.PjNoTelp;
                 existing.MenyerahkanId = model.MenyerahkanId;
                 existing.MengetahuiId = model.MengetahuiId;
                 existing.TiketSscNo = model.TiketSscNo;
                 existing.TanggalKembali = model.TanggalKembali.HasValue
                     ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
+
+                // Reset rejected BA back to Draft so it re-enters the submission workflow
+                if (existing.Status == "Rejected")
+                {
+                    existing.Status = "Draft";
+                    existing.AlasanReject = null;
+                    existing.TtdPjPath = null;
+                    existing.DocxPath = null;
+                    existing.SubmittedAt = null;
+                    existing.PjSignedAt = null;
+                    existing.ApprovedAt = null;
+                }
 
                 // Update perangkat: hapus lama, masukkan yang baru
                 DbContext.PerangkatBA.RemoveRange(existing.Perangkat);
@@ -553,6 +574,7 @@
                     Jenis = model.Jenis,
                     JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null,
                     PjId = model.PjId,
+                    PjNoTelp = model.PjNoTelp,
                     MenyerahkanId = model.MenyerahkanId,
                     MengetahuiId = model.MengetahuiId,
                     TiketSscNo = model.TiketSscNo,
@@ -612,6 +634,7 @@
         public string Jenis { get; set; } = "Alokasi";
         public string? JenisCustom { get; set; }
         public int PjId { get; set; }
+        public string? PjNoTelp { get; set; }
         public int MenyerahkanId { get; set; }
         public int MengetahuiId { get; set; }
         public string? TiketSscNo { get; set; }

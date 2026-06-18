@@ -30,13 +30,28 @@ else if (ba is null)
 }
 else
 {
-    <div style="display:flex;align-items:center;gap:16px;padding:12px 0;margin-bottom:16px;border-bottom:1px solid var(--border);">
-        <button class="btn btn-outline btn-sm" @onclick="GoBack" style="display:flex;align-items:center;gap:6px;">
-            <i class="bi bi-arrow-left"></i> Kembali ke Pratinjau
-        </button>
-        <div>
-            <div style="font-weight:700;font-size:16px;">Edit Manual: @(ba.NomorSurat ?? "Draft")</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-bottom:16px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:16px;">
+            <button class="btn btn-outline btn-sm" @onclick="GoBack" style="display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-arrow-left"></i> Kembali ke Pratinjau
+            </button>
+            <div>
+                <div style="font-weight:700;font-size:16px;">Edit Manual: @(ba.NomorSurat ?? "Draft")</div>
+            </div>
         </div>
+        <button class="btn btn-primary" @onclick="SaveAndGoBackAsync" disabled="@isSaving"
+                style="display:flex;align-items:center;gap:8px;">
+            @if (isSaving)
+            {
+                <span class="spinner" style="width:16px;height:16px;border-width:2px;border-color:white;border-top-color:transparent;"></span>
+                <span>Menyimpan...</span>
+            }
+            else
+            {
+                <i class="bi bi-save-fill"></i>
+                <span>Simpan & Kembali</span>
+            }
+        </button>
     </div>
 
     @if (!string.IsNullOrEmpty(errorMessage))
@@ -69,6 +84,8 @@ else
     private string errorMessage = string.Empty;
     private int _currentUserId;
     private string _currentUserName = "";
+    private bool _editorInitialized = false;
+    private bool isSaving = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -100,8 +117,9 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && ba != null && !string.IsNullOrEmpty(ba.DocxPath))
+        if (!_editorInitialized && ba != null && !string.IsNullOrEmpty(ba.DocxPath) && string.IsNullOrEmpty(errorMessage))
         {
+            _editorInitialized = true;
             var onlyOfficeServerUrl = Configuration["OnlyOffice:ServerUrl"] ?? "http://localhost:8081";
             var apiScriptUrl = $"{onlyOfficeServerUrl}/web-apps/apps/api/documents/api.js";
 
@@ -145,6 +163,20 @@ else
     }
 
     private void GoBack() => Navigation.NavigateTo($"/editor/{Id}");
+
+    private async Task SaveAndGoBackAsync()
+    {
+        isSaving = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("onlyoffice.forceSave");
+            // Tunggu callback ONLYOFFICE selesai memproses (download + PDF regen)
+            await Task.Delay(3500);
+        }
+        catch { /* abaikan jika editor belum ready */ }
+        Navigation.NavigateTo($"/editor/{Id}");
+    }
 
     public async ValueTask DisposeAsync()
     {

@@ -25,6 +25,8 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     await db.Database.ExecuteSqlRawAsync(@"
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'ProfilePicPath')
             ALTER TABLE [Users] ADD [ProfilePicPath] nvarchar(500) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'PjNoTelp')
+            ALTER TABLE [BeritaAcara] ADD [PjNoTelp] nvarchar(50) NULL;
     ");
 
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
@@ -202,6 +204,7 @@ app.MapPost("/account/logout", async (
 app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
     int baId,
     HttpContext ctx,
+    IConfiguration cfg,
     SistemBeritaAcara.Infrastructure.Data.AppDbContext db,
     SistemBeritaAcara.Core.Interfaces.IDocumentService documentService) =>
 {
@@ -209,7 +212,7 @@ app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
     {
         var payload = await ctx.Request.ReadFromJsonAsync<System.Text.Json.JsonElement>();
 
-        // Status 2 = document is saved
+        // Status 2 = closed/saved, Status 6 = force-save (Ctrl+S)
         if (payload.TryGetProperty("status", out var statusProp) && (statusProp.GetInt32() == 2 || statusProp.GetInt32() == 6))
         {
             if (payload.TryGetProperty("url", out var downloadUrlProp))
@@ -217,19 +220,60 @@ app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
                 var downloadUrl = downloadUrlProp.GetString();
                 if (!string.IsNullOrEmpty(downloadUrl))
                 {
+                    // ONLYOFFICE sends a URL from its own server (Docker-internal, port 80).
+                    // Rewrite the host to the mapped port on the Windows host so we can download it.
+                    var onlyOfficeServerUrl = (cfg["OnlyOffice:ServerUrl"] ?? "http://localhost:8081").TrimEnd('/');
+                    try
+                    {
+                        var dlUri = new Uri(downloadUrl);
+                        var targetBase = new Uri(onlyOfficeServerUrl);
+                        // Rewrite scheme+host+port to the configured ONLYOFFICE server (keeps path & query)
+                        var builder = new UriBuilder(targetBase);
+                        builder.Path = dlUri.AbsolutePath;
+                        builder.Query = dlUri.Query.TrimStart('?');
+                        downloadUrl = builder.Uri.ToString();
+                    }
+                    catch { /* keep original URL if rewrite fails */ }
+
                     var ba = await db.BeritaAcara.FindAsync(baId);
                     if (ba != null && !string.IsNullOrEmpty(ba.DocxPath))
                     {
                         var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()));
+                        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+
                         using var httpClient = new System.Net.Http.HttpClient();
+                        httpClient.Timeout = TimeSpan.FromSeconds(30);
                         var response = await httpClient.GetAsync(downloadUrl);
                         if (response.IsSuccessStatusCode)
                         {
-                            await using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
-                            await response.Content.CopyToAsync(fs);
+                            // Tulis ke temp dulu, lalu atomic move — menghindari partial-write
+                            // dan konflik lock dengan proses lain (Spire.Doc, Defender, dsb.)
+                            var tempFilePath = filePath + ".cb_tmp";
+                            await using (var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                            {
+                                await response.Content.CopyToAsync(fs);
+                            }
+
+                            // Move dengan retry untuk menangani sisa lock sementara
+                            for (int attempt = 0; attempt < 10; attempt++)
+                            {
+                                try
+                                {
+                                    File.Move(tempFilePath, filePath, overwrite: true);
+                                    break;
+                                }
+                                catch (IOException) when (attempt < 9)
+                                {
+                                    await Task.Delay(300);
+                                }
+                            }
 
                             // Regenerate PDF dari DOCX yang sudah diedit
                             await documentService.ConvertDocxToPdfAsync(filePath);
+                        }
+                        else
+                        {
+                            return Results.Ok(new { error = 1, message = $"Download failed: {response.StatusCode} from {downloadUrl}" });
                         }
                     }
                 }
@@ -241,7 +285,7 @@ app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
     {
         return Results.Ok(new { error = 1, message = ex.Message });
     }
-});
+}).DisableAntiforgery();
 
 // Database and roles are ensured earlier before app start
 
