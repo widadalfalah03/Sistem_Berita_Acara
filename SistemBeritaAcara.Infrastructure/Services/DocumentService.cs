@@ -375,9 +375,26 @@ public class DocumentService : IDocumentService
             using (var fs = File.OpenRead(imagePath)) imgPart.FeedData(fs);
             var imgId = mainPart.GetIdOfPart(imgPart);
 
-            // 160pt × 80pt → EMU (1 pt = 12700 EMU)
-            long cx = 160L * 12700L;
-            long cy =  80L * 12700L;
+            // Calculate dimensions preserving aspect ratio
+            long cx = 140L * 12700L;
+            long cy =  70L * 12700L;
+            var dims = GetImageDimensions(imagePath);
+            if (dims.width > 0 && dims.height > 0)
+            {
+                double targetRatio = 140.0 / 70.0;
+                double imageRatio = (double)dims.width / dims.height;
+
+                if (imageRatio > targetRatio)
+                {
+                    cx = 140L * 12700L;
+                    cy = (long)((140.0 / imageRatio) * 12700L);
+                }
+                else
+                {
+                    cy = 70L * 12700L;
+                    cx = (long)((70.0 * imageRatio) * 12700L);
+                }
+            }
 
             var drawing = new Drawing(
                 new DW.Inline(
@@ -426,11 +443,16 @@ public class DocumentService : IDocumentService
                     pPr.Remove();
                 }
 
-                // Buat ParagraphProperties baru yang bersih agar urutan elemen (Indentation lalu Justification)
-                // valid menurut skema OpenXML. Ini mencegah Spire.Doc mengabaikan alignment.
+                // Buat ParagraphProperties baru yang bersih
+                // Hitung sisa tinggi (dalam point) yang hilang akibat scaling, lalu tambahkan sebagai Spacing After (dalam twips)
+                long cy_pts = cy / 12700L;
+                long missing_cy_pts = 70L - cy_pts;
+                long spacing_after_twips = missing_cy_pts * 20L;
+
                 para.ParagraphProperties = new ParagraphProperties(
                     new Indentation { Left = "0" },
-                    new Justification { Val = JustificationValues.Left }
+                    new Justification { Val = JustificationValues.Left },
+                    new SpacingBetweenLines { After = spacing_after_twips.ToString() }
                 );
 
                 // Hapus semua run & text yang ada (termasuk run placeholder)
@@ -440,6 +462,21 @@ public class DocumentService : IDocumentService
                 // Sisipkan run baru berisi gambar dengan RunProperties yang bersih
                 var imgRun = new Run((Drawing)drawing.CloneNode(true));
                 para.Append(imgRun);
+
+                // Force the parent table to have a Fixed layout so columns don't auto-resize based on signature width
+                var parentTable = para.Ancestors<Table>().FirstOrDefault();
+                if (parentTable != null)
+                {
+                    var tblPr = parentTable.Elements<TableProperties>().FirstOrDefault();
+                    if (tblPr != null)
+                    {
+                        var layout = tblPr.Elements<TableLayout>().FirstOrDefault();
+                        if (layout == null)
+                            tblPr.Append(new TableLayout { Type = TableLayoutValues.Fixed });
+                        else
+                            layout.Type = TableLayoutValues.Fixed;
+                    }
+                }
 
                 break;
             }
@@ -460,6 +497,56 @@ public class DocumentService : IDocumentService
     private static void EnsureFileExists(string path)
     {
         if (!File.Exists(path)) throw new FileNotFoundException("File DOCX tidak ditemukan.", path);
+    }
+
+    private static (int width, int height) GetImageDimensions(string filePath)
+    {
+        try
+        {
+            using var fs = File.OpenRead(filePath);
+            var header = new byte[8];
+            fs.Read(header, 0, 8);
+            
+            // Check PNG
+            if (header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47)
+            {
+                fs.Seek(16, SeekOrigin.Begin);
+                var buf = new byte[8];
+                fs.Read(buf, 0, 8);
+                int width = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
+                int height = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
+                return (width, height);
+            }
+            // Check JPEG
+            else if (header[0] == 0xFF && header[1] == 0xD8)
+            {
+                fs.Seek(2, SeekOrigin.Begin);
+                while (fs.Position < fs.Length)
+                {
+                    int marker = fs.ReadByte();
+                    if (marker != 0xFF) break;
+                    marker = fs.ReadByte();
+                    if (marker == 0xC0 || marker == 0xC1 || marker == 0xC2)
+                    {
+                        fs.Seek(3, SeekOrigin.Current);
+                        var buf = new byte[4];
+                        fs.Read(buf, 0, 4);
+                        int height = (buf[0] << 8) | buf[1];
+                        int width = (buf[2] << 8) | buf[3];
+                        return (width, height);
+                    }
+                    else
+                    {
+                        var lenBuf = new byte[2];
+                        fs.Read(lenBuf, 0, 2);
+                        int len = (lenBuf[0] << 8) | lenBuf[1];
+                        fs.Seek(len - 2, SeekOrigin.Current);
+                    }
+                }
+            }
+        }
+        catch { }
+        return (0, 0);
     }
 
     private static string Terbilang(int angka)
