@@ -185,6 +185,8 @@ else
         {
             var token = await UserManager.GeneratePasswordResetTokenAsync(appUser);
             await UserManager.ResetPasswordAsync(appUser, token, "Admin1234!");
+            appUser.MustChangePw = true;
+            await UserManager.UpdateAsync(appUser);
             resetMsg = "Password berhasil direset ke Admin1234!";
         }
         catch (Exception ex) { errorMsg = ex.Message; }
