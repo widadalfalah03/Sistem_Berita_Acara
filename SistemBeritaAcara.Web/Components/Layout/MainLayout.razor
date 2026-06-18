@@ -2,6 +2,9 @@
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
 @using System.Security.Claims
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.Extensions.DependencyInjection
+@inject IServiceProvider ServiceProvider
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inherits LayoutComponentBase
@@ -12,11 +15,7 @@
 }
 else
 {
-    <!-- First-login: redirect to change password -->
-    @if (mustChangePw && !Navigation.Uri.Contains("/profil"))
-    {
-        Navigation.NavigateTo("/profil", true);
-    }
+
 
     <div class="app-layout">
         <aside class="sidebar">
@@ -24,8 +23,7 @@ else
             <div class="sidebar-logo">
                 <div class="logo-text">
                     <div>
-                        <div class="brand-name">Pertamina</div>
-                        <div class="brand-sub">Patra Niaga</div>
+                        <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height: 60px; width: auto;" alt="Pertamina Patra Niaga" />
                     </div>
                 </div>
             </div>
@@ -136,24 +134,7 @@ else
 
             <!-- Footer -->
             <div class="sidebar-footer">
-                <!-- Profile user card -->
-                <NavLink class="sidebar-user-card" href="/profil">
-                    <div class="sidebar-user-avatar">
-                        @if (!string.IsNullOrEmpty(profilePicPath))
-                        {
-                            <img src="/@profilePicPath" alt="Foto Profil" />
-                        }
-                        else
-                        {
-                            @initials
-                        }
-                    </div>
-                    <div class="sidebar-user-info">
-                        <div class="sidebar-user-name">@currentUserName</div>
-                        <div class="sidebar-user-role">@currentRoleLabel</div>
-                    </div>
-                    <i class="bi bi-chevron-right" style="font-size:12px;color:var(--text-muted);margin-left:auto;"></i>
-                </NavLink>
+
 
                 <form method="post" action="/account/logout" style="margin:0;">
                     <AntiforgeryToken />
@@ -250,7 +231,17 @@ else
                        ?? string.Empty;
 
             var userIdStr = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            int.TryParse(userIdStr, out _currentUserId);
+            if (int.TryParse(userIdStr, out _currentUserId))
+            {
+                using var scope = ServiceProvider.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var appUser = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == _currentUserId);
+                if (appUser is not null)
+                {
+                    profilePicPath = appUser.ProfilePicPath;
+                    mustChangePw = appUser.MustChangePw;
+                }
+            }
 
             initials = GetInitials(currentUserName);
             currentRoleLabel = currentRole switch
@@ -268,13 +259,6 @@ else
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender || isLoginPage || _currentUserId == 0) return;
-
-        var user = await DbContext.Users.FindAsync(_currentUserId);
-        if (user is not null)
-        {
-            profilePicPath = user.ProfilePicPath;
-            mustChangePw = user.MustChangePw;
-        }
 
         unreadCount = await DbContext.Notification
             .CountAsync(n => n.UserId == _currentUserId && !n.IsRead);

@@ -54,6 +54,8 @@ appsettings.Staging.json
 **/wwwroot/ttd/
 **/wwwroot/arsip/
 **/wwwroot/lib/
+**/wwwroot/files/*
+!**/wwwroot/files/templates/
 
 # Database lokal
 *.db

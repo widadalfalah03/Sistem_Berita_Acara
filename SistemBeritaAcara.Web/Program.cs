@@ -187,7 +187,13 @@ app.MapPost("/account/login", async (
 
     var result = await signInManager.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: false);
     if (result.Succeeded)
+    {
+        if (user.MustChangePw && user.Role != "AdminIT")
+        {
+            return Results.Redirect("/setup-akun");
+        }
         return Results.Redirect(returnUrl);
+    }
 
     return Results.Redirect("/login?error=invalid");
 });

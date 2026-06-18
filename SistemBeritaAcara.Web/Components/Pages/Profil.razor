@@ -47,7 +47,7 @@ else
             <i class="bi bi-exclamation-triangle-fill" style="color:#D97706;font-size:20px;flex-shrink:0;"></i>
             <div>
                 <div style="font-weight:700;color:#92400E;">Tanda Tangan Belum Disetel</div>
-                <div style="font-size:13px;color:#92400E;margin-top:2px;">Gambar tanda tangan Anda di bagian <strong>Tanda Tangan</strong> di bawah agar bisa memproses Berita Acara.</div>
+                <div style="font-size:13px;color:#92400E;margin-top:2px;">Gambar tanda tangan Anda melalui tombol <strong>Ubah Tanda Tangan</strong> di kanan layar agar bisa memproses Berita Acara.</div>
             </div>
         </div>
     }
@@ -59,8 +59,6 @@ else
 
             <!-- Informasi Akun -->
             <div class="form-section" style="margin-bottom:0;">
-                <div class="form-section-title">Informasi Akun</div>
-
                 <!-- Profile pic + name row -->
                 <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;padding:20px;background:var(--bg);border-radius:var(--radius);">
                     <div style="position:relative;">
@@ -144,127 +142,10 @@ else
                     }
                 }
             </div>
-
-            <!-- Tanda Tangan -->
-            @if (currentUser.Role != "AdminIT")
-            {
-                <div class="form-section" style="margin-bottom:0;">
-                    <div class="form-section-title">Tanda Tangan Digital</div>
-                    <p style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">
-                        Tanda tangan ini akan otomatis ter-embed ke dokumen Berita Acara setiap kali Anda memproses dokumen.
-                    </p>
-
-                    <!-- Current TTD preview -->
-                    @if (!string.IsNullOrEmpty(currentUser.TtdPath))
-                    {
-                        <div style="margin-bottom:20px;">
-                            <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">TTD Saat Ini</div>
-                            <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:inline-block;">
-                                <img src="/@currentUser.TtdPath" alt="Tanda Tangan" style="max-height:80px;max-width:300px;object-fit:contain;" />
-                            </div>
-                        </div>
-                    }
-
-                    <!-- TTD Tabs -->
-                    <div style="display:flex;gap:8px;margin-bottom:16px;">
-                        <button class="@(ttdMode=="draw"?"btn btn-primary btn-sm":"btn btn-outline btn-sm")" @onclick='()=>ttdMode="draw"'>
-                            <i class="bi bi-pen"></i> Gambar TTD
-                        </button>
-                        <button class="@(ttdMode=="upload"?"btn btn-primary btn-sm":"btn btn-outline btn-sm")" @onclick='()=>ttdMode="upload"'>
-                            <i class="bi bi-upload"></i> Upload File
-                        </button>
-                    </div>
-
-                    @if (ttdMode == "draw")
-                    {
-                        <div>
-                            <div style="border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white;margin-bottom:12px;position:relative;">
-                                <canvas id="ttd-canvas" width="600" height="180"
-                                        style="width:100%;height:180px;cursor:crosshair;touch-action:none;"
-                                        @onmousedown="OnCanvasMouseDown"
-                                        @onmouseup="OnCanvasMouseUp"
-                                        @onmousemove="OnCanvasMouseMove"
-                                        @onmouseleave="OnCanvasMouseUp"
-                                        @ontouchstart:preventDefault="true" @ontouchend:preventDefault="true">
-                                </canvas>
-                                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:@(isCanvasEmpty?"0.3":"0");">
-                                    <span style="font-size:14px;color:var(--text-muted);">Gambar tanda tangan Anda di sini</span>
-                                </div>
-                            </div>
-                            <div style="display:flex;gap:8px;margin-bottom:16px;">
-                                <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
-                                    <i class="bi bi-arrow-counterclockwise"></i> Hapus
-                                </button>
-                            </div>
-                            <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@(isCanvasEmpty || isSavingTtd)">
-                                @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> <span>Menyimpan...</span> }
-                                else { <i class="bi bi-save"></i> <span>Simpan Tanda Tangan</span> }
-                            </button>
-                        </div>
-                    }
-                    else
-                    {
-                        <div>
-                            <div class="upload-area" style="padding:32px 24px;cursor:default;margin-bottom:16px;">
-                                <i class="bi bi-pen" style="font-size:32px;"></i>
-                                <div class="upload-text">Upload File Tanda Tangan</div>
-                                <div class="upload-hint">PNG dengan latar transparan atau JPG · Maks 5MB</div>
-                                <div style="margin-top:16px;">
-                                    <InputFile OnChange="OnTtdFileSelected" accept="image/*"
-                                               style="display:block;margin:0 auto;font-size:13px;" />
-                                </div>
-                            </div>
-                            @if (ttdUploadFile is not null)
-                            {
-                                <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#F0FDF4;border-radius:var(--radius);margin-bottom:16px;font-size:14px;color:#16A34A;">
-                                    <i class="bi bi-check-circle-fill"></i>
-                                    File dipilih: <strong>@ttdUploadFile.Name</strong>
-                                </div>
-                            }
-                            <button class="btn btn-primary" @onclick="SaveUploadedTtdAsync"
-                                    disabled="@(ttdUploadFile is null || isSavingTtd)">
-                                @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> <span>Menyimpan...</span> }
-                                else { <i class="bi bi-save"></i> <span>Simpan Tanda Tangan</span> }
-                            </button>
-                        </div>
-                    }
-                </div>
-            }
         </div>
 
-        <!-- ── Kolom Kanan (Ganti Password) ── -->
+        <!-- ── Kolom Kanan ── -->
         <div class="side-cards">
-            <div class="side-card">
-                <h4><i class="bi bi-lock" style="color:var(--primary);margin-right:6px;"></i>Ganti Password</h4>
-                <p>Buat password baru yang kuat dan mudah diingat.</p>
-
-                @if (!string.IsNullOrEmpty(pwMessage))
-                {
-                    var isErr = pwMessage.StartsWith("Gagal");
-                    <div style="background:@(isErr?"var(--danger-light)":"#F0FDF4");color:@(isErr?"var(--danger)":"#16A34A");padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-                        <i class="bi @(isErr?"bi-exclamation-circle":"bi-check-circle")"></i>
-                        @pwMessage
-                    </div>
-                }
-
-                <div class="form-group">
-                    <label class="form-label" style="font-size:12px;">Password Lama</label>
-                    <input type="password" class="form-control" @bind="pwOld" style="font-size:13px;" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label" style="font-size:12px;">Password Baru</label>
-                    <input type="password" class="form-control" @bind="pwNew" style="font-size:13px;" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label" style="font-size:12px;">Konfirmasi Password Baru</label>
-                    <input type="password" class="form-control" @bind="pwConfirm" style="font-size:13px;" />
-                </div>
-                <button class="btn btn-primary" style="width:100%;margin-top:4px;" @onclick="ChangePasswordAsync" disabled="@isChangingPw">
-                    @if (isChangingPw) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> <span>Menyimpan...</span> }
-                    else { <i class="bi bi-shield-check"></i> <span>Simpan Password</span> }
-                </button>
-            </div>
-
             <div class="side-card" style="background:var(--bg);">
                 <h4 style="font-size:14px;color:var(--text-secondary);">Info Akun</h4>
                 <div style="font-size:13px;color:var(--text-muted);line-height:1.7;">
@@ -293,122 +174,115 @@ else
                     }
                 </div>
             </div>
+
+            <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" @onclick="() => showPwModal = true">
+                <i class="bi bi-shield-lock"></i> Ganti Password
+            </button>
+            
+            @if (currentUser.Role != "AdminIT")
+            {
+                @if (!string.IsNullOrEmpty(currentUser.TtdPath))
+                {
+                    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;justify-content:center;margin-bottom:8px;">
+                        <img src="/@currentUser.TtdPath?v=@ttdCacheBuster" alt="Tanda Tangan" style="max-height:60px;max-width:100%;object-fit:contain;" />
+                    </div>
+                }
+                <button class="btn btn-outline" style="width:100%;" @onclick="OpenTtdModal">
+                    <i class="bi bi-pen"></i> Ubah Tanda Tangan
+                </button>
+            }
         </div>
     </div>
 }
 
-<!-- Canvas drawing JS -->
-<script>
-    window.ttdCanvas = {
-        ctx: null,
-        isDrawing: false,
-        isEmpty: true,
+<!-- Modals -->
 
-        init: function () {
-            const canvas = document.getElementById('ttd-canvas');
-            if (!canvas) return;
-            this.ctx = canvas.getContext('2d');
-            this.ctx.strokeStyle = '#1a1a2e';
-            this.ctx.lineWidth = 2.5;
-            this.ctx.lineCap = 'round';
-            this.ctx.lineJoin = 'round';
-            this.isEmpty = true;
+@if (showPwModal)
+{
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1050;" @onclick="() => showPwModal = false">
+        <div style="background:var(--bg);width:400px;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-lg);" @onclick:stopPropagation="true">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h4 style="margin:0;font-size:18px;"><i class="bi bi-lock" style="color:var(--primary);margin-right:6px;"></i> Ganti Password</h4>
+                <button class="btn-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);" @onclick="() => showPwModal = false">&times;</button>
+            </div>
+            
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Buat password baru yang kuat dan mudah diingat.</p>
 
-            // Touch support
-            canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const t = e.touches[0];
-                const r = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / r.width;
-                const scaleY = canvas.height / r.height;
-                this.isDrawing = true;
-                this.ctx.beginPath();
-                this.ctx.moveTo((t.clientX - r.left) * scaleX, (t.clientY - r.top) * scaleY);
-            });
-            canvas.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if (!this.isDrawing) return;
-                const t = e.touches[0];
-                const r = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / r.width;
-                const scaleY = canvas.height / r.height;
-                this.ctx.lineTo((t.clientX - r.left) * scaleX, (t.clientY - r.top) * scaleY);
-                this.ctx.stroke();
-                this.isEmpty = false;
-            });
-            canvas.addEventListener('touchend', (e) => { e.preventDefault(); this.isDrawing = false; });
-        },
-
-        startDraw: function (x, y) {
-            if (!this.ctx) return;
-            const canvas = document.getElementById('ttd-canvas');
-            if (!canvas) return;
-            const r = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / r.width;
-            const scaleY = canvas.height / r.height;
-            this.isDrawing = true;
-            this.ctx.beginPath();
-            this.ctx.moveTo((x - r.left) * scaleX, (y - r.top) * scaleY);
-        },
-
-        draw: function (x, y) {
-            if (!this.isDrawing || !this.ctx) return;
-            const canvas = document.getElementById('ttd-canvas');
-            if (!canvas) return;
-            const r = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / r.width;
-            const scaleY = canvas.height / r.height;
-            this.ctx.lineTo((x - r.left) * scaleX, (y - r.top) * scaleY);
-            this.ctx.stroke();
-            this.isEmpty = false;
-        },
-
-        stopDraw: function () { this.isDrawing = false; },
-
-        clear: function () {
-            if (!this.ctx) return;
-            const canvas = document.getElementById('ttd-canvas');
-            if (!canvas) return;
-            this.ctx.clearRect(0, 0, canvas.width, canvas.height);
-            this.isEmpty = true;
-        },
-
-        isEmpty_check: function () { return this.isEmpty; },
-
-        getDataUrl: function () {
-            const canvas = document.getElementById('ttd-canvas');
-            if (!canvas) return null;
-            // Auto-crop: trim semua whitespace di sekitar tanda tangan.
-            const ctx = canvas.getContext('2d');
-            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            let minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
-            for (let y = 0; y < canvas.height; y++) {
-                for (let x = 0; x < canvas.width; x++) {
-                    const alpha = data[(y * canvas.width + x) * 4 + 3];
-                    if (alpha > 10) {
-                        if (x < minX) minX = x;
-                        if (x > maxX) maxX = x;
-                        if (y < minY) minY = y;
-                        if (y > maxY) maxY = y;
-                    }
-                }
+            @if (!string.IsNullOrEmpty(pwMessage))
+            {
+                var isErr = pwMessage.StartsWith("Gagal");
+                <div style="background:@(isErr?"var(--danger-light)":"#F0FDF4");color:@(isErr?"var(--danger)":"#16A34A");padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                    <i class="bi @(isErr?"bi-exclamation-circle":"bi-check-circle")"></i>
+                    @pwMessage
+                </div>
             }
-            if (maxX <= minX || maxY <= minY) return canvas.toDataURL('image/png');
-            const pad = 4;
-            minX = Math.max(0, minX - pad);
-            minY = Math.max(0, minY - pad);
-            maxX = Math.min(canvas.width - 1, maxX + pad);
-            maxY = Math.min(canvas.height - 1, maxY + pad);
-            const w = maxX - minX + 1;
-            const h = maxY - minY + 1;
-            const tmp = document.createElement('canvas');
-            tmp.width = w;
-            tmp.height = h;
-            tmp.getContext('2d').drawImage(canvas, minX, minY, w, h, 0, 0, w, h);
-            return tmp.toDataURL('image/png');
-        }
-    };
-</script>
+
+            <div class="form-group">
+                <label class="form-label" style="font-size:12px;">Password Lama</label>
+                <input type="password" class="form-control" @bind="pwOld" style="font-size:13px;" />
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-size:12px;">Password Baru</label>
+                <input type="password" class="form-control" @bind="pwNew" style="font-size:13px;" />
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-size:12px;">Konfirmasi Password Baru</label>
+                <input type="password" class="form-control" @bind="pwConfirm" style="font-size:13px;" />
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
+                <button class="btn btn-outline" @onclick="() => showPwModal = false">Batal</button>
+                <button class="btn btn-primary" @onclick="ChangePasswordAsync" disabled="@isChangingPw">
+                    @if (isChangingPw) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
+                    else { <span>Simpan</span> }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showTtdModal && currentUser?.Role != "AdminIT")
+{
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1050;" @onclick="CloseTtdModal">
+        <div style="background:var(--bg);width:600px;max-width:95%;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-lg);" @onclick:stopPropagation="true">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h4 style="margin:0;font-size:18px;"><i class="bi bi-pen" style="color:var(--primary);margin-right:6px;"></i> Ubah Tanda Tangan</h4>
+                <button class="btn-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);" @onclick="CloseTtdModal">&times;</button>
+            </div>
+
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Gambarkan tanda tangan digital Anda yang baru di bawah ini.</p>
+
+            <div style="border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white;margin-bottom:12px;position:relative;">
+                <canvas id="ttd-canvas" width="600" height="200"
+                        style="width:100%;height:200px;cursor:crosshair;touch-action:none;display:block;"
+                        @onmousedown="OnCanvasMouseDown"
+                        @onmouseup="OnCanvasMouseUp"
+                        @onmousemove="OnCanvasMouseMove"
+                        @onmouseleave="OnCanvasMouseUp"
+                        @ontouchstart="OnCanvasTouchStart"
+                        @ontouchmove="OnCanvasTouchMove"
+                        @ontouchend="OnCanvasTouchEnd">
+                </canvas>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:@(isCanvasEmpty?"0.3":"0");">
+                    <span style="font-size:14px;color:var(--text-muted);">Gambar tanda tangan Anda di sini</span>
+                </div>
+            </div>
+            
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+                <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
+                    <i class="bi bi-eraser"></i> Hapus TTD
+                </button>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-outline" @onclick="CloseTtdModal">Batal</button>
+                    <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@(isCanvasEmpty || isSavingTtd)">
+                        @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
+                        else { <i class="bi bi-save"></i> <span>Simpan</span> }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 
 @code {
     private ApplicationUser? currentUser;
@@ -416,13 +290,16 @@ else
     private bool isLoading = true;
     private string globalMessage = string.Empty;
 
+    // Modals
+    private bool showPwModal = false;
+    private bool showTtdModal = false;
+
     // Profile pic
     private IBrowserFile? profilePicFile;
     private bool isSavingPic;
 
     // TTD
-    private string ttdMode = "draw";
-    private IBrowserFile? ttdUploadFile;
+    private string ttdCacheBuster = Guid.NewGuid().ToString();
     private bool isSavingTtd;
     private bool isCanvasEmpty = true;
     private bool isDrawingActive = false;
@@ -447,12 +324,19 @@ else
         isLoading = false;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task OpenTtdModal()
     {
-        if (firstRender && currentUser?.Role != "AdminIT")
-        {
-            await JS.InvokeVoidAsync("ttdCanvas.init");
-        }
+        showTtdModal = true;
+        isCanvasEmpty = true;
+        isDrawingActive = false;
+        // Delay slight to allow DOM to render modal canvas, then init it
+        await Task.Delay(100);
+        await JS.InvokeVoidAsync("ttdCanvas.init");
+    }
+
+    private void CloseTtdModal()
+    {
+        showTtdModal = false;
     }
 
     // ── Canvas drawing events ──
@@ -471,6 +355,29 @@ else
     }
 
     private async Task OnCanvasMouseUp(MouseEventArgs e)
+    {
+        if (!isDrawingActive) return;
+        isDrawingActive = false;
+        await JS.InvokeVoidAsync("ttdCanvas.stopDraw");
+        isCanvasEmpty = await JS.InvokeAsync<bool>("ttdCanvas.isEmpty_check");
+        StateHasChanged();
+    }
+    
+    // For touch devices (prevent default) is handled inside JS, but we need Blazor mapping to keep state updated
+    private async Task OnCanvasTouchStart(TouchEventArgs e)
+    {
+        isDrawingActive = true;
+        await JS.InvokeVoidAsync("ttdCanvas.startDraw", e.Touches[0].ClientX, e.Touches[0].ClientY);
+    }
+
+    private async Task OnCanvasTouchMove(TouchEventArgs e)
+    {
+        if (!isDrawingActive) return;
+        await JS.InvokeVoidAsync("ttdCanvas.draw", e.Touches[0].ClientX, e.Touches[0].ClientY);
+        if (isCanvasEmpty) { isCanvasEmpty = false; StateHasChanged(); }
+    }
+
+    private async Task OnCanvasTouchEnd(TouchEventArgs e)
     {
         if (!isDrawingActive) return;
         isDrawingActive = false;
@@ -510,37 +417,8 @@ else
             currentUser.MustChangePw = false;
             await UserManager.UpdateAsync(currentUser);
             globalMessage = "Tanda tangan berhasil disimpan!";
-            await ClearCanvasAsync();
-        }
-        catch (Exception ex) { globalMessage = $"Gagal menyimpan TTD: {ex.Message}"; }
-        finally { isSavingTtd = false; }
-    }
-
-    // ── Upload TTD ──
-
-    private void OnTtdFileSelected(InputFileChangeEventArgs e) => ttdUploadFile = e.File;
-
-    private async Task SaveUploadedTtdAsync()
-    {
-        if (ttdUploadFile is null) return;
-        isSavingTtd = true;
-        globalMessage = string.Empty;
-        try
-        {
-            var ext = Path.GetExtension(ttdUploadFile.Name);
-            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
-            Directory.CreateDirectory(folder);
-            var fname = $"ttd-user-{currentUser!.Id}{ext}";
-            var fpath = Path.Combine(folder, fname);
-            await using (var fs = File.Create(fpath))
-            {
-                await ttdUploadFile.OpenReadStream(5_000_000).CopyToAsync(fs);
-            }
-            currentUser.TtdPath = $"files/signatures/{fname}";
-            currentUser.MustChangePw = false;
-            await UserManager.UpdateAsync(currentUser);
-            globalMessage = "Tanda tangan berhasil disimpan!";
-            ttdUploadFile = null;
+            ttdCacheBuster = Guid.NewGuid().ToString();
+            showTtdModal = false;
         }
         catch (Exception ex) { globalMessage = $"Gagal menyimpan TTD: {ex.Message}"; }
         finally { isSavingTtd = false; }
@@ -560,7 +438,15 @@ else
             var ext = Path.GetExtension(profilePicFile.Name);
             var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "profiles");
             Directory.CreateDirectory(folder);
-            var fname = $"profile-{currentUser!.Id}{ext}";
+
+            // Delete old picture if exists to prevent accumulating files
+            if (!string.IsNullOrEmpty(currentUser!.ProfilePicPath))
+            {
+                var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.ProfilePicPath.Replace("/", "\\"));
+                if (File.Exists(oldPath)) File.Delete(oldPath);
+            }
+
+            var fname = $"profile-{currentUser.Id}-{DateTime.UtcNow.Ticks}{ext}";
             var fpath = Path.Combine(folder, fname);
             await using (var fs = File.Create(fpath))
             {
@@ -570,6 +456,7 @@ else
             await UserManager.UpdateAsync(currentUser);
             globalMessage = "Foto profil berhasil disimpan!";
             profilePicFile = null;
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
         }
         catch (Exception ex) { globalMessage = $"Gagal menyimpan foto profil: {ex.Message}"; }
         finally { isSavingPic = false; }
@@ -600,8 +487,9 @@ else
             {
                 currentUser!.MustChangePw = false;
                 await UserManager.UpdateAsync(currentUser);
-                pwMessage = "Password berhasil diubah!";
+                globalMessage = "Password berhasil diubah!";
                 pwOld = pwNew = pwConfirm = string.Empty;
+                showPwModal = false;
             }
             else
             {

@@ -36,16 +36,16 @@ else if (currentRole == "AdminGudangBarang")
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>No. Surat</th>
-                        <th>Jenis BA</th>
-                        <th>Tanggal Submit</th>
-                        <th>Approver</th>
-                        <th>Status</th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("No. Surat"))">No. Surat <i class="bi @GetSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis BA"))">Jenis BA <i class="bi @GetSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Tanggal Submit <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Approver"))">Approver <i class="bi @GetSortIcon("Approver")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var ba in baList)
+                    @foreach (var ba in SortedBaList)
                     {
                         <tr>
                             <td>
@@ -141,6 +141,27 @@ else if (currentRole == "Approver")
     private bool isLoading = true;
     private string currentRole = string.Empty;
     private int currentUserId;
+
+    private string sortColumn = "Tanggal Submit";
+    private bool sortAscending = false;
+
+    private void SortTable(string column)
+    {
+        if (sortColumn == column) sortAscending = !sortAscending;
+        else { sortColumn = column; sortAscending = true; }
+    }
+
+    private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+
+    private IEnumerable<BeritaAcaraEntity> SortedBaList => sortColumn switch
+    {
+        "No. Surat" => sortAscending ? baList.OrderBy(b => b.NomorSurat) : baList.OrderByDescending(b => b.NomorSurat),
+        "Jenis BA" => sortAscending ? baList.OrderBy(b => b.Jenis) : baList.OrderByDescending(b => b.Jenis),
+        "Tanggal Submit" => sortAscending ? baList.OrderBy(b => b.SubmittedAt) : baList.OrderByDescending(b => b.SubmittedAt),
+        "Approver" => sortAscending ? baList.OrderBy(b => b.Mengetahui?.Nama) : baList.OrderByDescending(b => b.Mengetahui?.Nama),
+        "Status" => sortAscending ? baList.OrderBy(b => b.Status) : baList.OrderByDescending(b => b.Status),
+        _ => baList
+    };
 
     protected override async Task OnInitializedAsync()
     {

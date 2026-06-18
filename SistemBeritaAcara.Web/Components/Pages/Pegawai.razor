@@ -78,12 +78,12 @@ else
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Nama / NIP</th>
-                    <th>Jabatan</th>
-                    <th>Fungsi/Direktorat</th>
-                    <th>Email</th>
-                    <th>Cost Center</th>
-                    <th>Status</th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama / NIP"))">Nama / NIP <i class="bi @GetSortIcon("Nama / NIP")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Jabatan"))">Jabatan <i class="bi @GetSortIcon("Jabatan")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Fungsi/Direktorat"))">Fungsi/Direktorat <i class="bi @GetSortIcon("Fungsi/Direktorat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Email"))">Email <i class="bi @GetSortIcon("Email")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Cost Center"))">Cost Center <i class="bi @GetSortIcon("Cost Center")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                 </tr>
             </thead>
             <tbody>
@@ -158,12 +158,51 @@ else
     private string search = string.Empty;
     private string importResult = string.Empty;
 
-    private IEnumerable<PegawaiEntity> FilteredPegawai => allPegawai
-        .Where(p => showInactive || p.IsAktif)
-        .Where(p => string.IsNullOrEmpty(search) ||
-                    p.Nama.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    p.NoPekerja.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    (p.Jabatan ?? "").Contains(search, StringComparison.OrdinalIgnoreCase));
+    private string sortColumn = "Nama / NIP";
+    private bool sortAscending = true;
+
+    private void SortTable(string column)
+    {
+        if (sortColumn == column)
+        {
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            sortColumn = column;
+            sortAscending = true;
+        }
+    }
+
+    private string GetSortIcon(string column)
+    {
+        if (sortColumn != column) return "bi-arrow-down-up";
+        return sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+    }
+
+    private IEnumerable<PegawaiEntity> FilteredPegawai
+    {
+        get
+        {
+            var query = allPegawai
+                .Where(p => showInactive || p.IsAktif)
+                .Where(p => string.IsNullOrEmpty(search) ||
+                            p.Nama.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                            p.NoPekerja.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                            (p.Jabatan ?? "").Contains(search, StringComparison.OrdinalIgnoreCase));
+
+            return sortColumn switch
+            {
+                "Nama / NIP" => sortAscending ? query.OrderBy(p => p.Nama) : query.OrderByDescending(p => p.Nama),
+                "Jabatan" => sortAscending ? query.OrderBy(p => p.Jabatan) : query.OrderByDescending(p => p.Jabatan),
+                "Fungsi/Direktorat" => sortAscending ? query.OrderBy(p => p.FungsiDirektorat) : query.OrderByDescending(p => p.FungsiDirektorat),
+                "Email" => sortAscending ? query.OrderBy(p => p.Email) : query.OrderByDescending(p => p.Email),
+                "Cost Center" => sortAscending ? query.OrderBy(p => p.CostCenter) : query.OrderByDescending(p => p.CostCenter),
+                "Status" => sortAscending ? query.OrderByDescending(p => p.IsAktif) : query.OrderBy(p => p.IsAktif),
+                _ => query
+            };
+        }
+    }
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 

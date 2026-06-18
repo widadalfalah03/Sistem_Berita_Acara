@@ -117,10 +117,24 @@ public class DocumentService : IDocumentService
 
             // Ganti placeholder — gunakan paragraph-level replacement agar
             // placeholder yang terpecah oleh spellcheck Word (proofErr) ikut terganti.
-            // Contoh: {{HariTanggal}} bisa terpecah menjadi run "{{" + "HariTanggal" + "}}"
             foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
             {
                 NormalizeParagraphPlaceholders(para, replacements);
+            }
+
+            // Sembunyikan teks placeholder tanda tangan ({{SIG_...}}) dengan warna putih
+            // agar tidak terlihat di dokumen setelah gambar TTD di-embed
+            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
+            {
+                var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
+                if (fullText.Contains("{{SIG_"))
+                {
+                    foreach (var run in para.Descendants<Run>())
+                    {
+                        if (run.RunProperties == null) run.RunProperties = new RunProperties();
+                        run.RunProperties.Color = new Color { Val = "FFFFFF" };
+                    }
+                }
             }
 
             // 2. Replace Table Rows for Perangkat
@@ -323,9 +337,26 @@ public class DocumentService : IDocumentService
             using (var fs = File.OpenRead(imagePath)) imgPart.FeedData(fs);
             var imgId = mainPart.GetIdOfPart(imgPart);
 
-            // 160pt × 80pt → EMU (1 pt = 12700 EMU)
-            long cx = 160L * 12700L;
-            long cy =  80L * 12700L;
+            // Calculate dimensions preserving aspect ratio
+            long cx = 140L * 12700L;
+            long cy =  70L * 12700L;
+            var dims = GetImageDimensions(imagePath);
+            if (dims.width > 0 && dims.height > 0)
+            {
+                double targetRatio = 140.0 / 70.0;
+                double imageRatio = (double)dims.width / dims.height;
+
+                if (imageRatio > targetRatio)
+                {
+                    cx = 140L * 12700L;
+                    cy = (long)((140.0 / imageRatio) * 12700L);
+                }
+                else
+                {
+                    cy = 70L * 12700L;
+                    cx = (long)((70.0 * imageRatio) * 12700L);
+                }
+            }
 
             var drawing = new Drawing(
                 new DW.Inline(
@@ -374,11 +405,16 @@ public class DocumentService : IDocumentService
                     pPr.Remove();
                 }
 
-                // Buat ParagraphProperties baru yang bersih agar urutan elemen (Indentation lalu Justification)
-                // valid menurut skema OpenXML. Ini mencegah Spire.Doc mengabaikan alignment.
+                // Buat ParagraphProperties baru yang bersih
+                // Hitung sisa tinggi (dalam point) yang hilang akibat scaling, lalu tambahkan sebagai Spacing After (dalam twips)
+                long cy_pts = cy / 12700L;
+                long missing_cy_pts = 70L - cy_pts;
+                long spacing_after_twips = missing_cy_pts * 20L;
+
                 para.ParagraphProperties = new ParagraphProperties(
                     new Indentation { Left = "0" },
-                    new Justification { Val = JustificationValues.Left }
+                    new Justification { Val = JustificationValues.Left },
+                    new SpacingBetweenLines { After = spacing_after_twips.ToString() }
                 );
 
                 // Hapus semua run & text yang ada (termasuk run placeholder)
@@ -388,6 +424,21 @@ public class DocumentService : IDocumentService
                 // Sisipkan run baru berisi gambar dengan RunProperties yang bersih
                 var imgRun = new Run((Drawing)drawing.CloneNode(true));
                 para.Append(imgRun);
+
+                // Force the parent table to have a Fixed layout so columns don't auto-resize based on signature width
+                var parentTable = para.Ancestors<Table>().FirstOrDefault();
+                if (parentTable != null)
+                {
+                    var tblPr = parentTable.Elements<TableProperties>().FirstOrDefault();
+                    if (tblPr != null)
+                    {
+                        var layout = tblPr.Elements<TableLayout>().FirstOrDefault();
+                        if (layout == null)
+                            tblPr.Append(new TableLayout { Type = TableLayoutValues.Fixed });
+                        else
+                            layout.Type = TableLayoutValues.Fixed;
+                    }
+                }
 
                 break;
             }
@@ -433,44 +484,82 @@ public class DocumentService : IDocumentService
         if (!File.Exists(path)) throw new FileNotFoundException("File DOCX tidak ditemukan.", path);
     }
 
-    /// <summary>
-    /// Menggabungkan teks dari semua Run dalam sebuah Paragraph, melakukan replace placeholder,
-    /// lalu meletakkan teks hasil replace ke Run pertama dan mengosongkan Run-Run lainnya.
-    /// Pendekatan ini menangani kasus di mana Word memecah placeholder seperti {{HariTanggal}}
-    /// menjadi beberapa run terpisah akibat proofErr (spell-checker).
-    /// </summary>
     private static void NormalizeParagraphPlaceholders(Paragraph para, Dictionary<string, string> replacements)
     {
         var runs = para.Elements<Run>().ToList();
         if (runs.Count == 0) return;
 
-        // Kumpulkan semua Text node beserta indeks run-nya
         var textNodes = runs
             .SelectMany((r, ri) => r.Elements<Text>().Select(t => (RunIndex: ri, TextNode: t)))
             .ToList();
 
         if (textNodes.Count == 0) return;
 
-        // Gabungkan semua teks dalam paragraf
         var combined = string.Concat(textNodes.Select(x => x.TextNode.Text));
 
-        // Cek apakah ada placeholder yang perlu diganti
         bool hasReplacement = replacements.Any(r => combined.Contains(r.Key));
         if (!hasReplacement) return;
 
-        // Lakukan semua replace
         foreach (var r in replacements)
             combined = combined.Replace(r.Key, r.Value);
 
-        // Tempatkan hasil di Text node pertama, kosongkan yang lain
         var firstText = textNodes[0].TextNode;
         firstText.Text = combined;
-        // Pertahankan whitespace
         if (combined.Length > 0 && (combined[0] == ' ' || combined[^1] == ' '))
             firstText.Space = SpaceProcessingModeValues.Preserve;
 
         for (int i = 1; i < textNodes.Count; i++)
             textNodes[i].TextNode.Text = string.Empty;
+    }
+
+    private static (int width, int height) GetImageDimensions(string filePath)
+    {
+        try
+        {
+            using var fs = File.OpenRead(filePath);
+            var header = new byte[8];
+            fs.Read(header, 0, 8);
+
+            // Check PNG
+            if (header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47)
+            {
+                fs.Seek(16, SeekOrigin.Begin);
+                var buf = new byte[8];
+                fs.Read(buf, 0, 8);
+                int width = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
+                int height = (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
+                return (width, height);
+            }
+            // Check JPEG
+            else if (header[0] == 0xFF && header[1] == 0xD8)
+            {
+                fs.Seek(2, SeekOrigin.Begin);
+                while (fs.Position < fs.Length)
+                {
+                    int marker = fs.ReadByte();
+                    if (marker != 0xFF) break;
+                    marker = fs.ReadByte();
+                    if (marker == 0xC0 || marker == 0xC1 || marker == 0xC2)
+                    {
+                        fs.Seek(3, SeekOrigin.Current);
+                        var buf = new byte[4];
+                        fs.Read(buf, 0, 4);
+                        int height = (buf[0] << 8) | buf[1];
+                        int width = (buf[2] << 8) | buf[3];
+                        return (width, height);
+                    }
+                    else
+                    {
+                        var lenBuf = new byte[2];
+                        fs.Read(lenBuf, 0, 2);
+                        int len = (lenBuf[0] << 8) | lenBuf[1];
+                        fs.Seek(len - 2, SeekOrigin.Current);
+                    }
+                }
+            }
+        }
+        catch { }
+        return (0, 0);
     }
 
     private static string Terbilang(int angka)
