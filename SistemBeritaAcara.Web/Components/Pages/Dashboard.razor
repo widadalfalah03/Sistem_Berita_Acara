@@ -86,12 +86,6 @@ else if (currentRole == "AdminGudangBarang")
             <div class="chart-container" style="height:180px;position:relative;">
                 <canvas id="statusChart"></canvas>
             </div>
-            <div class="chart-legend">
-                <div class="legend-item"><div class="legend-dot" style="background:#22C55E"></div>Selesai</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Proses</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>Ditolak</div>
-                <div class="legend-item"><div class="legend-dot" style="background:#94A3B8"></div>Draft</div>
-            </div>
         </div>
     </div>
 
@@ -456,6 +450,7 @@ else if (currentRole == "AdminIT")
     private bool isLoading = true;
     private string currentRole = string.Empty;
     private int currentUserId;
+    private bool chartsRendered = false;
 
     // Gudang stats
     private (int Draft, int Progress, int Approved, int Rejected) stat;
@@ -506,7 +501,8 @@ else if (currentRole == "AdminIT")
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || isLoading) return;
+        if (isLoading || chartsRendered) return;
+        chartsRendered = true;
 
         if (currentRole == "AdminGudangBarang")
         {
