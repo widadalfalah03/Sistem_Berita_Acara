@@ -122,11 +122,11 @@ else
 
                 <!-- Action buttons -->
                 <div style="display:flex;gap:12px;margin-top:20px;">
-                    <button class="btn btn-success" style="flex:1;" @onclick="ApproveAsync" disabled="@isProcessing">
-                        <i class="bi bi-check-lg"></i> Setujui (Approve)
+                    <button class="btn btn-success @(isProcessing ? "btn-loading" : "")" style="flex:1;" @onclick="ApproveAsync" disabled="@isProcessing">
+                        <i class="bi bi-check-lg"></i> Setujui
                     </button>
-                    <button class="btn btn-outline-danger" style="flex:1;" @onclick="() => showRejectModal = true" disabled="@isProcessing">
-                        <i class="bi bi-x-lg"></i> Tolak (Reject)
+                    <button class="btn btn-outline-danger @(isProcessing ? "btn-loading" : "")" style="flex:1;" @onclick="() => showRejectModal = true" disabled="@isProcessing">
+                        <i class="bi bi-x-lg"></i> Tolak
                     </button>
                 </div>
             </div>
@@ -151,7 +151,7 @@ else
                 <div class="card-header"><h3>Informasi Dokumen</h3></div>
                 <div class="card-body">
                     <table style="width:100%;border-collapse:collapse;">
-                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">No. Surat</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@(ba.NomorSurat ?? "Belum di-generate")</td></tr>
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">No. Surat</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@(ba.NomorSurat ?? "Belum dibuat")</td></tr>
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Tanggal.ToString("dd MMMM yyyy")</td></tr>
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tiket SSC</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@(ba.TiketSscNo ?? "-")</td></tr>
                         @if (ba.Jenis == "Peminjaman")
@@ -213,8 +213,8 @@ else
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
                 @if (ba.Status == "Draft")
                 {
-                    <button class="btn btn-primary" @onclick="SendMagicLinkAsync" disabled="@isProcessing">
-                        <i class="bi bi-send"></i> Kirim Magic Link ke PJ
+                    <button class="btn btn-primary @(isProcessing ? "btn-loading" : "")" @onclick="SendMagicLinkAsync" disabled="@isProcessing">
+                        <i class="bi bi-send"></i> Kirim Notifikasi ke PJ
                     </button>
                 }
                 else if (ba.Status == "WaitingPJSign")
@@ -261,8 +261,8 @@ else
             }
             <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
                 <button class="btn btn-outline" @onclick="() => showRejectModal = false">Batal</button>
-                <button class="btn btn-danger" @onclick="RejectAsync" disabled="@isProcessing">
-                    <i class="bi bi-x-lg"></i> Tolak (Reject)
+                <button class="btn btn-danger @(isProcessing ? "btn-loading" : "")" @onclick="RejectAsync" disabled="@isProcessing">
+                    <i class="bi bi-x-lg"></i> Tolak
                 </button>
             </div>
         </div>

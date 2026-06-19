@@ -1830,6 +1830,61 @@ a:hover { color: var(--primary-hover); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Button Loading State ──────────────────────────────────────── */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    cursor: default;
+}
+
+.btn-loading > * {
+    opacity: 0;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.btn-outline.btn-loading::after,
+.btn-outline-primary.btn-loading::after {
+    border-color: rgba(29, 78, 216, 0.25);
+    border-top-color: var(--primary);
+}
+
+.btn-outline-danger.btn-loading::after {
+    border-color: rgba(220, 38, 38, 0.25);
+    border-top-color: var(--danger);
+}
+
+.btn-success.btn-loading::after {
+    border-color: rgba(255, 255, 255, 0.35);
+    border-top-color: white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-loading::after,
+    .spinner {
+        animation: none;
+        border-top-color: currentColor;
+    }
+}
+
 /* ── Breadcrumb ────────────────────────────────────────────────── */
 .breadcrumb-back {
     display: flex;
@@ -3008,4 +3063,118 @@ a:hover { color: var(--primary-hover); }
     justify-content: center;
     padding: 0 4px;
     border: 2px solid var(--surface);
+}
+
+/* ── Focus Ring Accessibility ──────────────────────────────────── */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* ── Table Row Cursor ──────────────────────────────────────────── */
+.data-table tbody tr:has(a, button) {
+    cursor: default;
+}
+
+/* ── Smooth Skeleton Loading ───────────────────────────────────── */
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* ── Card Interaction ──────────────────────────────────────────── */
+.stat-card {
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-1px);
+}
+
+/* ── Transition on all interactive elements ────────────────────── */
+.nav-link,
+.btn,
+.btn-icon,
+.btn-review,
+.notif-item,
+.ba-card,
+.queue-item,
+.pdf-download {
+    transition: all 0.15s ease;
+}
+
+/* ── Toast Notifications (global message) ──────────────────────── */
+.alert-success {
+    background: #F0FDF4;
+    border: 1px solid #86EFAC;
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    color: #15803D;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.alert-error {
+    background: var(--danger-light);
+    border: 1px solid #FCA5A5;
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    color: var(--danger);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.alert-info {
+    background: var(--primary-light);
+    border: 1px solid #BFDBFE;
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+/* ── Page Header Improvements ──────────────────────────────────── */
+.page-title {
+    text-wrap: balance;
+}
+
+/* ── Empty State Centering ─────────────────────────────────────── */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 40px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.empty-state-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    max-width: 320px;
+    line-height: 1.6;
 }

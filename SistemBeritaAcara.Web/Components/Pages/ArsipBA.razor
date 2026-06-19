@@ -6,34 +6,103 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
+@inject IExcelService ExcelService
+@inject IJSRuntime JS
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 <PageTitle>Arsip — Sistem Berita Acara</PageTitle>
 
-<div class="page-header">
-    <h1 class="page-title">Arsip Berita Acara</h1>
-    <p class="page-subtitle">Berita Acara yang telah disetujui dan diarsipkan</p>
+<div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+        <h1 class="page-title">Arsip Berita Acara</h1>
+        <p class="page-subtitle">Berita Acara yang telah disetujui dan diarsipkan</p>
+    </div>
+    @if (currentRole == "AdminGudangBarang" && !isLoading && allBA.Count > 0)
+    {
+        <button class="btn btn-outline-primary btn-sm @(isExporting ? "btn-loading" : "")"
+                @onclick="ExportExcelAsync" disabled="@isExporting"
+                style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <i class="bi bi-file-earmark-excel"></i>
+            <span>Export Excel</span>
+        </button>
+    }
 </div>
 
-<!-- Search & Filter -->
-<div class="search-bar">
-    <div class="search-input" style="max-width:300px;">
-        <i class="bi bi-search"></i>
-        <input type="text" placeholder="Cari nomor surat..." @bind="search" @bind:event="oninput" />
+<!-- Search & Filter Panel -->
+<div class="card" style="margin-bottom:20px;padding:16px 20px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+        <!-- No. Surat -->
+        <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">No. Surat</label>
+            <div class="search-input" style="max-width:100%;">
+                <i class="bi bi-search"></i>
+                <input type="text" placeholder="Cari nomor surat..." @bind="search" @bind:event="oninput" />
+            </div>
+        </div>
+
+        <!-- Penanggung Jawab -->
+        <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Penanggung Jawab</label>
+            <div class="search-input" style="max-width:100%;">
+                <i class="bi bi-person"></i>
+                <input type="text" placeholder="Nama PJ..." @bind="pjSearch" @bind:event="oninput" />
+            </div>
+        </div>
+
+        <!-- Yang Menyerahkan -->
+        <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Yang Menyerahkan</label>
+            <div class="search-input" style="max-width:100%;">
+                <i class="bi bi-person-badge"></i>
+                <input type="text" placeholder="Nama..." @bind="menyerahkanSearch" @bind:event="oninput" />
+            </div>
+        </div>
     </div>
-    <select class="filter-select" @bind="yearFilter">
-        <option value="0">Semua Tahun</option>
-        @foreach (var y in availableYears)
-        {
-            <option value="@y">@y</option>
-        }
-    </select>
-    @if (!string.IsNullOrEmpty(search) || yearFilter != 0)
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:end;">
+        <!-- Yang Mengetahui -->
+        <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Yang Mengetahui</label>
+            <div class="search-input" style="max-width:100%;">
+                <i class="bi bi-person-check"></i>
+                <input type="text" placeholder="Nama approver..." @bind="mengetahuiSearch" @bind:event="oninput" />
+            </div>
+        </div>
+
+        <!-- Jenis BA -->
+        <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Jenis BA</label>
+            <select class="filter-select" style="width:100%;" @bind="jenisFilter">
+                <option value="">Semua Jenis</option>
+                <option value="Alokasi">Alokasi</option>
+                <option value="Peminjaman">Peminjaman</option>
+            </select>
+        </div>
+
+        <!-- Tanggal BA Dari -->
+        <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Tanggal Dari</label>
+            <input type="date" class="filter-select" style="width:100%;" @bind="dateFrom" />
+        </div>
+
+        <!-- Tanggal BA Sampai -->
+        <div>
+            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Tanggal Sampai</label>
+            <input type="date" class="filter-select" style="width:100%;" @bind="dateTo" />
+        </div>
+    </div>
+
+    @if (HasActiveFilter)
     {
-        <button class="filter-clear" @onclick="() => { search = string.Empty; yearFilter = 0; }">
-            <i class="bi bi-x-circle"></i> Bersihkan
-        </button>
+        <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:13px;color:var(--text-secondary);">
+                Menampilkan <strong>@FilteredBA.Count()</strong> dari <strong>@allBA.Count</strong> dokumen
+            </span>
+            <button class="btn btn-outline btn-sm" @onclick="ClearFilters" style="display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-x-circle"></i> Bersihkan Filter
+            </button>
+        </div>
     }
 </div>
 
@@ -45,8 +114,18 @@ else if (!FilteredBA.Any())
 {
     <div class="card" style="text-align:center;padding:60px;">
         <i class="bi bi-archive" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
-        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Belum ada arsip</div>
-        <div style="font-size:14px;color:var(--text-secondary);">Berita Acara yang disetujui akan muncul di sini</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">
+            @(HasActiveFilter ? "Tidak ada hasil yang cocok" : "Belum ada arsip")
+        </div>
+        <div style="font-size:14px;color:var(--text-secondary);">
+            @(HasActiveFilter ? "Coba ubah atau bersihkan filter pencarian." : "Berita Acara yang disetujui akan muncul di sini.")
+        </div>
+        @if (HasActiveFilter)
+        {
+            <button class="btn btn-outline btn-sm" @onclick="ClearFilters" style="margin-top:16px;display:inline-flex;align-items:center;gap:6px;">
+                <i class="bi bi-x-circle"></i> Bersihkan Filter
+            </button>
+        }
     </div>
 }
 else
@@ -114,17 +193,41 @@ else
 @code {
     private List<BeritaAcaraEntity> allBA = new();
     private bool isLoading = true;
+    private bool isExporting = false;
     private string currentRole = string.Empty;
     private int currentUserId;
+
+    // Filter state
     private string search = string.Empty;
-    private int yearFilter = 0;
-    private List<int> availableYears = new();
+    private string pjSearch = string.Empty;
+    private string menyerahkanSearch = string.Empty;
+    private string mengetahuiSearch = string.Empty;
+    private string jenisFilter = string.Empty;
+    private DateTime? dateFrom;
+    private DateTime? dateTo;
+
+    private bool HasActiveFilter =>
+        !string.IsNullOrEmpty(search) ||
+        !string.IsNullOrEmpty(pjSearch) ||
+        !string.IsNullOrEmpty(menyerahkanSearch) ||
+        !string.IsNullOrEmpty(mengetahuiSearch) ||
+        !string.IsNullOrEmpty(jenisFilter) ||
+        dateFrom.HasValue ||
+        dateTo.HasValue;
 
     private IEnumerable<BeritaAcaraEntity> FilteredBA => allBA
         .Where(b => string.IsNullOrEmpty(search) ||
-                    (b.NomorSurat ?? "").Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    (b.Pj?.Nama ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
-        .Where(b => yearFilter == 0 || b.ApprovedAt?.Year == yearFilter);
+                    (b.NomorSurat ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
+        .Where(b => string.IsNullOrEmpty(pjSearch) ||
+                    (b.Pj?.Nama ?? "").Contains(pjSearch, StringComparison.OrdinalIgnoreCase))
+        .Where(b => string.IsNullOrEmpty(menyerahkanSearch) ||
+                    (b.Menyerahkan?.Nama ?? "").Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase))
+        .Where(b => string.IsNullOrEmpty(mengetahuiSearch) ||
+                    (b.Mengetahui?.Nama ?? "").Contains(mengetahuiSearch, StringComparison.OrdinalIgnoreCase))
+        .Where(b => string.IsNullOrEmpty(jenisFilter) ||
+                    b.Jenis.Equals(jenisFilter, StringComparison.OrdinalIgnoreCase))
+        .Where(b => !dateFrom.HasValue || b.Tanggal >= DateOnly.FromDateTime(dateFrom.Value))
+        .Where(b => !dateTo.HasValue || b.Tanggal <= DateOnly.FromDateTime(dateTo.Value));
 
     protected override async Task OnInitializedAsync()
     {
@@ -135,7 +238,9 @@ else
 
         IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
             .Include(b => b.Pj)
+            .Include(b => b.Menyerahkan)
             .Include(b => b.Mengetahui)
+            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
             .Where(b => b.Status == "Approved");
 
         if (currentRole == "AdminGudangBarang")
@@ -144,7 +249,34 @@ else
             query = query.Where(b => b.MengetahuiId == currentUserId);
 
         allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();
-        availableYears = allBA.Where(b => b.ApprovedAt.HasValue).Select(b => b.ApprovedAt!.Value.Year).Distinct().OrderByDescending(y => y).ToList();
         isLoading = false;
+    }
+
+    private void ClearFilters()
+    {
+        search = string.Empty;
+        pjSearch = string.Empty;
+        menyerahkanSearch = string.Empty;
+        mengetahuiSearch = string.Empty;
+        jenisFilter = string.Empty;
+        dateFrom = null;
+        dateTo = null;
+    }
+
+    private async Task ExportExcelAsync()
+    {
+        isExporting = true;
+        try
+        {
+            var dataToExport = FilteredBA.ToList();
+            var bytes = await ExcelService.ExportArsipAsync(dataToExport);
+            var fileName = $"ArsipBA_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            await JS.InvokeVoidAsync("downloadFileFromBytes", fileName,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
+        }
+        finally
+        {
+            isExporting = false;
+        }
     }
 }

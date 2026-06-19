@@ -104,7 +104,7 @@ else
                         @resetMsg
                     </div>
                 }
-                <button class="btn btn-outline" style="width:100%;" @onclick="ResetPasswordAsync" disabled="@isSaving">
+                <button class="btn btn-outline @(isSaving ? "btn-loading" : "")" style="width:100%;" @onclick="ResetPasswordAsync" disabled="@isSaving">
                     <i class="bi bi-key"></i> Reset Password
                 </button>
             </div>
@@ -131,9 +131,8 @@ else
     <!-- Form actions -->
     <div class="form-actions" style="margin-top:24px;">
         <NavLink class="btn btn-outline" href="/dashboard">Batal</NavLink>
-        <button class="btn btn-primary" @onclick="SaveAsync" disabled="@isSaving">
-            @if (isSaving) { <span>Menyimpan...</span> }
-            else { <span><i class="bi bi-floppy"></i> Simpan Perubahan</span> }
+        <button class="btn btn-primary @(isSaving ? "btn-loading" : "")" @onclick="SaveAsync" disabled="@isSaving">
+            <i class="bi bi-floppy"></i> Simpan Perubahan
         </button>
     </div>
 }

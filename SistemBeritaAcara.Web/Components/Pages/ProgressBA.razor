@@ -61,14 +61,14 @@ else if (currentRole == "AdminGudangBarang")
                             <td>
                                 @if (ba.Status == "WaitingPJSign")
                                 {
-                                    <span style="color:#3B82F6;font-weight:600;font-size:13px;">
-                                        <i class="bi bi-pen"></i> Menunggu TTD PJ
+                                    <span class="pill pill-waiting-pj">
+                                        <i class="bi bi-pen" style="margin-right:4px;"></i> Menunggu TTD PJ
                                     </span>
                                 }
                                 else
                                 {
-                                    <span style="color:#F59E0B;font-weight:600;font-size:13px;">
-                                        <i class="bi bi-hourglass-split"></i> Menunggu Approval
+                                    <span class="pill pill-waiting-approval">
+                                        <i class="bi bi-hourglass-split" style="margin-right:4px;"></i> Menunggu Approval
                                     </span>
                                 }
                             </td>
@@ -89,7 +89,7 @@ else if (currentRole == "Approver")
     <div class="page-header d-flex align-center justify-between">
         <div>
             <h1 class="page-title">Antrian Persetujuan</h1>
-            <p class="page-subtitle">Berita Acara yang menunggu persetujuan kamu</p>
+            <p class="page-subtitle">Berita Acara yang menunggu persetujuan Anda</p>
         </div>
         @if (baList.Any())
         {
@@ -102,7 +102,7 @@ else if (currentRole == "Approver")
         <div class="card" style="text-align:center;padding:60px;">
             <i class="bi bi-inbox" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
             <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Antrian kosong</div>
-            <div style="font-size:14px;color:var(--text-secondary);">Tidak ada BA yang menunggu persetujuan kamu</div>
+            <div style="font-size:14px;color:var(--text-secondary);">Tidak ada BA yang menunggu persetujuan Anda saat ini</div>
         </div>
     }
     else

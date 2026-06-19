@@ -61,9 +61,11 @@ public class DocumentService : IDocumentService
                 ? string.Join(", ", ba.Perangkat.Select(p => p.Barang?.NamaBarang ?? "-").Distinct())
                 : "-";
 
-            // Tanggal kembali (Peminjaman only)
-            var tanggalKembaliStr = (ba.Jenis == "Peminjaman" && ba.TanggalKembali.HasValue)
-                ? ba.TanggalKembali.Value.ToString("dd MMMM yyyy", idCulture)
+            // Tanggal kembali (Peminjaman only) — tampilkan "-" jika tidak diisi
+            var tanggalKembaliStr = ba.Jenis == "Peminjaman"
+                ? (ba.TanggalKembali.HasValue
+                    ? ba.TanggalKembali.Value.ToString("dd MMMM yyyy", idCulture)
+                    : "-")
                 : string.Empty;
 
             // Jabatan approver — prefer Pegawai.Jabatan (loaded via DB if ApplicationUser.Jabatan is null)
@@ -446,8 +448,16 @@ public class DocumentService : IDocumentService
             mainPart.Document.Save();
         }
 
-        // Konversi DOCX → PDF menggunakan Spire.Doc
-        ConvertDocxToPdfInternal(docPath, docPath.Replace(".docx", ".pdf"));
+        // Konversi DOCX → PDF setelah embed TTD — bungkus try/catch agar error Spire.Doc
+        // tidak membatalkan keberhasilan embed TTD di DOCX.
+        try
+        {
+            ConvertDocxToPdfInternal(docPath, docPath.Replace(".docx", ".pdf"));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EmbedSignatureSpire] Gagal konversi PDF setelah embed TTD: {ex.Message}");
+        }
     }
 
     public Task ConvertDocxToPdfAsync(string docxPhysicalPath)

@@ -243,5 +243,56 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
 
         workbook.SaveAs(archivePath);
     }
+
+    public Task<byte[]> ExportArsipAsync(IEnumerable<BeritaAcara> data)
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.AddWorksheet("Arsip BA");
+
+        string[] headers = ["Tanggal", "Nomor Surat", "Jenis Berita Acara", "No. Tiket SSC",
+                             "Jenis Perangkat Keras", "Penanggung Jawab", "Yang Menyerahkan", "Yang Mengetahui"];
+
+        for (int i = 0; i < headers.Length; i++)
+        {
+            var cell = sheet.Cell(1, i + 1);
+            cell.Value = headers[i];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1E3A5F");
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        }
+
+        int row = 2;
+        foreach (var ba in data)
+        {
+            var perangkatNames = ba.Perangkat?
+                .Select(p => p.Barang?.NamaBarang)
+                .Where(n => !string.IsNullOrEmpty(n)) ?? [];
+
+            sheet.Cell(row, 1).Value = ba.Tanggal.ToString("dd/MM/yyyy");
+            sheet.Cell(row, 2).Value = ba.NomorSurat ?? string.Empty;
+            sheet.Cell(row, 3).Value = ba.Jenis;
+            sheet.Cell(row, 4).Value = ba.TiketSscNo ?? string.Empty;
+            sheet.Cell(row, 5).Value = string.Join(", ", perangkatNames);
+            sheet.Cell(row, 6).Value = ba.Pj?.Nama ?? string.Empty;
+            sheet.Cell(row, 7).Value = ba.Menyerahkan?.Nama ?? string.Empty;
+            sheet.Cell(row, 8).Value = ba.Mengetahui?.Nama ?? string.Empty;
+
+            if (row % 2 == 0)
+                sheet.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
+
+            row++;
+        }
+
+        sheet.Columns().AdjustToContents();
+
+        var headerRange = sheet.Range(1, 1, 1, headers.Length);
+        headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return Task.FromResult(ms.ToArray());
+    }
 }
 

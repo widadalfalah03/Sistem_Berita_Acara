@@ -18,7 +18,7 @@
 
 <div class="page-header">
     <h1 class="page-title">@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara Baru")</h1>
-    <p class="page-subtitle">Isi formulir berikut, lalu klik Next untuk melanjutkan ke editor dokumen</p>
+    <p class="page-subtitle">Isi formulir berikut untuk melanjutkan ke editor dokumen</p>
 </div>
 
 @if (!string.IsNullOrEmpty(errorMessage))
@@ -39,7 +39,7 @@
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label">Nomor Surat</label>
-                <input class="form-control readonly" readonly value="(auto-generate saat simpan)" />
+                <input class="form-control readonly" readonly value="Dibuat otomatis saat penyimpanan" />
             </div>
             <div class="form-group">
                 <label class="form-label">Tanggal</label>
@@ -67,7 +67,7 @@
             else if (model.Jenis == "Peminjaman")
             {
                 <div class="form-group">
-                    <label class="form-label">Tanggal Kembali</label>
+                    <label class="form-label">Tanggal Kembali <span style="color:var(--danger)">*</span></label>
                     <InputDate class="form-control" @bind-Value="model.TanggalKembali" />
                 </div>
             }
@@ -325,7 +325,7 @@
             }
             else
             {
-                <span>Next</span>
+                <span>Simpan & Lanjutkan</span>
                 <i class="bi bi-arrow-right"></i>
             }
         </button>
@@ -472,6 +472,7 @@
         if (model.MenyerahkanId == 0) { errorMessage = "Pilih Yang Menyerahkan terlebih dahulu."; return; }
         if (model.MengetahuiId == 0) { errorMessage = "Pilih Approver (Yang Mengetahui) terlebih dahulu."; return; }
         if (!model.Perangkat.Any(p => p.BarangId > 0)) { errorMessage = "Tambahkan minimal satu perangkat."; return; }
+        if (model.Jenis == "Peminjaman" && !model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk Berita Acara Peminjaman."; return; }
 
         isSaving = true;
         try
@@ -506,13 +507,15 @@
                 existing.TanggalKembali = model.TanggalKembali.HasValue
                     ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
 
+                // Hapus DocxPath agar EditorBA regenerasi dokumen dari data terbaru
+                existing.DocxPath = null;
+
                 // Reset rejected BA back to Draft so it re-enters the submission workflow
                 if (existing.Status == "Rejected")
                 {
                     existing.Status = "Draft";
                     existing.AlasanReject = null;
                     existing.TtdPjPath = null;
-                    existing.DocxPath = null;
                     existing.SubmittedAt = null;
                     existing.PjSignedAt = null;
                     existing.ApprovedAt = null;

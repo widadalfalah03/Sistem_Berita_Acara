@@ -89,9 +89,8 @@
 
             <div style="display:flex;gap:12px;">
                 <button class="btn btn-outline" @onclick="() => { selectedPegawai = null; selectedRole = string.Empty; }">Batal</button>
-                <button class="btn btn-primary" @onclick="CreateUserAsync" disabled="@isSaving">
-                    @if (isSaving) { <span>Membuat akun...</span> }
-                    else { <span><i class="bi bi-person-plus"></i> Buat Akun</span> }
+                <button class="btn btn-primary @(isSaving ? "btn-loading" : "")" @onclick="CreateUserAsync" disabled="@isSaving">
+                    <i class="bi bi-person-plus"></i> Buat Akun
                 </button>
             </div>
         </div>
