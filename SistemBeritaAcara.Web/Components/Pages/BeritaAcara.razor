@@ -495,6 +495,13 @@
 
                 if (existing is null) { errorMessage = "Draft tidak ditemukan."; isSaving = false; return; }
 
+                // Jika Jenis BA berubah (misal dari Alokasi ke Peminjaman),
+                // dokumen HARUS digenerate ulang dari template yang baru.
+                if (existing.Jenis != model.Jenis)
+                {
+                    existing.DocxPath = null;
+                }
+
                 existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
                 existing.Jenis = model.Jenis;
                 existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
