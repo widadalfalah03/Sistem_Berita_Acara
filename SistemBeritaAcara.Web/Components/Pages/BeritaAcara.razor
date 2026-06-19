@@ -473,6 +473,19 @@
         if (model.MengetahuiId == 0) { errorMessage = "Pilih Approver (Yang Mengetahui) terlebih dahulu."; return; }
         if (!model.Perangkat.Any(p => p.BarangId > 0)) { errorMessage = "Tambahkan minimal satu perangkat."; return; }
 
+        if (model.Jenis == "Peminjaman")
+        {
+            if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC wajib diisi untuk BA Peminjaman."; return; }
+            if (!model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk BA Peminjaman."; return; }
+            if (model.TanggalKembali.Value.Date < model.Tanggal.Date) { errorMessage = "Tanggal Kembali tidak boleh sebelum Tanggal peminjaman."; return; }
+        }
+        else if (model.Jenis == "Alokasi")
+        {
+            if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC wajib diisi untuk BA Alokasi."; return; }
+        }
+
+        if (!editId.HasValue && !photoFiles.Any()) { errorMessage = "Minimal 1 Bukti Foto wajib diunggah."; return; }
+
         isSaving = true;
         try
         {
@@ -495,9 +508,37 @@
 
                 if (existing is null) { errorMessage = "Draft tidak ditemukan."; isSaving = false; return; }
 
-                // Jika Jenis BA berubah (misal dari Alokasi ke Peminjaman),
-                // dokumen HARUS digenerate ulang dari template yang baru.
-                if (existing.Jenis != model.Jenis)
+                // Periksa apakah ada perubahan pada data form
+                bool isChanged = existing.Jenis != model.Jenis ||
+                                 existing.JenisCustom != (model.Jenis == "Lainnya" ? model.JenisCustom : null) ||
+                                 existing.Tanggal != DateOnly.FromDateTime(model.Tanggal) ||
+                                 existing.PjId != model.PjId ||
+                                 existing.PjNoTelp != model.PjNoTelp ||
+                                 existing.MenyerahkanId != model.MenyerahkanId ||
+                                 existing.MengetahuiId != model.MengetahuiId ||
+                                 existing.TiketSscNo != model.TiketSscNo ||
+                                 existing.TanggalKembali != (model.TanggalKembali.HasValue ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null);
+
+                if (!isChanged)
+                {
+                    var newPerangkatList = model.Perangkat.Where(p => p.BarangId > 0 && p.Jumlah > 0).ToList();
+                    if (existing.Perangkat.Count != newPerangkatList.Count)
+                    {
+                        isChanged = true;
+                    }
+                    else
+                    {
+                        foreach (var ep in existing.Perangkat)
+                        {
+                            var match = newPerangkatList.FirstOrDefault(np => np.BarangId == ep.BarangId && np.Jumlah == ep.Jumlah && np.NoSerial == ep.NoSerial && np.Keterangan == ep.Keterangan);
+                            if (match == null) { isChanged = true; break; }
+                        }
+                    }
+                }
+
+                // Jika data form berubah, dokumen HARUS digenerate ulang dari template
+                // dengan menghapus path lama, EditorBA akan mengenerate ulan.
+                if (isChanged)
                 {
                     existing.DocxPath = null;
                 }
