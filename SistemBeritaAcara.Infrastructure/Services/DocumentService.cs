@@ -142,7 +142,7 @@ public class DocumentService : IDocumentService
             // 2. Replace Table Rows for Perangkat
             // Template row identified by {{PerangkatJumlah}} placeholder
             var templateRow = mainPart.Document.Body.Descendants<TableRow>()
-                .FirstOrDefault(r => r.Descendants<Text>().Any(t => t.Text.Contains("{{PerangkatJumlah}}")));
+                .FirstOrDefault(r => r.Descendants<Text>().Any(t => t.Text != null && t.Text.Contains("{{PerangkatJumlah}}")));
 
             if (templateRow != null && ba.Perangkat != null)
             {
@@ -157,13 +157,15 @@ public class DocumentService : IDocumentService
                     {
                         foreach (var t in noCell.Descendants<Text>())
                         {
-                            if (t.Text.Contains("{{PerangkatNo}}"))
+                            if (t.Text != null && t.Text.Contains("{{PerangkatNo}}"))
                                 t.Text = t.Text.Replace("{{PerangkatNo}}", idx.ToString());
                         }
                     }
 
                     foreach (var text in newRow.Descendants<Text>())
                     {
+                        if (text.Text == null) continue;
+                        
                         if (text.Text.Contains("{{PerangkatJumlah}}"))
                             text.Text = text.Text.Replace("{{PerangkatJumlah}}", p.Jumlah.ToString());
                         if (text.Text.Contains("{{PerangkatTerbilang}}"))
