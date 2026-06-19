@@ -36,7 +36,7 @@ else if (currentRole == "AdminGudangBarang")
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("No. Surat"))">No. Surat <i class="bi @GetSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Dokumen <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis BA"))">Jenis BA <i class="bi @GetSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Tanggal Submit <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Approver"))">Approver <i class="bi @GetSortIcon("Approver")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
@@ -49,8 +49,8 @@ else if (currentRole == "AdminGudangBarang")
                     {
                         <tr>
                             <td>
-                                <div class="cell-main">@ba.NomorSurat</div>
-                                <div class="cell-sub">@ba.Pj?.Nama</div>
+                                <div class="cell-main">Berita Acara @ba.Jenis</div>
+                                <div class="cell-sub">PJ: @ba.Pj?.Nama</div>
                             </td>
                             <td><span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span></td>
                             <td>@ba.SubmittedAt?.ToString("dd MMM yyyy")</td>
@@ -155,7 +155,6 @@ else if (currentRole == "Approver")
 
     private IEnumerable<BeritaAcaraEntity> SortedBaList => sortColumn switch
     {
-        "No. Surat" => sortAscending ? baList.OrderBy(b => b.NomorSurat) : baList.OrderByDescending(b => b.NomorSurat),
         "Jenis BA" => sortAscending ? baList.OrderBy(b => b.Jenis) : baList.OrderByDescending(b => b.Jenis),
         "Tanggal Submit" => sortAscending ? baList.OrderBy(b => b.SubmittedAt) : baList.OrderByDescending(b => b.SubmittedAt),
         "Approver" => sortAscending ? baList.OrderBy(b => b.Mengetahui?.Nama) : baList.OrderByDescending(b => b.Mengetahui?.Nama),

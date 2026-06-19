@@ -20,7 +20,7 @@
 <div class="search-bar">
     <div class="search-input" style="max-width:300px;">
         <i class="bi bi-search"></i>
-        <input type="text" placeholder="Cari nomor surat..." @bind="search" @bind:event="oninput" />
+        <input type="text" placeholder="Cari jenis, PJ, atau alasan..." @bind="search" @bind:event="oninput" />
     </div>
     <select class="filter-select" @bind="yearFilter">
         <option value="0">Semua Tahun</option>
@@ -67,7 +67,7 @@ else
                 <div class="ba-card-badge">
                     <span class="pill pill-rejected">DITOLAK</span>
                 </div>
-                <div class="ba-card-number">@ba.NomorSurat</div>
+                <div class="ba-card-number">Berita Acara @ba.Jenis</div>
                 <div class="ba-card-title">Berita Acara @ba.Jenis</div>
                 <div class="ba-card-jenis">Jenis: @ba.Jenis</div>
                 <div class="ba-card-person">
@@ -113,7 +113,9 @@ else
 
     private IEnumerable<BeritaAcaraEntity> FilteredBA => allBA
         .Where(b => string.IsNullOrEmpty(search) ||
-                    (b.NomorSurat ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
+                    b.Jenis.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    (b.Pj?.Nama ?? "").Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                    (b.AlasanReject ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
         .Where(b => yearFilter == 0 || b.CreatedAt.Year == yearFilter)
         .Where(b => string.IsNullOrEmpty(jenisFilter) || b.Jenis == jenisFilter);
 
