@@ -18,17 +18,53 @@ else
 
 
     <div class="app-layout">
-        <aside class="sidebar">
-            <!-- Logo -->
-            <div class="sidebar-logo">
-                <div class="logo-text">
-                    <div>
-                        <NavLink href="/dashboard" style="display:block;line-height:0;">
-                            <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height: 60px; width: auto;" alt="Pertamina Patra Niaga" />
+        <header class="topbar">
+            <!-- Brand Logo -->
+            <div class="brand-logo-container">
+                <NavLink href="/dashboard" style="display:block;line-height:0;">
+                    <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height: 54px; width: auto;" alt="Pertamina Patra Niaga" />
+                </NavLink>
+            </div>
+
+            <div class="topbar-actions" style="position:relative;">
+                <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode" style="margin-right: 8px;">
+                    <i class="bi bi-moon" style="font-size:18px;"></i>
+                </button>
+                <div class="topbar-profile-container">
+                    <div class="topbar-user" style="cursor:pointer;display:flex;align-items:center;gap:12px;">
+                        <div class="topbar-avatar">
+                            @if (!string.IsNullOrEmpty(profilePicPath))
+                            {
+                                <img src="/@profilePicPath" alt="Foto Profil" />
+                            }
+                            else
+                            {
+                                @initials
+                            }
+                        </div>
+                        <div style="text-align:left;">
+                            <div class="topbar-username">@currentUserName</div>
+                            <div class="topbar-dropdown">@currentRoleLabel</div>
+                        </div>
+                        <i class="bi bi-chevron-down" style="font-size:12px;color:var(--text-muted);margin-left:4px;"></i>
+                    </div>
+
+                    <div class="profile-dropdown-menu">
+                        <NavLink href="/profil" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:var(--text-primary);text-decoration:none;border-bottom:1px solid var(--border-light);">
+                            <i class="bi bi-person" style="font-size:16px;"></i> Profile
                         </NavLink>
+                        <form method="post" action="/account/logout" style="margin:0;">
+                            <AntiforgeryToken />
+                            <button type="submit" style="width:100%;text-align:left;background:none;border:none;padding:12px 16px;color:var(--danger);display:flex;align-items:center;gap:10px;cursor:pointer;font-family:inherit;font-size:14px;">
+                                <i class="bi bi-box-arrow-right" style="font-size:16px;"></i> Log Out
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
+        </header>
+
+        <aside class="sidebar">
 
             <!-- CTA Buat BA (hanya AdminGudangBarang) -->
             @if (currentRole == "AdminGudangBarang")
@@ -136,54 +172,55 @@ else
 
             <!-- Footer -->
             <div class="sidebar-footer">
-
-
-                <form method="post" action="/account/logout" style="margin:0;">
-                    <AntiforgeryToken />
-                    <button type="submit" class="nav-link" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;cursor:pointer;color:var(--danger);">
-                        <i class="bi bi-box-arrow-right"></i>
-                        <span>Keluar</span>
-                    </button>
-                </form>
             </div>
         </aside>
 
         <div class="main-content">
-            <!-- Topbar -->
-            <header class="topbar">
-                <div class="topbar-left">
-                    <div class="topbar-page-title">@pageTitle</div>
-                </div>
-                <div class="topbar-actions">
-                    @if (currentRole != "AdminIT")
-                    {
-                        <NavLink class="topbar-notif" href="/notifikasi">
-                            <i class="bi bi-bell"></i>
-                            @if (unreadCount > 0)
-                            {
-                                <span class="notif-badge">@unreadCount</span>
-                            }
-                        </NavLink>
-                    }
-                </div>
-                <NavLink class="topbar-user" href="/profil">
-                    <div class="topbar-avatar">
-                        @if (!string.IsNullOrEmpty(profilePicPath))
-                        {
-                            <img src="/@profilePicPath" alt="Foto Profil" />
-                        }
-                        else
-                        {
-                            @initials
-                        }
-                    </div>
-                    <div>
-                        <div class="topbar-username">@currentUserName</div>
-                        <div class="topbar-dropdown">@currentRoleLabel</div>
-                    </div>
-                    <i class="bi bi-chevron-down" style="font-size:12px;color:var(--text-muted);margin-left:4px;"></i>
-                </NavLink>
-            </header>
+
+            <style>
+                .topbar-profile-container {
+                    position: relative;
+                }
+                .profile-dropdown-menu {
+                    display: none;
+                    position: absolute;
+                    top: 100%;
+                    right: 0;
+                    margin-top: 8px;
+                    background: var(--surface, #fff);
+                    border: 1px solid var(--border, #e5e7eb);
+                    border-radius: var(--radius, 8px);
+                    box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0,0,0,0.1));
+                    min-width: 180px;
+                    z-index: 100;
+                    overflow: visible; /* Changed from hidden to visible so ::before is active */
+                }
+                /* Bridge the gap so hover state isn't lost */
+                .profile-dropdown-menu::before {
+                    content: "";
+                    position: absolute;
+                    top: -10px;
+                    left: 0;
+                    right: 0;
+                    height: 10px;
+                    background: transparent;
+                }
+                .profile-dropdown-menu > a:first-of-type {
+                    border-top-left-radius: var(--radius, 8px);
+                    border-top-right-radius: var(--radius, 8px);
+                }
+                .profile-dropdown-menu > form:last-of-type > button {
+                    border-bottom-left-radius: var(--radius, 8px);
+                    border-bottom-right-radius: var(--radius, 8px);
+                }
+                .topbar-profile-container:hover .profile-dropdown-menu {
+                    display: block;
+                }
+                .profile-dropdown-menu a:hover,
+                .profile-dropdown-menu button:hover {
+                    background: var(--primary-light, #f0fdf4);
+                }
+            </style>
 
             <!-- Content -->
             <div class="content-area">
