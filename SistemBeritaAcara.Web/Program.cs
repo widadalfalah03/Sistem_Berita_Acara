@@ -218,8 +218,10 @@ app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
     {
         var payload = await ctx.Request.ReadFromJsonAsync<System.Text.Json.JsonElement>();
 
-        // Status 2 = closed/saved, Status 6 = force-save (Ctrl+S)
-        if (payload.TryGetProperty("status", out var statusProp) && (statusProp.GetInt32() == 2 || statusProp.GetInt32() == 6))
+        // Status 2 = closed/saved (regular)
+        // Status 6 = auto force-save (dari config forcesave:true / Ctrl+S)
+        // Status 7 = force-save dipicu oleh docEditor.forceSave() API call — HARUS ditangani!
+        if (payload.TryGetProperty("status", out var statusProp) && (statusProp.GetInt32() == 2 || statusProp.GetInt32() == 6 || statusProp.GetInt32() == 7))
         {
             if (payload.TryGetProperty("url", out var downloadUrlProp))
             {
@@ -292,6 +294,28 @@ app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
         return Results.Ok(new { error = 1, message = ex.Message });
     }
 }).DisableAntiforgery();
+
+// PDF Preview endpoint — no-cache agar browser selalu fetch dari disk, bukan cache
+app.MapGet("/api/preview/pdf/{baId:int}", async (
+    int baId,
+    HttpContext ctx,
+    SistemBeritaAcara.Infrastructure.Data.AppDbContext db) =>
+{
+    ctx.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+    ctx.Response.Headers["Pragma"] = "no-cache";
+    ctx.Response.Headers["Expires"] = "0";
+
+    var ba = await db.BeritaAcara.FindAsync(baId);
+    if (ba?.DocxPath == null) return Results.NotFound();
+
+    var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+        ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+
+    if (!File.Exists(pdfPath)) return Results.NotFound();
+
+    var bytes = await File.ReadAllBytesAsync(pdfPath);
+    return Results.File(bytes, "application/pdf", enableRangeProcessing: true);
+}).RequireAuthorization().DisableAntiforgery();
 
 // Database and roles are ensured earlier before app start
 

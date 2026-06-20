@@ -9,25 +9,43 @@
 @inject INotificationService NotificationService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
 <PageTitle>Editor Berita Acara — Sistem Berita Acara</PageTitle>
 
+@* Fullscreen overlay saat generate/embed dokumen — position:fixed, muncul di atas segalanya *@
 @if (isLoading)
 {
-    <div class="loading-spinner"><div class="spinner"></div><span>Memuat dokumen...</span></div>
-}
-else if (ba is null)
-{
-    <div style="text-align:center;padding:60px;color:var(--text-muted);">
-        <i class="bi bi-file-x" style="font-size:48px;display:block;margin-bottom:16px;"></i>
-        <div style="font-size:18px;font-weight:700;">Berita Acara tidak ditemukan</div>
-        <NavLink href="/draft" class="btn btn-outline" style="margin-top:16px;">← Kembali ke Draft</NavLink>
+    <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+        <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">Menyiapkan dokumen...</div>
+        <div style="font-size:13px;color:var(--text-muted);">Sedang mengkonversi ke PDF, harap tunggu</div>
     </div>
 }
-else
+@if (isSubmitting)
 {
+    <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+        <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">Mengirim untuk persetujuan...</div>
+        <div style="font-size:13px;color:var(--text-muted);">Menyematkan tanda tangan dan mengirim notifikasi ke PJ</div>
+    </div>
+}
+
+@* Konten utama hanya di-render setelah loading selesai, menghindari NRE saat ba masih null *@
+@if (!isLoading)
+{
+    @if (ba is null)
+    {
+        <div style="text-align:center;padding:60px;color:var(--text-muted);">
+            <i class="bi bi-file-x" style="font-size:48px;display:block;margin-bottom:16px;"></i>
+            <div style="font-size:18px;font-weight:700;">Berita Acara tidak ditemukan</div>
+            <NavLink href="/draft" class="btn btn-outline" style="margin-top:16px;">← Kembali ke Draft</NavLink>
+        </div>
+    }
+    else
+    {
     <!-- ── Topbar Editor ── -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-bottom:16px;border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:16px;">
@@ -76,7 +94,7 @@ else
         <div style="background:#E8EAF0;border-radius:var(--radius);height:842px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.05);">
             @if (!string.IsNullOrEmpty(ba.DocxPath))
             {
-                <iframe src="/@ba.DocxPath.Replace(".docx", ".pdf")?v=@(DateTime.Now.Ticks)#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
+                <iframe src="/api/preview/pdf/@ba.Id?v=@(DateTime.Now.Ticks)#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
             }
             else
             {
@@ -166,6 +184,7 @@ else
             </div>
         </div>
     </div>
+    }
 }
 
 @code {
@@ -218,9 +237,24 @@ else
                     errorMessage = "Gagal memuat pratinjau dokumen: " + ex.Message;
                 }
             }
+
         }
 
+        // Polling dipindah ke OnlyOfficeEditor.SaveAndGoBackAsync sehingga halaman ONLYOFFICE
+        // tetap hidup saat polling berlangsung — ONLYOFFICE callback tidak diinterrupt oleh
+        // page unload. EditorBA hanya perlu load data dan render iframe (PDF sudah siap).
+        // Guard prerender: jangan set isLoading=false saat static render agar prerender
+        // menampilkan spinner, bukan iframe dengan PDF lama.
+        if (!RendererInfo.IsInteractive) return;
+
         isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // JSRuntime hanya tersedia setelah render pertama — tidak boleh dipanggil saat prerender.
+        if (firstRender)
+            await JSRuntime.InvokeVoidAsync("appLoading.hide");
     }
 
     private async Task SubmitForApprovalAsync()

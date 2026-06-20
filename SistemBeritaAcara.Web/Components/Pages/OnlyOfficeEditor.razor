@@ -16,6 +16,15 @@
 
 <PageTitle>Edit Manual Dokumen — Sistem Berita Acara</PageTitle>
 
+@if (isSaving)
+{
+    <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+        <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">Menyimpan dokumen...</div>
+        <div style="font-size:13px;color:var(--text-muted);">Mengkonversi ke PDF, harap tunggu</div>
+    </div>
+}
+
 @if (isLoading)
 {
     <div class="loading-spinner"><div class="spinner"></div><span>Memuat Editor ONLYOFFICE...</span></div>
@@ -36,7 +45,7 @@ else
                 <i class="bi bi-arrow-left"></i> Kembali ke Pratinjau
             </button>
             <div>
-                <div style="font-weight:700;font-size:16px;">Edit Manual: @(ba.NomorSurat ?? "Draft")</div>
+                <div style="font-weight:700;font-size:16px;">Edit Dokumen: @(ba.NomorSurat ?? "Draft")</div>
             </div>
         </div>
         <button class="btn btn-primary" @onclick="SaveAndGoBackAsync" disabled="@isSaving"
@@ -49,7 +58,7 @@ else
             else
             {
                 <i class="bi bi-save-fill"></i>
-                <span>Simpan & Kembali</span>
+                <span>Simpan & Pratinjau</span>
             }
         </button>
     </div>
@@ -105,6 +114,22 @@ else
             {
                 ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
                 await DbContext.SaveChangesAsync();
+
+                // Embed TTD dan generate PDF agar pratinjau di EditorBA langsung tersedia
+                // (konsisten dengan perilaku EditorBA sebelumnya)
+                var currentUser = await DbContext.Users.FindAsync(_currentUserId);
+                if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
+                {
+                    var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                        currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
+                }
+                else
+                {
+                    var docxPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                        ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    await DocumentService.ConvertDocxToPdfAsync(docxPhysical);
+                }
             }
             catch (Exception ex)
             {
@@ -117,6 +142,10 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Sembunyikan overlay global (mungkin ditampilkan oleh BeritaAcara "Simpan & Lanjutkan")
+        if (firstRender)
+            await JSRuntime.InvokeVoidAsync("appLoading.hide");
+
         if (!_editorInitialized && ba != null && !string.IsNullOrEmpty(ba.DocxPath) && string.IsNullOrEmpty(errorMessage))
         {
             _editorInitialized = true;
@@ -170,12 +199,56 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
+            // Tampilkan overlay yang akan bertahan melewati navigasi ke EditorBA
+            await JSRuntime.InvokeVoidAsync("appLoading.show", "Menyimpan dokumen...", "Sedang mengkonversi ke PDF, harap tunggu");
+
+            // Snapshot timestamp SEBELUM forceSave sebagai baseline perbandingan
+            string docxPhysical = string.Empty, pdfPhysical = string.Empty;
+            DateTime beforeDocx = DateTime.MinValue, beforePdf = DateTime.MinValue;
+            if (ba?.DocxPath is not null)
+            {
+                var rel = ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString());
+                docxPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", rel);
+                pdfPhysical  = docxPhysical.Replace(".docx", ".pdf");
+                if (File.Exists(docxPhysical)) beforeDocx = File.GetLastWriteTimeUtc(docxPhysical);
+                if (File.Exists(pdfPhysical))  beforePdf  = File.GetLastWriteTimeUtc(pdfPhysical);
+            }
+
+            // Trigger save — page tetap hidup (Blazor circuit aktif) sehingga ONLYOFFICE
+            // dapat menyelesaikan proses simpan & mengirim callback ke server.
             await JSRuntime.InvokeVoidAsync("onlyoffice.forceSave");
-            // Tunggu callback ONLYOFFICE selesai memproses (download + PDF regen)
-            await Task.Delay(3500);
+
+            // Poll di sini (bukan di EditorBA) karena halaman masih aktif.
+            // Dengan circuit tetap terhubung, ONLYOFFICE tidak di-interrupt oleh page unload.
+            if (!string.IsNullOrEmpty(docxPhysical) && beforeDocx > DateTime.MinValue)
+            {
+                // Tahap 1: tunggu DOCX diperbarui oleh ONLYOFFICE callback (max 60 detik)
+                var docxDeadline = DateTime.UtcNow.AddSeconds(60);
+                bool docxUpdated = false;
+                while (DateTime.UtcNow < docxDeadline)
+                {
+                    await Task.Delay(500);
+                    if (File.Exists(docxPhysical) && File.GetLastWriteTimeUtc(docxPhysical) > beforeDocx)
+                    { docxUpdated = true; break; }
+                }
+
+                if (docxUpdated)
+                {
+                    // Tahap 2: tunggu PDF diperbarui (dibandingkan ke beforePdf, bukan docxTime)
+                    var pdfDeadline = DateTime.UtcNow.AddSeconds(30);
+                    while (DateTime.UtcNow < pdfDeadline)
+                    {
+                        await Task.Delay(500);
+                        if (File.Exists(pdfPhysical) && File.GetLastWriteTimeUtc(pdfPhysical) > beforePdf)
+                        { await Task.Delay(1500); break; } // 1500ms agar Spire.Doc benar-benar flush ke disk
+                    }
+                }
+            }
+
+            // PDF sudah siap di disk — navigasi ke EditorBA (in-app agar overlay bertahan)
+            Navigation.NavigateTo($"/editor/{Id}");
         }
-        catch { /* abaikan jika editor belum ready */ }
-        Navigation.NavigateTo($"/editor/{Id}");
+        catch { Navigation.NavigateTo($"/editor/{Id}"); }
     }
 
     public async ValueTask DisposeAsync()

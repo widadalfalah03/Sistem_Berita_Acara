@@ -34,7 +34,7 @@ public class DocumentService : IDocumentService
         return Path.Combine(_templatesDir, fileName);
     }
 
-    public Task<string> GenerateDocxAsync(BeritaAcara ba)
+    public async Task<string> GenerateDocxAsync(BeritaAcara ba)
     {
         var templatePath = GetTemplatePath(ba.Jenis ?? "Alokasi");
         if (!File.Exists(templatePath))
@@ -254,18 +254,20 @@ public class DocumentService : IDocumentService
             mainPart.Document.Save();
         }
 
-        // Convert ke PDF menggunakan Spire.Doc untuk keperluan Preview di browser
+        // Convert ke PDF — dibungkus Task.Run agar Spire.Doc (CPU-bound, ~3-8 detik) tidak
+        // memblokir thread pool thread Blazor Server. Tanpa Task.Run, circuit tidak bisa
+        // mengirim render update (termasuk loading overlay) selama konversi berlangsung.
         try
         {
             string pdfPhysicalPath = physicalPath.Replace(".docx", ".pdf");
-            ConvertDocxToPdfInternal(physicalPath, pdfPhysicalPath);
+            await Task.Run(() => ConvertDocxToPdfInternal(physicalPath, pdfPhysicalPath));
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Gagal membuat PDF preview: {ex.Message}");
         }
 
-        return Task.FromResult(relativePath);
+        return relativePath;
     }
 
     public async Task<string> EmbedTtdMenyerahkanAsync(int baId, string ttdPath)
@@ -274,7 +276,7 @@ public class DocumentService : IDocumentService
         string physicalPath = GetPhysicalPath(ba.DocxPath!);
         EnsureFileExists(physicalPath);
 
-        EmbedSignatureSpire(physicalPath, ttdPath, "{{SIG_MENYERAHKAN}}");
+        await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_MENYERAHKAN}}");
 
         return ba.DocxPath!;
     }
@@ -285,7 +287,7 @@ public class DocumentService : IDocumentService
         string physicalPath = GetPhysicalPath(ba.DocxPath!);
         EnsureFileExists(physicalPath);
 
-        EmbedSignatureSpire(physicalPath, ttdPath, "{{SIG_APPROVER}}");
+        await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_APPROVER}}");
 
         return ba.DocxPath!;
     }
@@ -296,7 +298,7 @@ public class DocumentService : IDocumentService
         string physicalPath = GetPhysicalPath(ba.DocxPath!);
         EnsureFileExists(physicalPath);
 
-        EmbedSignatureSpire(physicalPath, ttdPath, "{{SIG_PJ}}");
+        await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_PJ}}");
 
         ba.TtdPjPath = Path.Combine("files", "signatures", Path.GetFileName(ttdPath)).Replace("\\", "/");
         await _db.SaveChangesAsync();
@@ -314,7 +316,7 @@ public class DocumentService : IDocumentService
         string finalPhysicalPath = GetPhysicalPath(finalRelativePath);
         File.Copy(draftPhysicalPath, finalPhysicalPath, true);
 
-        EmbedSignatureSpire(finalPhysicalPath, ttdPath, "{{SIG_APPROVER}}");
+        await EmbedSignatureSpireAsync(finalPhysicalPath, ttdPath, "{{SIG_APPROVER}}");
 
         ba.DocxFinalPath = finalRelativePath;
         await _db.SaveChangesAsync();
@@ -322,7 +324,7 @@ public class DocumentService : IDocumentService
         return finalRelativePath;
     }
 
-    private static void EmbedSignatureSpire(string docPath, string imagePath, string placeholder)
+    private static async Task EmbedSignatureSpireAsync(string docPath, string imagePath, string placeholder)
     {
         if (!File.Exists(imagePath)) throw new FileNotFoundException("File tanda tangan tidak ditemukan.", imagePath);
 
@@ -450,11 +452,11 @@ public class DocumentService : IDocumentService
             mainPart.Document.Save();
         }
 
-        // Konversi DOCX → PDF setelah embed TTD — bungkus try/catch agar error Spire.Doc
-        // tidak membatalkan keberhasilan embed TTD di DOCX.
+        // Konversi DOCX → PDF dalam Task.Run agar Spire.Doc tidak memblokir
+        // circuit thread Blazor Server selama konversi berlangsung.
         try
         {
-            ConvertDocxToPdfInternal(docPath, docPath.Replace(".docx", ".pdf"));
+            await Task.Run(() => ConvertDocxToPdfInternal(docPath, docPath.Replace(".docx", ".pdf")));
         }
         catch (Exception ex)
         {
@@ -462,29 +464,45 @@ public class DocumentService : IDocumentService
         }
     }
 
-    public Task ConvertDocxToPdfAsync(string docxPhysicalPath)
+    public async Task ConvertDocxToPdfAsync(string docxPhysicalPath)
     {
-        ConvertDocxToPdfInternal(docxPhysicalPath, docxPhysicalPath.Replace(".docx", ".pdf"));
-        return Task.CompletedTask;
+        await Task.Run(() => ConvertDocxToPdfInternal(docxPhysicalPath, docxPhysicalPath.Replace(".docx", ".pdf")));
     }
 
     // Spire.Doc LoadFromFile pada Windows bisa menahan lock file setelah Close().
     // Solusi: load dari SALINAN temp sehingga file asli (DOCX) tetap bebas untuk ditulis.
     private static void ConvertDocxToPdfInternal(string docxPath, string pdfPath)
     {
+        string uniqueId = Guid.NewGuid().ToString("N");
         // Temp file harus berekstensi .docx agar Spire.Doc bisa mendeteksi format file
-        var tempPath = Path.Combine(Path.GetDirectoryName(docxPath)!, "_tmp_" + Path.GetFileName(docxPath));
+        var tempPath = Path.Combine(Path.GetDirectoryName(docxPath)!, $"_tmp_{uniqueId}_{Path.GetFileName(docxPath)}");
+        var tempPdfPath = Path.Combine(Path.GetDirectoryName(pdfPath)!, $"_tmp_{uniqueId}_{Path.GetFileName(pdfPath)}");
         File.Copy(docxPath, tempPath, overwrite: true);
         try
         {
             var doc = new Spire.Doc.Document();
             doc.LoadFromFile(tempPath);
-            doc.SaveToFile(pdfPath, Spire.Doc.FileFormat.PDF);
+            doc.SaveToFile(tempPdfPath, Spire.Doc.FileFormat.PDF);
             doc.Close();
+
+            // Pindahkan file temp PDF ke PDF tujuan dengan retry jika ada sisa lock
+            for (int attempt = 0; attempt < 10; attempt++)
+            {
+                try
+                {
+                    File.Move(tempPdfPath, pdfPath, overwrite: true);
+                    break;
+                }
+                catch (IOException) when (attempt < 9)
+                {
+                    System.Threading.Thread.Sleep(300);
+                }
+            }
         }
         finally
         {
             try { File.Delete(tempPath); } catch { }
+            try { File.Delete(tempPdfPath); } catch { }
         }
     }
 

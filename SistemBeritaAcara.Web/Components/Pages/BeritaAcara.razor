@@ -11,6 +11,7 @@
 @inject IDocumentService DocumentService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
@@ -284,7 +285,7 @@
                          onmouseover="this.style.background='var(--primary-light)'"
                          onmouseout="this.style.background='var(--surface)'">
                         <span style="@(model.MenyerahkanId == 0 ? "color:var(--text-muted);" : "")">
-                            @(model.MenyerahkanId > 0 ? (adminGudangUsers.FirstOrDefault(u => u.Id == model.MenyerahkanId)?.Nama ?? "Pilih Yang Menyerahkan...") : "Cari yang menyerahkan...")
+                            @(model.MenyerahkanId > 0 ? (adminGudangUsers.FirstOrDefault(u => u.PegawaiId == model.MenyerahkanId)?.Nama ?? "Pilih Yang Menyerahkan...") : "Cari yang menyerahkan...")
                         </span>
                         <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);flex-shrink:0;"></i>
                     </div>
@@ -583,7 +584,14 @@
                     : null;
                 model.PjId = existing.PjId;
                 model.PjNoTelp = existing.PjNoTelp;
-                model.MenyerahkanId = existing.MenyerahkanId;
+                // MenyerahkanId harus Pegawai.Id. Data lama mungkin salah simpan sebagai
+                // ApplicationUser.Id — auto-konversi saat load agar dokumen baru langsung benar.
+                if (adminGudangUsers.Any(u => u.PegawaiId == existing.MenyerahkanId))
+                    model.MenyerahkanId = existing.MenyerahkanId; // sudah format benar
+                else if (adminGudangUsers.FirstOrDefault(u => u.Id == existing.MenyerahkanId) is { } oldFormatUser)
+                    model.MenyerahkanId = oldFormatUser.PegawaiId ?? 0; // konversi dari format lama
+                else
+                    model.MenyerahkanId = existing.MenyerahkanId;
                 model.MengetahuiId = existing.MengetahuiId;
 
                 // Pre-fill selected pegawai untuk display
@@ -682,6 +690,33 @@
                 .FirstOrDefaultAsync(b => b.Id == editId.Value);
             if (existing is null) { autoSaveStatus = AutoSaveState.Error; StateHasChanged(); return; }
 
+            // ── Deteksi perubahan SEBELUM update ──────────────────────────────────
+            // Cek apakah ada field yang mempengaruhi konten dokumen yang berubah.
+            // Harus dilakukan sebelum existing.* diubah, karena SubmitAsync akan
+            // membandingkan existing (sudah di-autosave) vs model — jika kita tidak
+            // kosongkan DocxPath di sini, SubmitAsync akan melewati regenerasi dokumen.
+            var validPerangkat = model.Perangkat.Where(p => p.BarangId > 0).ToList();
+            bool perangkatBerubah = validPerangkat.Any() && (
+                existing.Perangkat.Count != validPerangkat.Count ||
+                validPerangkat.Any(p => !existing.Perangkat.Any(ep =>
+                    ep.BarangId == p.BarangId && ep.Jumlah == p.Jumlah &&
+                    ep.NoSerial == p.NoSerial && ep.Keterangan == p.Keterangan))
+            );
+            bool dokumenBerubah = !string.IsNullOrEmpty(existing.DocxPath) && (
+                existing.Jenis != model.Jenis ||
+                existing.JenisCustom != (model.Jenis == "Lainnya" ? model.JenisCustom : null) ||
+                existing.Tanggal != DateOnly.FromDateTime(model.Tanggal) ||
+                existing.PjId != model.PjId ||
+                existing.PjNoTelp != model.PjNoTelp ||
+                existing.MenyerahkanId != model.MenyerahkanId ||
+                existing.MengetahuiId != model.MengetahuiId ||
+                existing.TiketSscNo != model.TiketSscNo ||
+                existing.TanggalKembali != (model.TanggalKembali.HasValue
+                    ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null) ||
+                perangkatBerubah
+            );
+            // ─────────────────────────────────────────────────────────────────────
+
             existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
             existing.Jenis = model.Jenis;
             existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
@@ -693,8 +728,11 @@
             existing.TanggalKembali = model.TanggalKembali.HasValue
                 ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
 
+            // Kosongkan DocxPath agar EditorBA tahu harus regenerasi dari template
+            if (dokumenBerubah)
+                existing.DocxPath = null;
+
             // Update perangkat hanya jika ada yang terisi minimal 1 barang
-            var validPerangkat = model.Perangkat.Where(p => p.BarangId > 0).ToList();
             if (validPerangkat.Any())
             {
                 DbContext.PerangkatBA.RemoveRange(existing.Perangkat.ToList());
@@ -944,6 +982,8 @@
         bool hasFoto = photoFiles.Any() || existingPhotoUrls.Any();
         if (!hasFoto) { errorMessage = "Bukti foto serah terima wajib dilampirkan."; return; }
 
+        // Semua validasi lulus — tampilkan overlay via JS (instant, sebelum DB operations)
+        await JSRuntime.InvokeVoidAsync("appLoading.show", "Menyiapkan dokumen...", "Sedang memproses, harap tunggu");
         isSaving = true;
         try
         {
@@ -953,7 +993,7 @@
                 var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 int.TryParse(userIdStr, out _currentUserId);
             }
-            if (_currentUserId == 0) { errorMessage = "Sesi habis, silakan login kembali."; isSaving = false; return; }
+            if (_currentUserId == 0) { errorMessage = "Sesi habis, silakan login kembali."; await JSRuntime.InvokeVoidAsync("appLoading.hide"); isSaving = false; return; }
 
             // Jika draft belum sempat terbuat (autosave belum jalan), buat sekarang
             if (!editId.HasValue)
@@ -1067,7 +1107,7 @@
                 }
 
                 await DbContext.SaveChangesAsync();
-                Navigation.NavigateTo($"/editor/{existing.Id}");
+                Navigation.NavigateTo($"/onlyoffice-editor/{existing.Id}");
             }
             else
             {
@@ -1116,13 +1156,14 @@
                     }
                     await DbContext.SaveChangesAsync();
                 }
-                Navigation.NavigateTo($"/editor/{ba.Id}");
+                Navigation.NavigateTo($"/onlyoffice-editor/{ba.Id}");
             }
         }
         catch (Exception ex)
         {
             var inner = ex.InnerException != null ? $"\nInner: {ex.InnerException.Message}" : "";
             errorMessage = $"Gagal menyimpan Berita Acara: {ex.Message}{inner}";
+            await JSRuntime.InvokeVoidAsync("appLoading.hide");
         }
         finally { isSaving = false; }
     }
@@ -1147,7 +1188,7 @@
     
     private void SelectMenyerahkan(ApplicationUser u)
     {
-        model.MenyerahkanId = u.Id;
+        model.MenyerahkanId = u.PegawaiId ?? 0; // simpan Pegawai.Id, bukan ApplicationUser.Id
         showMenyerahkanSearch = false;
         _ = AutoSaveAsync();
     }
