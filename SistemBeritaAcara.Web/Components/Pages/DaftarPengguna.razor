@@ -94,7 +94,7 @@ else
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama"))">Nama / NIP <i class="bi @GetSortIcon("Nama")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Email"))">Email <i class="bi @GetSortIcon("Email")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Role"))">Role <i class="bi @GetSortIcon("Role")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("TTD"))">TTD <i class="bi @GetSortIcon("TTD")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th></th>
                     </tr>
@@ -111,20 +111,7 @@ else
                             <td>
                                 <span class="pill @GetRolePill(u.Role)">@GetRoleLabel(u.Role)</span>
                             </td>
-                            <td>
-                                @if (!string.IsNullOrWhiteSpace(u.TtdPath))
-                                {
-                                    <span class="status-dot active" style="font-size:12px;">
-                                        <i class="bi bi-check-circle-fill"></i> Ada
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="status-dot inactive" style="font-size:12px;">
-                                        <i class="bi bi-x-circle"></i> Belum
-                                    </span>
-                                }
-                            </td>
+
                             <td>
                                 @if (!u.IsDeleted)
                                 {

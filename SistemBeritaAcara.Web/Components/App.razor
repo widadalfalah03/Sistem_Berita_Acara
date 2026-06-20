@@ -35,6 +35,72 @@
     <script src="js/onlyoffice.js"></script>
     <script src="js/canvas-interop.js"></script>
     <script src="js/download-interop.js"></script>
+    <script>
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            const icon = document.querySelector('#theme-toggle i');
+            if (icon) {
+                icon.className = newTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon';
+            }
+        }
+
+        // Initialize theme on load
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+
+        function updateThemeIcon() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                const icon = document.querySelector('#theme-toggle i');
+                if (icon && icon.className !== 'bi bi-sun') icon.className = 'bi bi-sun';
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                const icon = document.querySelector('#theme-toggle i');
+                if (icon && icon.className !== 'bi bi-moon') icon.className = 'bi bi-moon';
+            }
+        }
+
+        // Update icon after DOM loads
+        window.addEventListener('DOMContentLoaded', () => {
+            updateThemeIcon();
+            
+            // Standard Blazor enhanced navigation event
+            if (window.Blazor) {
+                Blazor.addEventListener('enhancedload', updateThemeIcon);
+            }
+
+            // Fallback MutationObserver to catch any other DOM replacements
+            const observer = new MutationObserver(() => {
+                const savedTheme = localStorage.getItem('theme');
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                
+                if (savedTheme === 'dark' && !isDark) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else if (savedTheme !== 'dark' && isDark) {
+                    document.documentElement.removeAttribute('data-theme');
+                }
+                
+                const icon = document.querySelector('#theme-toggle i');
+                if (icon) {
+                    if (savedTheme === 'dark' && icon.className !== 'bi bi-sun') icon.className = 'bi bi-sun';
+                    if (savedTheme !== 'dark' && icon.className !== 'bi bi-moon') icon.className = 'bi bi-moon';
+                }
+            });
+            
+            observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
+    </script>
 </body>
 
 </html>

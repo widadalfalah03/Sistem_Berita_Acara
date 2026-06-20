@@ -58,6 +58,41 @@
     --transition: all 0.2s ease;
 }
 
+[data-theme="dark"] {
+    color-scheme: dark;
+    --primary: #3B82F6;
+    --primary-hover: #2563EB;
+    --primary-light: rgba(59, 130, 246, 0.15);
+    --primary-50: rgba(59, 130, 246, 0.05);
+
+    --danger: #EF4444;
+    --danger-hover: #DC2626;
+    --danger-light: rgba(239, 68, 68, 0.15);
+    --success: #22C55E;
+    --success-light: rgba(34, 197, 94, 0.15);
+    --warning: #F59E0B;
+    --warning-light: rgba(245, 158, 11, 0.15);
+
+    --bg: #030b25;
+    --surface: #0a1930;
+    --border: #1a2a47;
+    --border-light: #111d38;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #64748b;
+
+    --status-draft: #64748b;
+    --status-waiting-pj: #3b82f6;
+    --status-waiting-approval: #f59e0b;
+    --status-approved: #22c55e;
+    --status-rejected: #ef4444;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.24);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
+}
+
 /* ── Reset & Base ──────────────────────────────────────────────── */
 *, *::before, *::after {
     box-sizing: border-box;
@@ -87,25 +122,31 @@ a:hover { color: var(--primary-hover); }
     overflow: hidden;
 }
 
+.brand-logo-container {
+    display: flex;
+    align-items: center;
+}
+
 /* ── Sidebar ───────────────────────────────────────────────────── */
 .sidebar {
     width: var(--sidebar-width);
     min-width: var(--sidebar-width);
     background: var(--surface);
-    border-right: 1px solid var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: calc(100vh - var(--topbar-height) - 32px);
     overflow: hidden;
     position: fixed;
-    left: 0;
-    top: 0;
+    left: 16px;
+    top: calc(var(--topbar-height) + 16px);
     z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
-.sidebar-logo {
-    padding: 20px 20px 16px;
-    border-bottom: 1px solid var(--border-light);
+[data-theme="dark"] .sidebar {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .sidebar-logo img {
@@ -175,13 +216,14 @@ a:hover { color: var(--primary-hover); }
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 20px;
+    padding: 12px 16px;
+    margin: 4px 16px;
+    border-radius: var(--radius-lg);
     color: var(--text-secondary);
     font-size: 14px;
     font-weight: 500;
     text-decoration: none;
     transition: var(--transition);
-    border-left: 3px solid transparent;
     cursor: pointer;
 }
 
@@ -191,10 +233,14 @@ a:hover { color: var(--primary-hover); }
 }
 
 .nav-link.active {
-    color: var(--primary);
-    background: var(--primary-light);
-    border-left-color: var(--primary);
+    color: white;
+    background: var(--primary);
     font-weight: 600;
+    box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+}
+
+[data-theme="dark"] .nav-link.active {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .nav-link i {
@@ -215,6 +261,11 @@ a:hover { color: var(--primary-hover); }
     text-align: center;
 }
 
+.nav-link.active .nav-badge {
+    background: white;
+    color: var(--primary);
+}
+
 .sidebar-footer {
     padding: 8px 0;
     border-top: 1px solid var(--border-light);
@@ -229,24 +280,28 @@ a:hover { color: var(--primary-hover); }
 /* ── Main Content ──────────────────────────────────────────────── */
 .main-content {
     flex: 1;
-    margin-left: var(--sidebar-width);
+    margin-left: calc(var(--sidebar-width) + 32px);
+    margin-top: var(--topbar-height);
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: calc(100vh - var(--topbar-height));
     overflow: hidden;
 }
 
 /* ── Topbar ────────────────────────────────────────────────────── */
 .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
     height: var(--topbar-height);
-    min-height: var(--topbar-height);
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     padding: 0 32px;
-    gap: 16px;
+    z-index: 101;
 }
 
 .topbar-user {
@@ -465,6 +520,22 @@ a:hover { color: var(--primary-hover); }
     font-size: 12px;
     color: var(--text-muted);
     margin-top: 2px;
+}
+
+.perangkat-table input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-primary);
+    background: var(--bg);
+    transition: var(--transition);
+}
+
+.perangkat-table input:focus {
+    outline: none;
+    border-color: var(--primary);
 }
 
 /* ── Pill Badges ───────────────────────────────────────────────── */
@@ -2306,7 +2377,7 @@ a:hover { color: var(--primary-hover); }
 .pdf-download:hover { background: var(--primary); color: white; }
 
 /* -- Notifikasi / Inbox ---------------------------------------- */
-.notif-tabs {
+/* .notif-tabs { */
     display: flex;
     align-items: center;
     gap: 4px;
@@ -2315,7 +2386,7 @@ a:hover { color: var(--primary-hover); }
     padding-bottom: 0;
 }
 
-.notif-tab {
+/* .notif-tab { */
     padding: 10px 18px;
     background: none;
     border: none;
@@ -2329,12 +2400,10 @@ a:hover { color: var(--primary-hover); }
     transition: all 0.2s;
 }
 
-.notif-tab.active {
+/* .notif-tab.active { */
     color: var(--primary);
     border-bottom-color: var(--primary);
 }
-
-.notif-tab:hover { color: var(--text-primary); }
 
 .notif-mark-read {
     margin-left: auto;
@@ -2367,8 +2436,8 @@ a:hover { color: var(--primary-hover); }
 
 .notif-item:last-child { border-bottom: none; }
 .notif-item:hover { background: var(--bg); }
-.notif-item.unread { background: #F0F7FF; }
-.notif-item.unread:hover { background: #E8F3FF; }
+.notif-item.unread { background: var(--primary-50, #F0F7FF); }
+.notif-item.unread:hover { background: var(--primary-light, #E8F3FF); }
 
 .notif-icon {
     width: 40px;
@@ -2492,7 +2561,7 @@ a:hover { color: var(--primary-hover); }
 }
 
 .timeline-dot.pending {
-    background: white;
+    background: var(--surface);
     border-color: var(--warning);
 }
 
@@ -2511,7 +2580,7 @@ a:hover { color: var(--primary-hover); }
 .btn-success:hover { background: #16A34A; }
 
 .btn-outline-danger {
-    background: white;
+    background: transparent;
     color: var(--danger);
     border: 1px solid var(--danger);
 }
@@ -2519,7 +2588,7 @@ a:hover { color: var(--primary-hover); }
 .btn-outline-danger:hover { background: var(--danger-light); }
 
 .btn-outline-primary {
-    background: white;
+    background: transparent;
     color: var(--primary);
     border: 1px solid var(--primary);
     display: inline-flex;
@@ -2727,7 +2796,7 @@ a:hover { color: var(--primary-hover); }
     border-radius: var(--radius-sm);
     font-size: 13px;
     font-family: inherit;
-    background: white;
+    background: var(--bg);
     color: var(--text-primary);
 }
 
@@ -2847,7 +2916,7 @@ a:hover { color: var(--primary-hover); }
     font-size: 14px;
     font-family: inherit;
     color: var(--text-primary);
-    background: white;
+    background: var(--surface);
     cursor: pointer;
 }
 
@@ -3006,18 +3075,7 @@ a:hover { color: var(--primary-hover); }
 #blazor-error-ui .dismiss { cursor: pointer; font-size: 18px; }
 
 /* -- Topbar Notif & Actions ----------------------------------- */
-.topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    height: var(--topbar-height);
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
+
 
 .topbar-actions {
     display: flex;
@@ -3178,3 +3236,9 @@ a:hover { color: var(--primary-hover); }
     max-width: 320px;
     line-height: 1.6;
 }
+
+select option { background: var(--surface); color: var(--text-primary); }
+
+
+[data-theme="dark"] .brand-logo-container img { filter: brightness(0) invert(1); }
+
