@@ -17,12 +17,7 @@
 
 <PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") — Sistem Berita Acara</PageTitle>
 
-<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-    <div>
-        <h1 class="page-title">@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara Baru")</h1>
-        <p class="page-subtitle">Isi formulir berikut, lalu klik Next untuk melanjutkan ke editor dokumen</p>
-    </div>
-   <!-- ── Floating toast: autosave status ── -->
+<!-- ── Floating toast: autosave status ── -->
 @if (autoSaveStatus != AutoSaveState.Idle)
 {
     <div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,0.18);font-size:13px;font-weight:500;transition:opacity 0.3s;
@@ -59,7 +54,6 @@
         </button>
     </div>
 }
-</div>
 
 <EditForm Model="model" OnValidSubmit="SubmitAsync">
     <DataAnnotationsValidator />
@@ -69,15 +63,32 @@
         <div class="form-section-title">1. Informasi Dokumen</div>
         <div class="form-row">
             <div class="form-group">
-
+                <label class="form-label">No. Tiket My SSC <span style="color:var(--danger)">*</span></label>
+                <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="Contoh: INC-20240001" />
+            </div>
+            <div class="form-group" style="position:relative;">
                 <label class="form-label">Jenis Berita Acara <span style="color:var(--danger)">*</span></label>
-                <select class="form-control form-select"
-                        value="@model.Jenis"
-                        @onchange="OnJenisSelectChanged">
-                    <option value="Alokasi">Alokasi</option>
-                    <option value="Peminjaman">Peminjaman</option>
-                    <option value="Lainnya">Lainnya</option>
-                </select>
+                <div @onclick="() => showJenisDropdown = !showJenisDropdown"
+                     style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:200px;">
+                    <span style="font-weight:500;">@model.Jenis</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showJenisDropdown ? "transform:rotate(180deg);" : "")"></i>
+                </div>
+                @if (showJenisDropdown)
+                {
+                    <div @onclick="() => showJenisDropdown = false"
+                         style="position:fixed;inset:0;z-index:99;"></div>
+                    <div style="position:absolute;top:100%;left:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:200px;margin-top:4px;overflow:hidden;">
+                        @foreach (var jenis in new[] { "Alokasi", "Peminjaman" })
+                        {
+                            <div @onclick="() => SelectJenis(jenis)"
+                                 style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(model.Jenis == jenis ? "600" : "400");background:@(model.Jenis == jenis ? "var(--primary)" : "transparent");color:@(model.Jenis == jenis ? "white" : "var(--text-primary)");"
+                                 onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
+                                 onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
+                                @jenis
+                            </div>
+                        }
+                    </div>
+                }
             </div>
             @if (model.Jenis == "Peminjaman")
             {
@@ -86,19 +97,12 @@
                     <InputDate class="form-control" @bind-Value="model.TanggalKembali" @bind-Value:after="TriggerAutoSave" />
                 </div>
             }
-            else if (model.Jenis == "Lainnya")
-            {
-                <div class="form-group">
-                    <label class="form-label">Jenis Kustom <span style="color:var(--danger)">*</span></label>
-                    <InputText class="form-control" @bind-Value="model.JenisCustom" @bind-Value:after="TriggerAutoSave" placeholder="Deskripsikan jenis BA..." />
-                </div>
-            }
         </div>
     </div>
 
     <!-- ── 2. Data Penanggung Jawab ── -->
     <div class="form-section">
-        <div class="form-section-title">2. Data Penanggung Jawab (PJ)</div>
+        <div class="form-section-title">2. Data Penanggung Jawab</div>
         <div class="form-group">
             <label class="form-label">Cari PJ (Nama / No. Pekerja) <span style="color:var(--danger)">*</span></label>
             <div class="search-input" style="max-width:400px;">
@@ -185,7 +189,7 @@
                     <th style="width:12%">Satuan <span style="color:var(--danger)">*</span></th>
                     <th style="width:20%">No. Serial <span style="color:var(--danger)">*</span></th>
                     <th style="width:24%">Keterangan <span style="color:var(--danger)">*</span></th>
-                    <th style="width:6%"></th>
+                    <th style="width:44px;padding:0;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -206,6 +210,8 @@
                             <!-- Inline search dropdown -->
                             @if (showBarangSearch && activeSearchRow == p)
                             {
+                                <div @onclick="CloseBarangSearch"
+                                     style="position:fixed;inset:0;z-index:99;"></div>
                                 <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;">
                                     <div style="padding:6px 8px;border-bottom:1px solid var(--border-light);">
                                         <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;">
@@ -219,7 +225,7 @@
                                     </div>
                                     @if (barangSearchResults.Any())
                                     {
-                                        <div style="max-height:200px;overflow-y:auto;">
+                                        <div style="max-height:320px;overflow-y:auto;">
                                             @foreach (var b in barangSearchResults)
                                             {
                                                 <div @onclick="() => SelectBarangForRow(b)"
@@ -235,10 +241,6 @@
                                     {
                                         <div style="padding:12px 14px;font-size:13px;color:var(--text-muted);">Tidak ada hasil</div>
                                     }
-                                    <div style="padding:6px 8px;border-top:1px solid var(--border-light);">
-                                        <button type="button" @onclick="CloseBarangSearch"
-                                                style="font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;">Tutup</button>
-                                    </div>
                                 </div>
                             }
                         </td>
@@ -250,7 +252,7 @@
                                    @onchange="@(e => { p.NoSerial = e.Value?.ToString(); TriggerAutoSave(); })" /></td>
                         <td><input type="text" value="@p.Keterangan"
                                    @onchange="@(e => { p.Keterangan = e.Value?.ToString(); TriggerAutoSave(); })" /></td>
-                        <td>
+                        <td style="width:44px;padding:0;text-align:center;vertical-align:middle;">
                             <button type="button" class="perangkat-delete" @onclick="() => RemovePerangkat(p)">
                                 <i class="bi bi-trash3"></i>
                             </button>
@@ -260,12 +262,8 @@
             </tbody>
         </table>
 
-        <!-- No. Tiket My SSC + Tambah Perangkat dalam satu baris -->
-        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-            <div class="form-group" style="margin-bottom:0;min-width:240px;max-width:340px;">
-                <label class="form-label" style="font-size:13px;">No. Tiket My SSC <span style="color:var(--danger)">*</span></label>
-                <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="Contoh: INC-20240001" />
-            </div>
+        <!-- Tambah Perangkat -->
+        <div style="display:flex;justify-content:flex-start;">
             <button type="button" class="btn btn-outline btn-sm" @onclick="AddPerangkat">
                 <i class="bi bi-plus-lg"></i> Tambah Perangkat
             </button>
@@ -291,6 +289,8 @@
                     </div>
                     @if (showMenyerahkanSearch)
                     {
+                        <div @onclick="CloseMenyerahkanSearch"
+                             style="position:fixed;inset:0;z-index:99;"></div>
                         <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;margin-top:4px;">
                             <div style="padding:8px;border-bottom:1px solid var(--border-light);">
                                 <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;">
@@ -319,10 +319,6 @@
                             {
                                 <div style="padding:12px 14px;font-size:14px;color:var(--text-muted);">Tidak ada hasil</div>
                             }
-                            <div style="padding:8px;border-top:1px solid var(--border-light);">
-                                <button type="button" @onclick="CloseMenyerahkanSearch"
-                                        style="font-size:12px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;">Tutup</button>
-                            </div>
                         </div>
                     }
                 </div>
@@ -343,6 +339,8 @@
                     </div>
                     @if (showMengetahuiSearch)
                     {
+                        <div @onclick="CloseMengetahuiSearch"
+                             style="position:fixed;inset:0;z-index:99;"></div>
                         <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;margin-top:4px;">
                             <div style="padding:8px;border-bottom:1px solid var(--border-light);">
                                 <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;">
@@ -371,18 +369,14 @@
                             {
                                 <div style="padding:12px 14px;font-size:14px;color:var(--text-muted);">Tidak ada hasil</div>
                             }
-                            <div style="padding:8px;border-top:1px solid var(--border-light);">
-                                <button type="button" @onclick="CloseMengetahuiSearch"
-                                        style="font-size:12px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;">Tutup</button>
-                            </div>
                         </div>
                     }
                 </div>
             </div>
 
-            <!-- Yang Menerima (PJ) -->
+            <!-- Yang Menerima (Penanggung Jawab) -->
             <div class="ttd-col">
-                <div class="ttd-label">Yang Menerima (PJ)</div>
+                <div class="ttd-label">Yang Menerima</div>
                 <div style="padding:10px 0;font-size:14px;color:var(--text-secondary);">
                     @if (selectedPj is not null)
                     {
@@ -466,9 +460,9 @@
 
     <!-- Actions -->
     <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 0;">
-        <NavLink href="/draft" class="btn btn-outline">
-            <i class="bi bi-x-lg"></i> Batal
-        </NavLink>
+        <button type="button" class="btn btn-outline" @onclick="ResetForm">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+        </button>
         <button type="submit" class="btn btn-primary" disabled="@isSaving" style="min-width:140px;">
             @if (isSaving)
             {
@@ -535,6 +529,9 @@
     private enum AutoSaveState { Idle, Saving, Saved, Error }
     private AutoSaveState autoSaveStatus = AutoSaveState.Idle;
     private System.Threading.CancellationTokenSource? _autoSaveCts;
+
+    // Jenis dropdown state
+    private bool showJenisDropdown = false;
 
     // Barang search state
     private bool showBarangSearch = false;
@@ -767,9 +764,10 @@
         }
     }
 
-    private void OnJenisSelectChanged(ChangeEventArgs e)
+    private void SelectJenis(string jenis)
     {
-        model.Jenis = e.Value?.ToString() ?? "Alokasi";
+        model.Jenis = jenis;
+        showJenisDropdown = false;
         if (model.Jenis != "Peminjaman")
             model.TanggalKembali = null;
         TriggerAutoSave();
@@ -806,8 +804,33 @@
     {
         activeSearchRow = row;
         barangSearchQuery = string.Empty;
-        barangSearchResults = barangOptions.Take(8).ToList();
+        barangSearchResults = barangOptions.ToList();
         showBarangSearch = true;
+    }
+
+    private void ResetForm()
+    {
+        model = new CreateBaModel { Tanggal = DateTime.Today, Perangkat = [new()] };
+        showJenisDropdown = false;
+        selectedPj = null;
+        pjSearch = string.Empty;
+        pjResults = new();
+        barangSearchQuery = string.Empty;
+        barangSearchResults = new();
+        showBarangSearch = false;
+        activeSearchRow = null;
+        showMenyerahkanSearch = false;
+        menyerahkanSearchQuery = string.Empty;
+        menyerahkanSearchResults = new();
+        showMengetahuiSearch = false;
+        mengetahuiSearchQuery = string.Empty;
+        mengetahuiSearchResults = new();
+        photoFiles = new();
+        photoDataUrls = new();
+        existingPhotoUrls = new();
+        errorMessage = string.Empty;
+        editId = null;
+        autoSaveStatus = AutoSaveState.Idle;
     }
 
     private void AddPerangkat()
@@ -815,7 +838,7 @@
         model.Perangkat.Add(new());
         activeSearchRow = model.Perangkat.Last();
         barangSearchQuery = string.Empty;
-        barangSearchResults = barangOptions.Take(8).ToList();
+        barangSearchResults = barangOptions.ToList();
         showBarangSearch = true;
     }
 
@@ -829,9 +852,9 @@
     {
         barangSearchQuery = e.Value?.ToString() ?? string.Empty;
         barangSearchResults = string.IsNullOrWhiteSpace(barangSearchQuery)
-            ? barangOptions.Take(8).ToList()
+            ? barangOptions.ToList()
             : barangOptions.Where(b => b.NamaBarang.Contains(barangSearchQuery, StringComparison.OrdinalIgnoreCase))
-                           .Take(8).ToList();
+                           .ToList();
     }
 
     private void SelectBarangForRow(MasterBarangEntity b)

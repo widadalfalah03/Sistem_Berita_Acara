@@ -17,11 +17,6 @@
 }
 else if (currentRole == "AdminGudangBarang")
 {
-    <div class="page-header">
-        <h1 class="page-title">Progress Berita Acara</h1>
-        <p class="page-subtitle">BA yang sedang dalam proses pengajuan dan persetujuan</p>
-    </div>
-
     @if (!baList.Any())
     {
         <div class="card" style="text-align:center;padding:60px;">
@@ -37,7 +32,7 @@ else if (currentRole == "AdminGudangBarang")
                 <thead>
                     <tr>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Dokumen <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis BA"))">Jenis BA <i class="bi @GetSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis BA"))">Jenis Berita Acara <i class="bi @GetSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Tanggal Submit <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Approver"))">Approver <i class="bi @GetSortIcon("Approver")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
@@ -50,7 +45,7 @@ else if (currentRole == "AdminGudangBarang")
                         <tr>
                             <td>
                                 <div class="cell-main">Berita Acara @ba.Jenis</div>
-                                <div class="cell-sub">PJ: @ba.Pj?.Nama</div>
+                                <div class="cell-sub">Penanggung Jawab: @ba.Pj?.Nama</div>
                             </td>
                             <td><span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span></td>
                             <td>@ba.SubmittedAt?.ToString("dd MMM yyyy")</td>
@@ -62,7 +57,7 @@ else if (currentRole == "AdminGudangBarang")
                                 @if (ba.Status == "WaitingPJSign")
                                 {
                                     <span class="pill pill-waiting-pj">
-                                        <i class="bi bi-pen" style="margin-right:4px;"></i> Menunggu TTD PJ
+                                        <i class="bi bi-pen" style="margin-right:4px;"></i> Menunggu TTD Penanggung Jawab
                                     </span>
                                 }
                                 else
@@ -73,7 +68,7 @@ else if (currentRole == "AdminGudangBarang")
                                 }
                             </td>
                             <td>
-                                <NavLink class="btn-icon" href="@($"/berita-acara/{ba.Id}")">
+                                <NavLink class="btn-icon" href="@($"/berita-acara/{ba.Id}?from=progress")">
                                     <i class="bi bi-eye"></i>
                                 </NavLink>
                             </td>
@@ -86,17 +81,6 @@ else if (currentRole == "AdminGudangBarang")
 }
 else if (currentRole == "Approver")
 {
-    <div class="page-header d-flex align-center justify-between">
-        <div>
-            <h1 class="page-title">Antrian Persetujuan</h1>
-            <p class="page-subtitle">Berita Acara yang menunggu persetujuan Anda</p>
-        </div>
-        @if (baList.Any())
-        {
-            <span class="pill pill-waiting-approval">@baList.Count Menunggu</span>
-        }
-    </div>
-
     @if (!baList.Any())
     {
         <div class="card" style="text-align:center;padding:60px;">

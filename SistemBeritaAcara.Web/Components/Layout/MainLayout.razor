@@ -78,6 +78,7 @@ else
             }
 
             <!-- Navigation -->
+            <div class="sidebar-nav-card">
             <nav class="sidebar-nav">
                 @if (currentRole == "AdminGudangBarang")
                 {
@@ -111,11 +112,11 @@ else
                     </NavLink>
                     <NavLink class="nav-link" href="/rejected">
                         <i class="bi bi-x-circle"></i>
-                        <span>Ditolak</span>
+                        <span>Rejected</span>
                     </NavLink>
                     <NavLink class="nav-link" href="/archive">
                         <i class="bi bi-archive"></i>
-                        <span>Arsip</span>
+                        <span>Archive</span>
                     </NavLink>
                 }
                 else if (currentRole == "Approver")
@@ -142,11 +143,11 @@ else
                     </NavLink>
                     <NavLink class="nav-link" href="/rejected">
                         <i class="bi bi-x-circle"></i>
-                        <span>Ditolak</span>
+                        <span>Rejected</span>
                     </NavLink>
                     <NavLink class="nav-link" href="/archive">
                         <i class="bi bi-archive"></i>
-                        <span>Arsip</span>
+                        <span>Archive</span>
                     </NavLink>
                 }
                 else if (currentRole == "AdminIT")
@@ -169,10 +170,8 @@ else
                     </NavLink>
                 }
             </nav>
-
-            <!-- Footer -->
-            <div class="sidebar-footer">
             </div>
+
         </aside>
 
         <div class="main-content">

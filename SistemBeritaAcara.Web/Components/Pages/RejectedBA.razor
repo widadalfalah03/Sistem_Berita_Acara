@@ -9,96 +9,75 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<PageTitle>Ditolak — Sistem Berita Acara</PageTitle>
-
-<div class="page-header">
-    <h1 class="page-title">Berita Acara Ditolak</h1>
-    <p class="page-subtitle">Daftar Berita Acara yang ditolak dan perlu revisi</p>
-</div>
-
-<!-- Search & Filter -->
-<div class="search-bar">
-    <div class="search-input" style="max-width:300px;">
-        <i class="bi bi-search"></i>
-        <input type="text" placeholder="Cari jenis, PJ, atau alasan..." @bind="search" @bind:event="oninput" />
-    </div>
-    <select class="filter-select" @bind="yearFilter">
-        <option value="0">Semua Tahun</option>
-        @foreach (var y in availableYears)
-        {
-            <option value="@y">@y</option>
-        }
-    </select>
-    @if (currentRole == "Approver")
-    {
-        <select class="filter-select" @bind="jenisFilter">
-            <option value="">Semua Jenis</option>
-            <option value="Alokasi">Alokasi</option>
-            <option value="Peminjaman">Peminjaman</option>
-            <option value="Lainnya">Lainnya</option>
-        </select>
-    }
-    @if (!string.IsNullOrEmpty(search) || yearFilter != 0 || !string.IsNullOrEmpty(jenisFilter))
-    {
-        <button class="filter-clear" @onclick="ClearFilters">
-            <i class="bi bi-x-circle"></i> Bersihkan Semua
-        </button>
-    }
-</div>
+<PageTitle>Rejected — Sistem Berita Acara</PageTitle>
 
 @if (isLoading)
 {
     <div class="loading-spinner"><div class="spinner"></div><span>Memuat data...</span></div>
 }
-else if (!FilteredBA.Any())
+else if (!allBA.Any())
 {
     <div class="card" style="text-align:center;padding:60px;">
-        <i class="bi bi-x-circle" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
-        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Tidak ada Berita Acara yang ditolak</div>
-        <div style="font-size:14px;color:var(--text-secondary);">Tidak ada dokumen yang ditolak.</div>
+        <i class="bi bi-check-circle" style="font-size:48px;color:var(--success,#22C55E);display:block;margin-bottom:16px;"></i>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Tidak ada dokumen yang ditolak</div>
+        <div style="font-size:14px;color:var(--text-secondary);">Semua Berita Acara berjalan lancar.</div>
     </div>
 }
 else
 {
-    @foreach (var ba in FilteredBA)
-    {
-        <div class="ba-card">
-            <div class="ba-card-left">
-                <div class="ba-card-badge">
-                    <span class="pill pill-rejected">DITOLAK</span>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        @foreach (var ba in allBA)
+        {
+            <div class="rejected-item">
+                <div class="rejected-item-top">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span class="pill pill-rejected" style="font-size:11px;letter-spacing:.03em;">Rejected</span>
+                        <span style="font-size:15px;font-weight:600;color:var(--text-primary);">Berita Acara @ba.Jenis</span>
+                    </div>
+                    <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
+                        @(ba.ApprovedAt?.ToString("dd MMM yyyy, HH:mm") ?? ba.CreatedAt.ToString("dd MMM yyyy"))
+                    </span>
                 </div>
-                <div class="ba-card-number">Berita Acara @ba.Jenis</div>
-                <div class="ba-card-title">Berita Acara @ba.Jenis</div>
-                <div class="ba-card-jenis">Jenis: @ba.Jenis</div>
-                <div class="ba-card-person">
-                    <i class="bi bi-person-circle"></i>
-                    <div>
-                        <div class="person-name">@ba.Mengetahui?.Nama</div>
-                        <div class="person-role">Approver</div>
+
+                <div class="rejected-item-meta">
+                    <div class="rejected-meta-item">
+                        <i class="bi bi-person"></i>
+                        <div>
+                            <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Penanggung Jawab</div>
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Pj?.Nama ?? "—")</div>
+                        </div>
+                    </div>
+                    <div class="rejected-meta-item">
+                        <i class="bi bi-person-check"></i>
+                        <div>
+                            <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Approver</div>
+                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Mengetahui?.Nama ?? "—")</div>
+                        </div>
                     </div>
                 </div>
-                <div class="ba-card-date">
-                    <i class="bi bi-calendar3"></i>
-                    <span>@ba.ApprovedAt?.ToString("dd MMMM yyyy")</span>
+
+                @if (!string.IsNullOrEmpty(ba.AlasanReject))
+                {
+                    <div class="rejected-item-reason">
+                        <i class="bi bi-chat-square-text" style="flex-shrink:0;margin-top:1px;color:var(--danger);"></i>
+                        <span>@ba.AlasanReject</span>
+                    </div>
+                }
+
+                <div class="rejected-item-actions">
+                    <NavLink href="@($"/berita-acara/{ba.Id}")" class="btn btn-sm btn-outline">
+                        <i class="bi bi-eye"></i> Lihat Detail
+                    </NavLink>
+                    @if (currentRole == "AdminGudangBarang")
+                    {
+                        <NavLink href="@($"/buat-ba?edit={ba.Id}")" class="btn btn-sm btn-primary">
+                            <i class="bi bi-arrow-counterclockwise"></i> Revisi
+                        </NavLink>
+                    }
                 </div>
             </div>
-            <div class="ba-card-right">
-                <div class="rejection-reason">
-                    <div class="rejection-label">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                        Alasan Penolakan
-                    </div>
-                    <div class="rejection-quote">
-                        @(ba.AlasanReject ?? "Tidak ada alasan yang diberikan")
-                    </div>
-                </div>
-                <NavLink class="ba-card-link" style="margin-top:auto;display:block;margin-top:16px;"
-                   href="@($"/berita-acara/{ba.Id}")">
-                    Lihat Detail →
-                </NavLink>
-            </div>
-        </div>
-    }
+        }
+    </div>
 }
 
 @code {
@@ -106,18 +85,6 @@ else
     private bool isLoading = true;
     private string currentRole = string.Empty;
     private int currentUserId;
-    private string search = string.Empty;
-    private int yearFilter = 0;
-    private string jenisFilter = string.Empty;
-    private List<int> availableYears = new();
-
-    private IEnumerable<BeritaAcaraEntity> FilteredBA => allBA
-        .Where(b => string.IsNullOrEmpty(search) ||
-                    b.Jenis.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    (b.Pj?.Nama ?? "").Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    (b.AlasanReject ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
-        .Where(b => yearFilter == 0 || b.CreatedAt.Year == yearFilter)
-        .Where(b => string.IsNullOrEmpty(jenisFilter) || b.Jenis == jenisFilter);
 
     protected override async Task OnInitializedAsync()
     {
@@ -137,9 +104,6 @@ else
             query = query.Where(b => b.MengetahuiId == currentUserId);
 
         allBA = await query.OrderByDescending(b => b.CreatedAt).ToListAsync();
-        availableYears = allBA.Select(b => b.CreatedAt.Year).Distinct().OrderByDescending(y => y).ToList();
         isLoading = false;
     }
-
-    private void ClearFilters() { search = string.Empty; yearFilter = 0; jenisFilter = string.Empty; }
 }

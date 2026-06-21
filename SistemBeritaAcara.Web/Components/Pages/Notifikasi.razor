@@ -11,11 +11,6 @@
 
 <PageTitle>Inbox — Sistem Berita Acara</PageTitle>
 
-<div class="page-header">
-    <h1 class="page-title">Inbox</h1>
-    <p class="page-subtitle">Notifikasi terkait aktivitas Berita Acara Anda</p>
-</div>
-
 <!-- Tabs -->
 <div class="notif-tabs">
     <button class="notif-tab @(activeTab == "all" ? "active" : "")" @onclick="SetTabAll">
@@ -66,7 +61,8 @@ else
                     <div class="notif-message">@n.Message</div>
                 </div>
                 <div class="notif-meta">
-                    <div class="notif-time">@GetRelativeTime(n.CreatedAt)</div>
+                    <div class="notif-time">@n.CreatedAt.ToString("HH:mm")</div>
+                    <div class="notif-date">@GetRelativeDate(n.CreatedAt)</div>
                     @if (!n.IsRead)
                     {
                         <div class="notif-dot"></div>
@@ -152,19 +148,19 @@ else
         "BA_APPROVED" => "Berita Acara Disetujui",
         "BA_REJECTED" => "Berita Acara Ditolak",
         "WAITING_APPROVAL" => "Menunggu Persetujuan",
-        "WAITING_PJ_SIGN" => "Menunggu TTD PJ",
-        "PJ_SIGNED" => "PJ Sudah Menandatangani",
+        "WAITING_PJ_SIGN" => "Menunggu TTD Penanggung Jawab",
+        "PJ_SIGNED" => "Penanggung Jawab Sudah Menandatangani",
         "DUE_DATE_REMINDER" => "Pengingat Jatuh Tempo",
         _ => "Notifikasi"
     };
 
-    private static string GetRelativeTime(DateTime dt)
+    private static string GetRelativeDate(DateTime dt)
     {
-        var diff = DateTime.Now - dt;
-        if (diff.TotalMinutes < 1) return "baru saja";
-        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes} mnt lalu";
-        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours} jam lalu";
-        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} hari lalu";
+        var today = DateTime.Today;
+        var yesterday = today.AddDays(-1);
+        if (dt.Date == today) return "Hari ini";
+        if (dt.Date == yesterday) return "Kemarin";
+        if ((today - dt.Date).TotalDays < 7) return dt.ToString("dddd", new System.Globalization.CultureInfo("id-ID"));
         return dt.ToString("dd MMM yyyy");
     }
 }

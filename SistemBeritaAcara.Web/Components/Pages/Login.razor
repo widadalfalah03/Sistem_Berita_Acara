@@ -14,14 +14,11 @@
 
 <div class="login-page">
     <div class="login-card">
-        <div class="login-card-bar"></div>
         <div class="login-card-body">
-            <!-- Logo -->
+
+            <!-- Logo only, no text heading -->
             <div class="login-logo">
-                <div class="logo-mark">
-                    <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height: 100px; width: auto;" alt="Pertamina Patra Niaga" />
-                </div>
-                <div style="font-size:13px;color:var(--text-muted);margin-top:12px;">Sistem Berita Acara</div>
+                <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height:88px;width:auto;" alt="Pertamina Patra Niaga" />
             </div>
 
             @if (!string.IsNullOrEmpty(errorMessage))
@@ -32,46 +29,36 @@
                 </div>
             }
 
-            <!-- HTML form POST ke /account/login — wajib agar cookie auth bisa ditulis -->
             <form method="post" action="/account/login">
                 <AntiforgeryToken />
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
 
                 <div class="form-group">
-                    <label class="form-label" for="login-email">Email</label>
-                    <div class="search-input">
-                        <i class="bi bi-person"></i>
-                        <input class="form-control" type="email" id="login-email" name="email"
-                               placeholder="email@pertamina.com" autocomplete="email" required />
-                    </div>
+                    <input class="login-input" type="email" id="login-email" name="email"
+                           placeholder="Email Address" autocomplete="email" required />
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="login-password">Password</label>
-                    <div class="search-input" style="position:relative;">
-                        <i class="bi bi-lock"></i>
-                        <input class="form-control" type="password" id="login-password" name="password"
-                               placeholder="Masukkan password" autocomplete="current-password"
-                               required style="padding-right:44px;" />
-                        <button type="button" onclick="togglePw(this)"
-                                style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">
+                    <div class="login-pw-wrap">
+                        <input class="login-input" type="password" id="login-password" name="password"
+                               placeholder="Password" autocomplete="current-password" required />
+                        <button type="button" class="login-pw-toggle" onclick="togglePw(this)" tabindex="-1">
                             <i class="bi bi-eye" id="pw-toggle-icon"></i>
                         </button>
                     </div>
                 </div>
 
-                <div class="login-remember">
-                    <input type="checkbox" id="remember-me" name="rememberMe" value="on" />
-                    <label for="remember-me">Ingat Saya</label>
+                <div class="login-row">
+                    <label class="login-remember">
+                        <input type="checkbox" name="rememberMe" value="on" />
+                        <span>Remember me</span>
+                    </label>
+                    <a href="#" class="login-forgot">Forgot Password?</a>
                 </div>
 
-                <button type="submit" class="login-btn">
-                    <span>Login</span>
-                </button>
+                <button type="submit" class="login-btn">Login</button>
             </form>
-        </div>
-        <div class="login-footer">
-            <a href="#">Lupa password? Hubungi Admin IT →</a>
+
         </div>
     </div>
 </div>

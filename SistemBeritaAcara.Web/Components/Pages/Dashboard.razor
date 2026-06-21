@@ -24,11 +24,7 @@
 else if (currentRole == "AdminGudangBarang")
 {
     <!-- ════ DASHBOARD ADMIN GUDANG ════ -->
-    <div class="page-header">
-        <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Ringkasan aktivitas Berita Acara Anda</p>
-    </div>
-
+    <div class="dashboard-fill">
     <!-- Stat Cards -->
     <div class="stat-cards">
         <div class="stat-card">
@@ -44,7 +40,7 @@ else if (currentRole == "AdminGudangBarang")
             <div class="stat-card-info">
                 <div class="stat-card-label">Sedang Diproses</div>
                 <div class="stat-card-value blue">@stat.Progress</div>
-                <div class="stat-card-desc">Menunggu TTD / Approval</div>
+                <div class="stat-card-desc">Menunggu persetujuan</div>
             </div>
         </div>
         <div class="stat-card">
@@ -52,7 +48,7 @@ else if (currentRole == "AdminGudangBarang")
             <div class="stat-card-info">
                 <div class="stat-card-label">Disetujui</div>
                 <div class="stat-card-value green">@stat.Approved</div>
-                <div class="stat-card-desc">Sudah selesai</div>
+                <div class="stat-card-desc">Telah disetujui</div>
             </div>
         </div>
         <div class="stat-card">
@@ -60,7 +56,7 @@ else if (currentRole == "AdminGudangBarang")
             <div class="stat-card-info">
                 <div class="stat-card-label">Ditolak</div>
                 <div class="stat-card-value red">@stat.Rejected</div>
-                <div class="stat-card-desc">Perlu revisi</div>
+                <div class="stat-card-desc">Dikembalikan approver</div>
             </div>
         </div>
     </div>
@@ -73,7 +69,7 @@ else if (currentRole == "AdminGudangBarang")
                 <span class="chart-title">Tren Pembuatan Berita Acara</span>
                 <span class="chart-period">6 Bulan Terakhir</span>
             </div>
-            <div class="chart-container" style="height:220px;">
+            <div class="chart-container" style="height:200px;">
                 <canvas id="trendChart"></canvas>
             </div>
         </div>
@@ -83,7 +79,7 @@ else if (currentRole == "AdminGudangBarang")
             <div class="chart-header">
                 <span class="chart-title">Status BA Saat Ini</span>
             </div>
-            <div class="chart-container" style="height:180px;position:relative;">
+            <div class="chart-container" style="height:170px;position:relative;">
                 <canvas id="statusChart"></canvas>
             </div>
         </div>
@@ -145,7 +141,7 @@ else if (currentRole == "AdminGudangBarang")
                     <thead>
                         <tr>
                             <th style="cursor:pointer;" @onclick="@(() => SortDue("No. Surat"))">No. Surat <i class="bi @GetDueSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                            <th style="cursor:pointer;" @onclick="@(() => SortDue("PJ"))">PJ <i class="bi @GetDueSortIcon("PJ")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                            <th style="cursor:pointer;" @onclick="@(() => SortDue("PJ"))">Penanggung Jawab <i class="bi @GetDueSortIcon("PJ")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                             <th style="cursor:pointer;" @onclick="@(() => SortDue("Tgl Kembali"))">Tgl Kembali <i class="bi @GetDueSortIcon("Tgl Kembali")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                             <th style="cursor:pointer;" @onclick="@(() => SortDue("Status"))">Status <i class="bi @GetDueSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         </tr>
@@ -179,15 +175,12 @@ else if (currentRole == "AdminGudangBarang")
             }
         </div>
     </div>
+    </div>
 }
 else if (currentRole == "Approver")
 {
     <!-- ════ DASHBOARD APPROVER ════ -->
-    <div class="page-header">
-        <h1 class="page-title">Dashboard Approver</h1>
-        <p class="page-subtitle">Kelola antrian persetujuan Berita Acara</p>
-    </div>
-
+    <div class="dashboard-fill">
     <div class="stat-cards">
         <div class="stat-card">
             <div class="stat-card-icon pending"><i class="bi bi-inbox"></i></div>
@@ -229,7 +222,7 @@ else if (currentRole == "Approver")
                 <span class="chart-title">Tren Persetujuan Bulanan</span>
                 <span class="chart-period">6 Bulan Terakhir</span>
             </div>
-            <div class="chart-container" style="height:220px;">
+            <div class="chart-container" style="height:200px;">
                 <canvas id="approverTrendChart"></canvas>
             </div>
         </div>
@@ -237,7 +230,7 @@ else if (currentRole == "Approver")
             <div class="chart-header">
                 <span class="chart-title">Approval / Rejection</span>
             </div>
-            <div class="chart-container" style="height:200px;position:relative;">
+            <div class="chart-container" style="height:170px;position:relative;">
                 <canvas id="approverDonut"></canvas>
             </div>
         </div>
@@ -265,7 +258,7 @@ else if (currentRole == "Approver")
                 <thead>
                     <tr>
                         <th style="cursor:pointer;" @onclick="@(() => SortApprover("No. Surat"))">No. Surat <i class="bi @GetApproverSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Jenis BA"))">Jenis BA <i class="bi @GetApproverSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Jenis BA"))">Jenis Berita Acara <i class="bi @GetApproverSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortApprover("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetApproverSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortApprover("Tanggal Submit"))">Tanggal Submit <i class="bi @GetApproverSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th>Aksi</th>
@@ -293,15 +286,11 @@ else if (currentRole == "Approver")
             </table>
         }
     </div>
+    </div>
 }
 else if (currentRole == "AdminIT")
 {
     <!-- ════ DASHBOARD ADMIN IT ════ -->
-    <div class="page-header">
-        <h1 class="page-title">Dashboard Admin IT</h1>
-        <p class="page-subtitle">Ringkasan sistem dan aktivitas Berita Acara Pertamina Patra Niaga</p>
-    </div>
-
     <!-- Stat Cards row 1: Pengguna -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;">
         <div class="stat-card">
@@ -369,7 +358,7 @@ else if (currentRole == "AdminIT")
             <div class="stat-card-info">
                 <div class="stat-card-label">BA Sedang Diproses</div>
                 <div class="stat-card-value blue">@itStats.TotalProgress</div>
-                <div class="stat-card-desc">Menunggu TTD / Approval</div>
+                <div class="stat-card-desc">Menunggu persetujuan</div>
             </div>
         </div>
     </div>
@@ -662,7 +651,7 @@ else if (currentRole == "AdminIT")
         "Approved" => "Disetujui",
         "Rejected" => "Ditolak",
         "WaitingApproval" => "Menunggu Approval",
-        "WaitingPJSign" => "Menunggu TTD PJ",
+        "WaitingPJSign" => "Menunggu TTD Penanggung Jawab",
         "Draft" => "Draft",
         _ => status
     };

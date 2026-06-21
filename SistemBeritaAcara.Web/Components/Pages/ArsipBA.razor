@@ -11,23 +11,19 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<PageTitle>Arsip — Sistem Berita Acara</PageTitle>
+<PageTitle>Archive — Sistem Berita Acara</PageTitle>
 
-<div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div>
-        <h1 class="page-title">Arsip Berita Acara</h1>
-        <p class="page-subtitle">Berita Acara yang telah disetujui dan diarsipkan</p>
-    </div>
-    @if (currentRole == "AdminGudangBarang" && !isLoading && allBA.Count > 0)
-    {
-        <button class="btn btn-outline-primary btn-sm @(isExporting ? "btn-loading" : "")"
+@if (currentRole == "AdminGudangBarang" && !isLoading && allBA.Count > 0)
+{
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+        <button class="btn btn-primary btn-sm @(isExporting ? "btn-loading" : "")"
                 @onclick="ExportExcelAsync" disabled="@isExporting"
-                style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+                style="display:flex;align-items:center;gap:8px;">
             <i class="bi bi-file-earmark-excel"></i>
-            <span>Export Excel</span>
+            <span>Export ke Excel</span>
         </button>
-    }
-</div>
+    </div>
+}
 
 <!-- Search & Filter Panel -->
 <div class="card" style="margin-bottom:20px;padding:16px 20px;">
@@ -175,7 +171,7 @@ else
                 </div>
 
                 <div style="display:flex;gap:12px;margin-top:8px;">
-                    <NavLink class="btn btn-outline btn-sm" style="flex:1;" href="@($"/berita-acara/{ba.Id}")">
+                    <NavLink class="btn btn-outline btn-sm" style="flex:1;" href="@($"/berita-acara/{ba.Id}?from=archive")">
                         <i class="bi bi-eye"></i> Pratinjau
                     </NavLink>
                     @if (!string.IsNullOrEmpty(ba.DocxFinalPath))

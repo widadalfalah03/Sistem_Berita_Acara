@@ -492,9 +492,15 @@ else
         _ => s
     };
 
+    [SupplyParameterFromQuery(Name = "from")]
+    public string? From { get; set; }
+
     private void GoBack()
     {
-        var dest = currentRole == "Approver" ? "/progress" : "/draft";
+        var dest = currentRole == "Approver" ? "/progress"
+                 : From == "progress" ? "/progress"
+                 : From == "archive" ? "/archive"
+                 : "/draft";
         Navigation.NavigateTo(dest);
     }
 
