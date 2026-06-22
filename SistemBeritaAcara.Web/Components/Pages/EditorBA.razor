@@ -12,6 +12,7 @@
 @inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
+@implements IDisposable
 
 <PageTitle>Editor Berita Acara — Sistem Berita Acara</PageTitle>
 
@@ -94,7 +95,7 @@
         <div style="background:#E8EAF0;border-radius:var(--radius);height:842px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.05);">
             @if (!string.IsNullOrEmpty(ba.DocxPath))
             {
-                <iframe src="/api/preview/pdf/@ba.Id?v=@(DateTime.Now.Ticks)#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
+                <iframe @key="pdfVersion" src="/api/preview/pdf/@ba.Id?v=@pdfVersion#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
             }
             else
             {
@@ -195,6 +196,34 @@
     private bool isSubmitting = false;
     private string errorMessage = string.Empty;
     private int _currentUserId;
+    // pdfVersion hanya naik saat kita sengaja refresh data dari DB.
+    // Digunakan sebagai @key pada iframe sehingga browser memuat ulang PDF
+    // tepat satu kali setiap kali kita kembali dari ONLYOFFICE editor.
+    private long pdfVersion = 0;
+    private int _loadedId = 0; // Id terakhir yang sudah di-load
+
+    protected override void OnInitialized()
+    {
+        // Subscribe ke LocationChanged agar saat Blazor navigasi kembali ke
+        // halaman ini dari OnlyOfficeEditor, kita bisa refresh data & PDF.
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        // Periksa apakah URL saat ini cocok dengan halaman ini
+        var uri = new Uri(e.Location);
+        var path = uri.AbsolutePath.TrimEnd('/');
+        var expectedPath = $"/editor/{Id}";
+        if (path.Equals(expectedPath, StringComparison.OrdinalIgnoreCase) && _currentUserId != 0)
+        {
+            await InvokeAsync(async () =>
+            {
+                await RefreshBaAsync();
+                StateHasChanged();
+            });
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -202,7 +231,20 @@
         var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         int.TryParse(userIdStr, out _currentUserId);
 
+        await LoadBaAsync();
+
+        // Guard prerender: jangan set isLoading=false saat static render agar prerender
+        // menampilkan spinner, bukan iframe dengan PDF lama.
+        if (!RendererInfo.IsInteractive) return;
+
+        isLoading = false;
+    }
+
+    private async Task LoadBaAsync()
+    {
+        _loadedId = Id;
         ba = await DbContext.Set<BeritaAcaraEntity>()
+            .AsNoTracking()
             .Include(b => b.Pj)
             .Include(b => b.Menyerahkan)
             .Include(b => b.Mengetahui)
@@ -212,23 +254,30 @@
 
         if (ba != null)
         {
-            // Jika DocxPath sudah ada, jangan regenerasi dari template — bisa jadi sudah diedit via ONLYOFFICE
             // Hanya generate jika belum ada sama sekali (BA baru pertama kali dibuka)
             if (string.IsNullOrEmpty(ba.DocxPath))
             {
                 try
                 {
-                    ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
-
-                    // Simpan DocxPath ke DB dulu sebelum EmbedTtd agar FindAsync di DocumentService
-                    // selalu mendapat DocxPath yang sudah terisi meskipun DbContext berbeda instance.
-                    await DbContext.SaveChangesAsync();
+                    // Perlu tracked entity untuk SaveChanges
+                    var trackedBa = await DbContext.Set<BeritaAcaraEntity>().FindAsync(Id);
+                    if (trackedBa != null)
+                    {
+                        trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+                        await DbContext.SaveChangesAsync();
+                        ba = await DbContext.Set<BeritaAcaraEntity>()
+                            .AsNoTracking()
+                            .Include(b => b.Pj).Include(b => b.Menyerahkan).Include(b => b.Mengetahui)
+                            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
+                            .Include(b => b.BuktiFotos)
+                            .FirstOrDefaultAsync(b => b.Id == Id);
+                    }
 
                     var currentUser = await DbContext.Users.FindAsync(_currentUserId);
                     if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
                     {
                         var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                        await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
+                        await DocumentService.EmbedTtdMenyerahkanAsync(Id, ttdPhysicalPath);
                     }
                 }
                 catch (Exception ex)
@@ -237,17 +286,33 @@
                     errorMessage = "Gagal memuat pratinjau dokumen: " + ex.Message;
                 }
             }
-
         }
 
-        // Polling dipindah ke OnlyOfficeEditor.SaveAndGoBackAsync sehingga halaman ONLYOFFICE
-        // tetap hidup saat polling berlangsung — ONLYOFFICE callback tidak diinterrupt oleh
-        // page unload. EditorBA hanya perlu load data dan render iframe (PDF sudah siap).
-        // Guard prerender: jangan set isLoading=false saat static render agar prerender
-        // menampilkan spinner, bukan iframe dengan PDF lama.
-        if (!RendererInfo.IsInteractive) return;
+        // Naikkan versi agar iframe di-recreate oleh Blazor
+        pdfVersion = DateTime.UtcNow.Ticks;
+    }
 
-        isLoading = false;
+    // Dipanggil saat kembali dari OnlyOfficeEditor — refresh data segar dari DB
+    private async Task RefreshBaAsync()
+    {
+        // Buat DbContext context baru agar tidak ada entity tracking lama
+        ba = await DbContext.Set<BeritaAcaraEntity>()
+            .AsNoTracking()
+            .Include(b => b.Pj)
+            .Include(b => b.Menyerahkan)
+            .Include(b => b.Mengetahui)
+            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
+            .Include(b => b.BuktiFotos)
+            .FirstOrDefaultAsync(b => b.Id == Id && (b.Status == "Draft" || b.Status == "Rejected") && b.CreatedBy == _currentUserId);
+
+        // Naikkan versi agar iframe di-recreate oleh Blazor (memuat PDF baru)
+        pdfVersion = DateTime.UtcNow.Ticks;
+        errorMessage = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
