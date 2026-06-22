@@ -16,9 +16,9 @@ public class EmailService(IConfiguration config) : IEmailService
     // PublicUrl digunakan untuk link di email agar bisa diakses browser (bukan Docker-internal)
     private readonly string _baseUrl = config["App:PublicUrl"] ?? config["App:BaseUrl"] ?? "http://localhost:5000";
 
-    public async Task SendMagicLinkAsync(string toEmail, string toPjName, int baId, string token)
+    public async Task SendMagicLinkAsync(string toEmail, string toPjName, int baId, string token, string baseUrl)
     {
-        string link = $"{_baseUrl}/pj/sign/{token}";
+        string link = $"{baseUrl.TrimEnd('/')}/pj/sign/{token}";
         string body = $"""
             <h2 style="color: #0f172a;">Pemberitahuan Sistem: Persetujuan Dokumen</h2>
             <p>Halo <strong>{toPjName}</strong>,</p>
