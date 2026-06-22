@@ -5,6 +5,8 @@
 @inject AppDbContext DbContext
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
+@inject SistemBeritaAcara.Core.Interfaces.IEmailService EmailService
+@inject IConfiguration Config
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
 
@@ -75,10 +77,11 @@
                 </select>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Password Awal</label>
-                <input class="form-control" type="text" value="Admin1234!" readonly />
-                <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Password default, wajib diganti oleh pengguna</div>
+            <div class="form-group" style="margin-top:16px; background:#eff6ff; padding:12px; border-radius:6px; border:1px solid #bfdbfe;">
+                <div style="font-size:13px; color:#1e40af;">
+                    <i class="bi bi-info-circle-fill" style="margin-right:6px;"></i>
+                    Pengguna akan menerima email otomatis berisi tautan untuk Setup Akun (Password & Tanda Tangan).
+                </div>
             </div>
 
             @if (!string.IsNullOrEmpty(errorMsg))
@@ -103,7 +106,7 @@
             </div>
             <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Akun Berhasil Dibuat</div>
             <div style="font-size:14px;color:var(--text-secondary);margin-bottom:24px;">
-                Akun untuk <strong>@savedName</strong> telah dibuat dengan role <strong>@savedRole</strong>
+                Email undangan telah berhasil dikirim ke <strong>@(selectedPegawai?.Email ?? "pengguna")</strong> untuk akun <strong>@savedName</strong> dengan role <strong>@savedRole</strong>
             </div>
             <div style="display:flex;gap:12px;justify-content:center;">
                 <button class="btn btn-outline" @onclick="Reset">Tambah Pengguna Lain</button>
@@ -167,12 +170,20 @@
                 EmailConfirmed = true,
                 IsDeleted = false
             };
-            var result = await UserManager.CreateAsync(user, "Admin1234!");
+            
+            // Generate a random temporary password
+            var tempPw = Guid.NewGuid().ToString("N") + "X1!";
+            var result = await UserManager.CreateAsync(user, tempPw);
             if (!result.Succeeded)
             {
                 errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
                 return;
             }
+
+            var token = await UserManager.GeneratePasswordResetTokenAsync(user);
+            var baseUrl = Config["App:PublicUrl"] ?? Config["App:BaseUrl"] ?? "http://localhost:5000";
+            await EmailService.SendUserInvitationAsync(user.Email, user.Nama, token, baseUrl);
+
             savedName = selectedPegawai.Nama;
             savedRole = selectedRole switch
             {
