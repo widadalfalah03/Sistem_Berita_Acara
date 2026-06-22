@@ -15,7 +15,6 @@
 <div class="page-header d-flex align-center justify-between">
     <div>
         <h1 class="page-title">Daftar Pegawai</h1>
-        <p class="page-subtitle">Data pegawai PT Pertamina Patra Niaga</p>
     </div>
     <button class="btn btn-primary" @onclick="() => showUpload = true">
         <i class="bi bi-arrow-up-circle"></i> Update Data Pegawai
@@ -54,10 +53,6 @@
         <input type="text" placeholder="Cari nama, NIP, atau jabatan..."
                @bind="search" @bind:event="oninput" />
     </div>
-    <div class="toggle-wrapper" @onclick="() => showInactive = !showInactive">
-        <div class="toggle-switch @(showInactive ? "active" : "")"></div>
-        <span>Tampilkan Data Non-Aktif</span>
-    </div>
 </div>
 
 @if (isLoading)
@@ -83,7 +78,6 @@ else
                     <th style="cursor:pointer;" @onclick="@(() => SortTable("Fungsi/Direktorat"))">Fungsi/Direktorat <i class="bi @GetSortIcon("Fungsi/Direktorat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     <th style="cursor:pointer;" @onclick="@(() => SortTable("Email"))">Email <i class="bi @GetSortIcon("Email")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     <th style="cursor:pointer;" @onclick="@(() => SortTable("Cost Center"))">Cost Center <i class="bi @GetSortIcon("Cost Center")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                 </tr>
             </thead>
             <tbody>
@@ -98,17 +92,12 @@ else
                         <td>@p.FungsiDirektorat</td>
                         <td>@p.Email</td>
                         <td>@p.CostCenter</td>
-                        <td>
-                            <span class="status-dot @(p.IsAktif ? "active" : "inactive")">
-                                @(p.IsAktif ? "Aktif" : "Nonaktif")
-                            </span>
-                        </td>
                     </tr>
                 }
                 @if (!FilteredPegawai.Any())
                 {
                     <tr>
-                        <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">
+                        <td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">
                             Tidak ada data pegawai yang sesuai filter
                         </td>
                     </tr>
@@ -185,7 +174,7 @@ else
         get
         {
             var query = allPegawai
-                .Where(p => showInactive || p.IsAktif)
+                .Where(p => p.IsAktif)
                 .Where(p => string.IsNullOrEmpty(search) ||
                             p.Nama.Contains(search, StringComparison.OrdinalIgnoreCase) ||
                             p.NoPekerja.Contains(search, StringComparison.OrdinalIgnoreCase) ||
