@@ -346,6 +346,7 @@
 
             // Muat ulang entity BA dengan tracking agar EF bisa melacak perubahan.
             // ba di state komponen ini adalah AsNoTracking — tidak bisa dipakai langsung untuk SaveChanges.
+            DbContext.ChangeTracker.Clear();
             var trackedBa = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Pj)
                 .FirstOrDefaultAsync(b => b.Id == ba.Id);

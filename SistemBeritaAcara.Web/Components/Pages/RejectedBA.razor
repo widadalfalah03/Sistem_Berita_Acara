@@ -94,6 +94,7 @@ else
         currentUserId = appUser.Id;
 
         IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
+            .AsNoTracking()
             .Include(b => b.Mengetahui)
             .Include(b => b.Pj)
             .Where(b => b.Status == "Rejected");

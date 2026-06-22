@@ -167,7 +167,7 @@ else if (currentRole == "Approver")
                 .Include(b => b.Pj)
                 .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
                 .Where(b => b.MengetahuiId == currentUserId && b.Status == "WaitingApproval")
-                .OrderBy(b => b.SubmittedAt)
+                .OrderByDescending(b => b.SubmittedAt)
                 .ToListAsync();
         }
         isLoading = false;
