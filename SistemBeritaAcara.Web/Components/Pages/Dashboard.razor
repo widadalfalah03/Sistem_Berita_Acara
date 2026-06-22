@@ -138,7 +138,7 @@ else if (currentRole == "AdminGudangBarang")
                         var daysLeft = (d.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
                         var badgeClass = daysLeft < 0 ? "due-badge overdue" : daysLeft == 0 ? "due-badge today" : daysLeft <= 2 ? "due-badge h1" : "due-badge h2";
                         var badgeText = daysLeft < 0 ? $"Lewat {Math.Abs(daysLeft)}h" : daysLeft == 0 ? "Hari Ini" : $"H-{daysLeft}";
-                        <div class="due-item">
+                        <div class="due-item" @onclick="@(() => OpenDetailModal(d.Id))">
                             <div class="due-item-info">
                                 <div class="due-item-surat">@d.NomorSurat</div>
                                 <div class="due-item-pj"><i class="bi bi-person" style="font-size:11px;"></i> @d.Pj?.Nama</div>
@@ -146,9 +146,6 @@ else if (currentRole == "AdminGudangBarang")
                             </div>
                             <div class="due-item-right">
                                 <span class="@badgeClass">@badgeText</span>
-                                <button class="btn-detail-loan" @onclick="@(() => OpenDetailModal(d.Id))">
-                                    <i class="bi bi-eye"></i> Detail
-                                </button>
                             </div>
                         </div>
                     }
