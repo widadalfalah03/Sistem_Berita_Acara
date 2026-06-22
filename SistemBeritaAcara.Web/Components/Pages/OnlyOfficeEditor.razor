@@ -95,6 +95,8 @@ else
     private string _currentUserName = "";
     private bool _editorInitialized = false;
     private bool isSaving = false;
+    // Kunci dokumen ONLYOFFICE — disimpan agar bisa digunakan saat memanggil Command Service
+    private string _docKey = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -115,8 +117,6 @@ else
                 ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
                 await DbContext.SaveChangesAsync();
 
-                // Embed TTD dan generate PDF agar pratinjau di EditorBA langsung tersedia
-                // (konsisten dengan perilaku EditorBA sebelumnya)
                 var currentUser = await DbContext.Users.FindAsync(_currentUserId);
                 if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
                 {
@@ -142,7 +142,6 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Sembunyikan overlay global (mungkin ditampilkan oleh BeritaAcara "Simpan & Lanjutkan")
         if (firstRender)
             await JSRuntime.InvokeVoidAsync("appLoading.hide");
 
@@ -152,20 +151,19 @@ else
             var onlyOfficeServerUrl = Configuration["OnlyOffice:ServerUrl"] ?? "http://localhost:8081";
             var apiScriptUrl = $"{onlyOfficeServerUrl}/web-apps/apps/api/documents/api.js";
 
-            // Gunakan App:BaseUrl dari config agar ONLYOFFICE di Docker bisa mengakses file
-            // App:BaseUrl menggunakan IP LAN (bukan localhost) sehingga bisa dijangkau dari dalam container
             var appBaseUrl = (Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
-
             var docUrl = $"{appBaseUrl}/{ba.DocxPath}";
             var callbackUrl = $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}";
-            var key = $"{ba.Id}-{DateTime.Now.Ticks}"; // Key unik untuk memaksa reload/edit baru
+
+            // Key unik per sesi editor — disimpan untuk dipakai di Command Service saat forceSave
+            _docKey = $"{ba.Id}-{DateTime.Now.Ticks}";
 
             var config = new
             {
                 document = new
                 {
                     fileType = "docx",
-                    key = key,
+                    key = _docKey,
                     title = $"Berita Acara - {(ba.NomorSurat ?? ba.Id.ToString())}.docx",
                     url = docUrl
                 },
@@ -182,7 +180,8 @@ else
                     lang = "id-ID",
                     customization = new
                     {
-                        forcesave = true
+                        forcesave = true,
+                        autosave = true
                     }
                 }
             };
@@ -199,10 +198,9 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
-            // Tampilkan overlay yang akan bertahan melewati navigasi ke EditorBA
             await JSRuntime.InvokeVoidAsync("appLoading.show", "Menyimpan dokumen...", "Sedang mengkonversi ke PDF, harap tunggu");
 
-            // Snapshot timestamp SEBELUM forceSave sebagai baseline perbandingan
+            // Snapshot timestamp SEBELUM save sebagai baseline perbandingan
             string docxPhysical = string.Empty, pdfPhysical = string.Empty;
             DateTime beforeDocx = DateTime.MinValue, beforePdf = DateTime.MinValue;
             if (ba?.DocxPath is not null)
@@ -214,15 +212,40 @@ else
                 if (File.Exists(pdfPhysical))  beforePdf  = File.GetLastWriteTimeUtc(pdfPhysical);
             }
 
-            // Trigger save — page tetap hidup (Blazor circuit aktif) sehingga ONLYOFFICE
-            // dapat menyelesaikan proses simpan & mengirim callback ke server.
-            await JSRuntime.InvokeVoidAsync("onlyoffice.forceSave");
+            // ── Strategi 1: ONLYOFFICE Command Service (server → server, paling andal) ──
+            var commandServiceUsed = false;
+            if (!string.IsNullOrEmpty(_docKey))
+            {
+                try
+                {
+                    var onlyOfficeServerUrl = (Configuration["OnlyOffice:ServerUrl"] ?? "http://localhost:8081").TrimEnd('/');
+                    var commandUrl = $"{onlyOfficeServerUrl}/coauthoring/CommandService.ashx";
+                    using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                    var payload = new { c = "forcesave", key = _docKey };
+                    var resp = await http.PostAsJsonAsync(commandUrl, payload);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var body = await resp.Content.ReadAsStringAsync();
+                        commandServiceUsed = true;
+                        Console.WriteLine($"[OnlyOffice CommandService] key={_docKey} response={body}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[OnlyOffice CommandService] Gagal: {ex.Message}. Fallback ke client forceSave.");
+                }
+            }
 
-            // Poll di sini (bukan di EditorBA) karena halaman masih aktif.
-            // Dengan circuit tetap terhubung, ONLYOFFICE tidak di-interrupt oleh page unload.
+            // ── Strategi 2: Fallback — client-side editor.forceSave() via JS ──
+            if (!commandServiceUsed)
+            {
+                await JSRuntime.InvokeVoidAsync("onlyoffice.forceSave");
+            }
+
+            // ── Poll: tunggu ONLYOFFICE callback masuk dan PDF terbarui di disk ──
             if (!string.IsNullOrEmpty(docxPhysical) && beforeDocx > DateTime.MinValue)
             {
-                // Tahap 1: tunggu DOCX diperbarui oleh ONLYOFFICE callback (max 60 detik)
+                // Tahap 1: tunggu DOCX diperbarui (max 60 detik)
                 var docxDeadline = DateTime.UtcNow.AddSeconds(60);
                 bool docxUpdated = false;
                 while (DateTime.UtcNow < docxDeadline)
@@ -234,18 +257,17 @@ else
 
                 if (docxUpdated)
                 {
-                    // Tahap 2: tunggu PDF diperbarui (dibandingkan ke beforePdf, bukan docxTime)
+                    // Tahap 2: tunggu PDF diperbarui (max 30 detik)
                     var pdfDeadline = DateTime.UtcNow.AddSeconds(30);
                     while (DateTime.UtcNow < pdfDeadline)
                     {
                         await Task.Delay(500);
                         if (File.Exists(pdfPhysical) && File.GetLastWriteTimeUtc(pdfPhysical) > beforePdf)
-                        { await Task.Delay(1500); break; } // 1500ms agar Spire.Doc benar-benar flush ke disk
+                        { await Task.Delay(1500); break; } // 1.5s buffer agar Spire.Doc flush ke disk
                     }
                 }
             }
 
-            // PDF sudah siap di disk — navigasi ke EditorBA (in-app agar overlay bertahan)
             Navigation.NavigateTo($"/editor/{Id}");
         }
         catch { Navigation.NavigateTo($"/editor/{Id}"); }

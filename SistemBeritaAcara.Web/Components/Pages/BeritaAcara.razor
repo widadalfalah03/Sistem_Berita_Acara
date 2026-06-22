@@ -1131,7 +1131,7 @@
                 }
 
                 await DbContext.SaveChangesAsync();
-                Navigation.NavigateTo($"/onlyoffice-editor/{existing.Id}");
+                Navigation.NavigateTo($"/editor/{existing.Id}");
             }
             else
             {
@@ -1180,7 +1180,7 @@
                     }
                     await DbContext.SaveChangesAsync();
                 }
-                Navigation.NavigateTo($"/onlyoffice-editor/{ba.Id}");
+                Navigation.NavigateTo($"/editor/{ba.Id}");
             }
         }
         catch (Exception ex)

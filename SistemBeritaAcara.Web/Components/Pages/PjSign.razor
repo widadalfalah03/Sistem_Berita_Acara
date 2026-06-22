@@ -84,7 +84,7 @@ else
         <div class="pj-preview">
             @if (!string.IsNullOrEmpty(pdfPath))
             {
-                <iframe src="/@pdfPath?v=@cacheBreaker#toolbar=1&navpanes=0" title="Pratinjau Berita Acara"></iframe>
+                <iframe @key="cacheBreaker" src="/@pdfPath?v=@cacheBreaker#toolbar=1&navpanes=0" title="Pratinjau Berita Acara"></iframe>
             }
             else
             {
