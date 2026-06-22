@@ -11,81 +11,67 @@
 
 <PageTitle>Inbox — Sistem Berita Acara</PageTitle>
 
-<div class="gmail-inbox" style="flex:1;display:flex;flex-direction:column;">
-    <!-- Gmail-style toolbar -->
-    <div class="gmail-toolbar">
-        <div class="gmail-tabs">
-            <button class="gmail-tab @(activeTab == "all" ? "active" : "")" @onclick="SetTabAll">
-                <i class="bi bi-inbox"></i>
-                Semua
-                @if (notifications.Any())
-                {
-                    <span class="gmail-tab-count">@notifications.Count</span>
-                }
-            </button>
-            <button class="gmail-tab @(activeTab == "unread" ? "active" : "")" @onclick="SetTabUnread">
-                <i class="bi bi-circle-fill" style="font-size:8px;"></i>
-                Belum Dibaca
-                @if (notifications.Any(n => !n.IsRead))
-                {
-                    <span class="gmail-tab-count unread">@notifications.Count(n => !n.IsRead)</span>
-                }
-            </button>
-        </div>
-        <button class="gmail-mark-all" @onclick="MarkAllReadAsync">
-            <i class="bi bi-check2-all"></i> Tandai semua dibaca
-        </button>
-    </div>
-
-    @if (isLoading)
-    {
-        <div class="loading-spinner"><div class="spinner"></div><span>Memuat notifikasi...</span></div>
-    }
-    else if (!DisplayedNotifications.Any())
-    {
-        <div class="gmail-empty">
-            <div class="gmail-empty-icon">
-                <i class="bi bi-inbox"></i>
-            </div>
-            <div class="gmail-empty-title">
-                @(activeTab == "unread" ? "Tidak ada notifikasi yang belum dibaca" : "Kotak masuk kosong")
-            </div>
-            <div class="gmail-empty-sub">Semua notifikasi telah dibaca.</div>
-        </div>
-    }
-    else
-    {
-        @foreach (var group in GroupedNotifications)
+<!-- Tab bar -->
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+    <button @onclick="SetTabAll"
+            style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;transition:all 0.15s;
+                   @(activeTab == "all" ? "background:var(--primary);color:white;" : "background:transparent;color:var(--text-secondary);")">
+        Semua
+        @if (notifications.Any())
         {
-            <div class="gmail-date-group">@group.Key</div>
-            @foreach (var n in group)
-            {
-                <div class="gmail-row @(n.IsRead ? "read" : "unread")"
-                     @onclick="async () => await MarkReadAndNavigate(n)">
-                    <!-- Icon -->
-                    <div class="gmail-row-icon @GetNotifIconClass(n.Tipe)">
-                        <i class="bi @GetNotifIcon(n.Tipe)"></i>
-                    </div>
-                    <!-- Content -->
-                    <div class="gmail-row-body">
-                        <span class="gmail-row-title">@GetNotifTitle(n.Tipe)</span>
-                        <span class="gmail-row-sep">–</span>
-                        <span class="gmail-row-preview">@n.Message</span>
-                    </div>
-                    <!-- Time -->
-                    <div class="gmail-row-time">
-                        @n.CreatedAt.ToString("HH:mm")
-                        <div class="gmail-row-date">@n.CreatedAt.ToString("dd MMM")</div>
-                    </div>
+            <span style="margin-left:5px;">(@notifications.Count)</span>
+        }
+    </button>
+    <button @onclick="SetTabUnread"
+            style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:500;font-family:inherit;transition:all 0.15s;
+                   @(activeTab == "unread" ? "background:var(--primary);color:white;" : "background:transparent;color:var(--text-secondary);")">
+        Belum Dibaca
+    </button>
+    <button @onclick="MarkAllReadAsync"
+            style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--primary);font-family:inherit;display:flex;align-items:center;gap:6px;padding:4px 0;">
+        <i class="bi bi-check2-all"></i> Tandai sudah dibaca
+    </button>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-spinner"><div class="spinner"></div><span>Memuat notifikasi...</span></div>
+}
+else if (!DisplayedNotifications.Any())
+{
+    <div class="card" style="text-align:center;padding:60px;">
+        <i class="bi bi-bell-slash" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">
+            @(activeTab == "unread" ? "Tidak ada notifikasi yang belum dibaca" : "Tidak ada notifikasi")
+        </div>
+        <div style="font-size:14px;color:var(--text-secondary);">Kamu sudah up-to-date!</div>
+    </div>
+}
+else
+{
+    <div class="card" style="overflow:hidden;padding:0;">
+        @foreach (var n in DisplayedNotifications)
+        {
+            <div class="notif-item @(n.IsRead ? "" : "unread")"
+                 @onclick="async () => await MarkReadAndNavigate(n)">
+                <div class="notif-icon @GetNotifIconClass(n.Tipe)">
+                    <i class="bi @GetNotifIcon(n.Tipe)"></i>
+                </div>
+                <div class="notif-content">
+                    <div class="notif-title">@GetNotifTitle(n.Tipe)</div>
+                    <div class="notif-message">@n.Message</div>
+                </div>
+                <div class="notif-meta">
+                    <div class="notif-time">@GetRelativeTime(n.CreatedAt)</div>
                     @if (!n.IsRead)
                     {
-                        <div class="gmail-unread-dot"></div>
+                        <div class="notif-dot"></div>
                     }
                 </div>
-            }
+            </div>
         }
-    }
-</div>
+    </div>
+}
 
 @code {
     private List<Notification> notifications = new();
@@ -96,11 +82,6 @@
     private IEnumerable<Notification> DisplayedNotifications => activeTab == "unread"
         ? notifications.Where(n => !n.IsRead)
         : notifications;
-
-    private IEnumerable<IGrouping<string, Notification>> GroupedNotifications =>
-        DisplayedNotifications
-            .GroupBy(n => GetDateGroup(n.CreatedAt))
-            .OrderBy(g => GetDateGroupOrder(g.Key));
 
     protected override async Task OnInitializedAsync()
     {
@@ -140,25 +121,6 @@
             Navigation.NavigateTo($"/berita-acara/{n.BaId.Value}");
     }
 
-    private static string GetDateGroup(DateTime dt)
-    {
-        var today = DateTime.Today;
-        if (dt.Date == today) return "Hari ini";
-        if (dt.Date == today.AddDays(-1)) return "Kemarin";
-        if ((today - dt.Date).TotalDays < 7) return "Minggu ini";
-        if (dt.Month == today.Month && dt.Year == today.Year) return "Bulan ini";
-        return dt.ToString("MMMM yyyy", new System.Globalization.CultureInfo("id-ID"));
-    }
-
-    private static int GetDateGroupOrder(string group) => group switch
-    {
-        "Hari ini" => 0,
-        "Kemarin" => 1,
-        "Minggu ini" => 2,
-        "Bulan ini" => 3,
-        _ => 4
-    };
-
     private static string GetNotifIconClass(string tipe) => tipe switch
     {
         "BA_APPROVED" => "success",
@@ -186,9 +148,19 @@
         "BA_APPROVED" => "Berita Acara Disetujui",
         "BA_REJECTED" => "Berita Acara Ditolak",
         "WAITING_APPROVAL" => "Menunggu Persetujuan",
-        "WAITING_PJ_SIGN" => "Menunggu TTD Penanggung Jawab",
-        "PJ_SIGNED" => "Penanggung Jawab Sudah Menandatangani",
+        "WAITING_PJ_SIGN" => "Menunggu TTD PJ",
+        "PJ_SIGNED" => "PJ Sudah Menandatangani",
         "DUE_DATE_REMINDER" => "Pengingat Jatuh Tempo",
         _ => "Notifikasi"
     };
+
+    private static string GetRelativeTime(DateTime dt)
+    {
+        var diff = DateTime.Now - dt;
+        if (diff.TotalMinutes < 1) return "baru saja";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes} mnt lalu";
+        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours} jam lalu";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} hari lalu";
+        return dt.ToString("dd MMM yyyy");
+    }
 }
