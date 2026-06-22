@@ -23,6 +23,8 @@ public class BeritaAcara
     public string? DocxPath { get; set; }
     public string? DocxFinalPath { get; set; }
     public bool ExcelExported { get; set; } = false;
+    public bool IsReturned { get; set; } = false;
+    public DateTime? ReturnedAt { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
