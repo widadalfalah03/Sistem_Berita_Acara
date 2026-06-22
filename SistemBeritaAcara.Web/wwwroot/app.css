@@ -2591,6 +2591,68 @@ a:hover { color: var(--primary-hover); }
     gap: 10px;
 }
 
+/* -- Arsip Row (list-style archive items) ------------------------------ */
+.arsip-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: background 0.15s;
+    min-width: 0;
+}
+
+.arsip-row:last-child { border-bottom: none; }
+.arsip-row:hover { background: var(--bg); }
+
+.arsip-row-number {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: monospace;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.arsip-row-jenis {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--primary);
+    background: var(--primary-light);
+    border-radius: var(--radius-full);
+    padding: 3px 10px;
+    flex-shrink: 0;
+}
+
+.arsip-row-date {
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.arsip-row-download {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    color: var(--primary);
+    background: var(--primary-light);
+    text-decoration: none;
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.arsip-row-download:hover {
+    background: var(--primary);
+    color: white;
+}
+
 /* -- BA Card (Arsip/Rejected/Detail) - Deprecated but kept for compatibility */
 .ba-card {
     display: flex;

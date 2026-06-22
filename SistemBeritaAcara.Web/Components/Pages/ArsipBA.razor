@@ -15,88 +15,55 @@
 
 @if (currentRole == "AdminGudangBarang" && !isLoading && allBA.Count > 0)
 {
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button class="btn btn-primary btn-sm @(isExporting ? "btn-loading" : "")"
                 @onclick="ExportExcelAsync" disabled="@isExporting"
-                style="display:flex;align-items:center;gap:8px;">
+                style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
             <i class="bi bi-file-earmark-excel"></i>
             <span>Export ke Excel</span>
         </button>
     </div>
 }
 
-<!-- Search & Filter Panel -->
-<div class="card" style="margin-bottom:20px;padding:16px 20px;">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
-        <!-- No. Surat -->
-        <div>
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">No. Surat</label>
-            <div class="search-input" style="max-width:100%;">
-                <i class="bi bi-search"></i>
-                <input type="text" placeholder="Cari nomor surat..." @bind="search" @bind:event="oninput" />
+<!-- Filter Panel -->
+<div class="card" style="margin-bottom:16px;overflow:hidden;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border-light);">
+        <div style="padding:0;border-right:1px solid var(--border-light);">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px 6px;">No. Surat</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 16px 10px;">
+                <i class="bi bi-search" style="color:var(--text-muted);font-size:13px;flex-shrink:0;"></i>
+                <input type="text" placeholder="Cari nomor surat..."
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:14px;color:var(--text-primary);"
+                       @bind="search" @bind:event="oninput" />
             </div>
         </div>
-
-        <!-- Penanggung Jawab -->
-        <div>
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Penanggung Jawab</label>
-            <div class="search-input" style="max-width:100%;">
-                <i class="bi bi-person"></i>
-                <input type="text" placeholder="Nama PJ..." @bind="pjSearch" @bind:event="oninput" />
+        <div style="padding:0;border-right:1px solid var(--border-light);">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px 6px;">Penanggung Jawab</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 16px 10px;">
+                <i class="bi bi-person" style="color:var(--text-muted);font-size:13px;flex-shrink:0;"></i>
+                <input type="text" placeholder="Nama PJ..."
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:14px;color:var(--text-primary);"
+                       @bind="pjSearch" @bind:event="oninput" />
             </div>
         </div>
-
-        <!-- Yang Menyerahkan -->
-        <div>
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Yang Menyerahkan</label>
-            <div class="search-input" style="max-width:100%;">
-                <i class="bi bi-person-badge"></i>
-                <input type="text" placeholder="Nama..." @bind="menyerahkanSearch" @bind:event="oninput" />
+        <div style="padding:0;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px 6px;">Yang Menyerahkan</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 16px 10px;">
+                <i class="bi bi-person-badge" style="color:var(--text-muted);font-size:13px;flex-shrink:0;"></i>
+                <input type="text" placeholder="Nama..."
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:14px;color:var(--text-primary);"
+                       @bind="menyerahkanSearch" @bind:event="oninput" />
             </div>
         </div>
     </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:end;">
-        <!-- Yang Mengetahui -->
-        <div>
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Yang Mengetahui</label>
-            <div class="search-input" style="max-width:100%;">
-                <i class="bi bi-person-check"></i>
-                <input type="text" placeholder="Nama approver..." @bind="mengetahuiSearch" @bind:event="oninput" />
-            </div>
-        </div>
-
-        <!-- Jenis BA -->
-        <div>
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Jenis BA</label>
-            <select class="filter-select" style="width:100%;" @bind="jenisFilter">
-                <option value="">Semua Jenis</option>
-                <option value="Alokasi">Alokasi</option>
-                <option value="Peminjaman">Peminjaman</option>
-            </select>
-        </div>
-
-        <!-- Tanggal BA Dari -->
-        <div>
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Tanggal Dari</label>
-            <input type="date" class="filter-select" style="width:100%;" @bind="dateFrom" />
-        </div>
-
-        <!-- Tanggal BA Sampai -->
-        <div>
-            <label style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">Tanggal Sampai</label>
-            <input type="date" class="filter-select" style="width:100%;" @bind="dateTo" />
-        </div>
-    </div>
-
     @if (HasActiveFilter)
     {
-        <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="padding:10px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);">
             <span style="font-size:13px;color:var(--text-secondary);">
-                Menampilkan <strong>@FilteredBA.Count()</strong> dari <strong>@allBA.Count</strong> dokumen
+                <strong>@FilteredBA.Count()</strong> dari <strong>@allBA.Count</strong> dokumen
             </span>
-            <button class="btn btn-outline btn-sm" @onclick="ClearFilters" style="display:flex;align-items:center;gap:6px;">
-                <i class="bi bi-x-circle"></i> Bersihkan Filter
+            <button @onclick="ClearFilters" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--primary);font-weight:500;padding:0;">
+                <i class="bi bi-x-circle" style="margin-right:4px;"></i>Bersihkan
             </button>
         </div>
     }
@@ -116,73 +83,32 @@ else if (!FilteredBA.Any())
         <div style="font-size:14px;color:var(--text-secondary);">
             @(HasActiveFilter ? "Coba ubah atau bersihkan filter pencarian." : "Berita Acara yang disetujui akan muncul di sini.")
         </div>
-        @if (HasActiveFilter)
-        {
-            <button class="btn btn-outline btn-sm" @onclick="ClearFilters" style="margin-top:16px;display:inline-flex;align-items:center;gap:6px;">
-                <i class="bi bi-x-circle"></i> Bersihkan Filter
-            </button>
-        }
     </div>
 }
 else
 {
-    @foreach (var ba in FilteredBA)
-    {
-        var fileName = string.IsNullOrEmpty(ba.DocxFinalPath)
-            ? $"BA-{ba.NomorSurat ?? ba.Id.ToString()}.docx"
-            : Path.GetFileName(ba.DocxFinalPath);
-
-        <div class="archive-card">
-            <!-- Header: Badge, Number, Jenis -->
-            <div class="archive-header">
-                <div class="archive-badge">
-                    <span class="pill pill-approved">DITERIMA</span>
-                </div>
-                <div class="archive-number">@ba.NomorSurat</div>
-                <div class="archive-jenis">@ba.Jenis</div>
-                <div class="archive-date">
-                    @ba.ApprovedAt?.ToString("dd MMM yyyy")
-                </div>
-            </div>
-
-            <!-- Body: People info -->
-            <div class="archive-body">
-                <div class="archive-person">
-                    <span class="label">PJ:</span>
-                    <span class="name">@ba.Pj?.Nama</span>
-                </div>
-                <div class="archive-person">
-                    <span class="label">Approver:</span>
-                    <span class="name">@ba.Mengetahui?.Nama</span>
-                </div>
-            </div>
-
-            <!-- Footer: Document + Actions -->
-            <div class="archive-footer">
-                <div class="archive-file">
-                    <div class="file-icon">
-                        <i class="bi @(string.IsNullOrEmpty(ba.DocxFinalPath) ? "bi-file-word" : "bi-file-pdf")"></i>
-                    </div>
-                    <div class="file-info">
-                        <div class="file-name">@fileName</div>
-                        <div class="file-type">@(string.IsNullOrEmpty(ba.DocxFinalPath) ? "DOCX" : "PDF")</div>
-                    </div>
-                </div>
-
-                <div class="archive-actions">
-                    <NavLink class="btn btn-outline btn-sm" href="@($"/berita-acara/{ba.Id}?from=archive")">
-                        <i class="bi bi-eye"></i> Pratinjau
-                    </NavLink>
+    <div class="card" style="overflow:hidden;padding:0;">
+        @foreach (var ba in FilteredBA)
+        {
+            <div class="arsip-row" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}?from=archive"))">
+                <span class="pill pill-approved" style="flex-shrink:0;">DITERIMA</span>
+                <span class="arsip-row-number">@ba.NomorSurat</span>
+                <span class="arsip-row-jenis">@ba.Jenis</span>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+                    <span class="arsip-row-date">@ba.Tanggal.ToString("dd MMM yyyy")</span>
                     @if (!string.IsNullOrEmpty(ba.DocxFinalPath))
                     {
-                        <a href="/@ba.DocxFinalPath" download class="btn btn-primary btn-sm">
-                            <i class="bi bi-download"></i> Unduh
+                        <a href="/@ba.DocxFinalPath" download
+                           class="arsip-row-download"
+                           @onclick:stopPropagation="true"
+                           title="Unduh dokumen">
+                            <i class="bi bi-download"></i>
                         </a>
                     }
                 </div>
             </div>
-        </div>
-    }
+        }
+    </div>
 }
 
 @code {
@@ -192,23 +118,15 @@ else
     private string currentRole = string.Empty;
     private int currentUserId;
 
-    // Filter state
     private string search = string.Empty;
     private string pjSearch = string.Empty;
     private string menyerahkanSearch = string.Empty;
     private string mengetahuiSearch = string.Empty;
-    private string jenisFilter = string.Empty;
-    private DateTime? dateFrom;
-    private DateTime? dateTo;
 
     private bool HasActiveFilter =>
         !string.IsNullOrEmpty(search) ||
         !string.IsNullOrEmpty(pjSearch) ||
-        !string.IsNullOrEmpty(menyerahkanSearch) ||
-        !string.IsNullOrEmpty(mengetahuiSearch) ||
-        !string.IsNullOrEmpty(jenisFilter) ||
-        dateFrom.HasValue ||
-        dateTo.HasValue;
+        !string.IsNullOrEmpty(menyerahkanSearch);
 
     private IEnumerable<BeritaAcaraEntity> FilteredBA => allBA
         .Where(b => string.IsNullOrEmpty(search) ||
@@ -216,13 +134,7 @@ else
         .Where(b => string.IsNullOrEmpty(pjSearch) ||
                     (b.Pj?.Nama ?? "").Contains(pjSearch, StringComparison.OrdinalIgnoreCase))
         .Where(b => string.IsNullOrEmpty(menyerahkanSearch) ||
-                    (b.Menyerahkan?.Nama ?? "").Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase))
-        .Where(b => string.IsNullOrEmpty(mengetahuiSearch) ||
-                    (b.Mengetahui?.Nama ?? "").Contains(mengetahuiSearch, StringComparison.OrdinalIgnoreCase))
-        .Where(b => string.IsNullOrEmpty(jenisFilter) ||
-                    b.Jenis.Equals(jenisFilter, StringComparison.OrdinalIgnoreCase))
-        .Where(b => !dateFrom.HasValue || b.Tanggal >= DateOnly.FromDateTime(dateFrom.Value))
-        .Where(b => !dateTo.HasValue || b.Tanggal <= DateOnly.FromDateTime(dateTo.Value));
+                    (b.Menyerahkan?.Nama ?? "").Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
@@ -235,7 +147,6 @@ else
             .Include(b => b.Pj)
             .Include(b => b.Menyerahkan)
             .Include(b => b.Mengetahui)
-            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
             .Where(b => b.Status == "Approved");
 
         if (currentRole == "AdminGudangBarang")
@@ -252,10 +163,6 @@ else
         search = string.Empty;
         pjSearch = string.Empty;
         menyerahkanSearch = string.Empty;
-        mengetahuiSearch = string.Empty;
-        jenisFilter = string.Empty;
-        dateFrom = null;
-        dateTo = null;
     }
 
     private async Task ExportExcelAsync()
