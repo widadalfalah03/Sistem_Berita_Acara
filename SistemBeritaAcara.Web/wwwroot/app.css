@@ -370,6 +370,10 @@ a:hover { color: var(--primary-hover); }
     flex-direction: column;
 }
 
+.content-area > * {
+    flex-shrink: 0;
+}
+
 /* Dashboard layout fills full height */
 .dashboard-fill {
     flex: 1;
