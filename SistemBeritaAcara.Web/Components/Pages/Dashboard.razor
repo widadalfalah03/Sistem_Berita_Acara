@@ -444,111 +444,20 @@ else if (currentRole == "AdminIT")
         </div>
     </div>
 
-    <!-- Stat Cards row 2: Data Master -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
-        <div class="stat-card">
-            <div class="stat-card-icon draft"><i class="bi bi-person-badge-fill"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Total Pegawai</div>
-                <div class="stat-card-value">@itStats.TotalPegawai</div>
-                <div class="stat-card-desc">Data master pegawai</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-bottom:24px;">
+        <div class="chart-card">
+            <div class="chart-header">
+                <span class="chart-title">Distribusi Peran Pengguna</span>
+            </div>
+            <div class="chart-container" style="height:250px;position:relative;">
+                <canvas id="adminITDonut"></canvas>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-card-icon neutral"><i class="bi bi-cpu-fill"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Jenis Perangkat</div>
-                <div class="stat-card-value">@itStats.TotalBarang</div>
-                <div class="stat-card-desc">Data master barang</div>
-            </div>
+        <div class="card" style="display:flex;flex-direction:column;justify-content:center;align-items:center;color:var(--text-muted);background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <i class="bi bi-shield-check" style="font-size:64px;color:#22C55E;margin-bottom:16px;"></i>
+            <h3 style="margin:0 0 8px 0;color:#1e293b;font-weight:600;">Sistem Berjalan Normal</h3>
+            <p style="margin:0;text-align:center;color:#64748b;line-height:1.5;">Seluruh modul dan layanan pada Sistem Berita Acara termonitor dan beroperasi dengan baik. Anda memiliki akses penuh ke manajemen pengguna.</p>
         </div>
-        <div class="stat-card">
-            <div class="stat-card-icon approved"><i class="bi bi-file-earmark-check-fill"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Total BA Disetujui</div>
-                <div class="stat-card-value green">@itStats.TotalApproved</div>
-                <div class="stat-card-desc">Seluruh sistem</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card-icon progress"><i class="bi bi-hourglass-split"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">BA Sedang Diproses</div>
-                <div class="stat-card-value blue">@itStats.TotalProgress</div>
-                <div class="stat-card-desc">Menunggu persetujuan</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Access Cards -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
-        <NavLink href="/pengguna" class="stat-card" style="text-decoration:none;display:flex;cursor:pointer;transition:box-shadow 0.2s;"
-                 onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''">
-            <div class="stat-card-icon total"><i class="bi bi-people"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label" style="font-size:14px;font-weight:700;color:var(--text-primary);">Kelola Pengguna</div>
-                <div class="stat-card-desc">Tambah, edit, atau nonaktifkan akun pengguna sistem →</div>
-            </div>
-        </NavLink>
-        <NavLink href="/data-pegawai" class="stat-card" style="text-decoration:none;display:flex;cursor:pointer;transition:box-shadow 0.2s;"
-                 onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''">
-            <div class="stat-card-icon draft"><i class="bi bi-person-badge"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label" style="font-size:14px;font-weight:700;color:var(--text-primary);">Data Pegawai</div>
-                <div class="stat-card-desc">Import & kelola data master pegawai dari Excel →</div>
-            </div>
-        </NavLink>
-        <NavLink href="/data-barang" class="stat-card" style="text-decoration:none;display:flex;cursor:pointer;transition:box-shadow 0.2s;"
-                 onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow=''">
-            <div class="stat-card-icon neutral"><i class="bi bi-box-seam"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label" style="font-size:14px;font-weight:700;color:var(--text-primary);">Data Barang</div>
-                <div class="stat-card-desc">Import & kelola master perangkat keras →</div>
-            </div>
-        </NavLink>
-    </div>
-
-    <!-- Recent Activity -->
-    <div class="card">
-        <div class="card-header">
-            <h3>Aktivitas Berita Acara Terbaru</h3>
-            <span style="font-size:13px;color:var(--text-muted);">Seluruh sistem</span>
-        </div>
-        @if (!itStats.RecentBA.Any())
-        {
-            <div style="text-align:center;padding:40px;color:var(--text-muted);">
-                <i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:12px;"></i>
-                Belum ada aktivitas Berita Acara
-            </div>
-        }
-        else
-        {
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th style="cursor:pointer;" @onclick="@(() => SortIT("No. Surat"))">No. Surat <i class="bi @GetITSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Jenis"))">Jenis <i class="bi @GetITSortIcon("Jenis")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetITSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Dibuat Oleh"))">Dibuat Oleh <i class="bi @GetITSortIcon("Dibuat Oleh")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Tanggal"))">Tanggal <i class="bi @GetITSortIcon("Tanggal")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortIT("Status"))">Status <i class="bi @GetITSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var ba in SortedRecentBA)
-                    {
-                        <tr>
-                            <td class="fw-semibold text-primary">@(ba.NomorSurat ?? "Draft")</td>
-                            <td><span class="pill @GetJenisPill(ba.Jenis)" style="font-size:11px;">@ba.Jenis</span></td>
-                            <td>@ba.Pj?.Nama</td>
-                            <td>@ba.Creator?.Nama</td>
-                            <td>@ba.Tanggal.ToString("dd MMM yyyy")</td>
-                            <td><span class="pill @GetStatusPill(ba.Status)" style="font-size:11px;">@GetStatusLabel(ba.Status)</span></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
     </div>
 }
 
@@ -645,6 +554,13 @@ else if (currentRole == "AdminIT")
                 new[] { approverStat.Approved, approverStat.Rejected },
                 new[] { "#22C55E", "#EF4444" });
         }
+        else if (currentRole == "AdminIT")
+        {
+            await JS.InvokeVoidAsync("chartInterop.createDonutChart", "adminITDonut",
+                new[] { "Admin IT", "Admin Gudang", "Approver" },
+                new[] { userStats.AdminIT, userStats.AdminGudang, userStats.Approver },
+                new[] { "#64748B", "#22C55E", "#3B82F6" });
+        }
     }
 
     private async Task LoadGudangDataAsync()
@@ -700,19 +616,6 @@ else if (currentRole == "AdminIT")
         userStats.AdminIT = allUsers.Count(u => u.Role == "AdminIT" && !u.IsDeleted);
         userStats.AdminGudang = allUsers.Count(u => u.Role == "AdminGudangBarang" && !u.IsDeleted);
         userStats.Approver = allUsers.Count(u => u.Role == "Approver" && !u.IsDeleted);
-
-        itStats.TotalPegawai = await DbCtx.Pegawai.CountAsync();
-        itStats.TotalBarang = await DbCtx.MasterBarang.CountAsync();
-        itStats.TotalApproved = await DbCtx.Set<BAEntity>().CountAsync(b => b.Status == "Approved");
-        itStats.TotalProgress = await DbCtx.Set<BAEntity>()
-            .CountAsync(b => b.Status == "WaitingPJSign" || b.Status == "WaitingApproval");
-
-        itStats.RecentBA = await DbCtx.Set<BAEntity>()
-            .Include(b => b.Pj)
-            .Include(b => b.Creator)
-            .OrderByDescending(b => b.CreatedAt)
-            .Take(10)
-            .ToListAsync();
     }
 
     private string[] GetLast6MonthLabels()
@@ -844,19 +747,4 @@ else if (currentRole == "AdminIT")
         _ => approverQueue
     };
 
-    // Sort variables and logic for Admin IT
-    private string sortITCol = "Tanggal";
-    private bool sortITAsc = false; // Descending by default
-    private void SortIT(string col) { if (sortITCol == col) sortITAsc = !sortITAsc; else { sortITCol = col; sortITAsc = true; } }
-    private string GetITSortIcon(string col) => sortITCol != col ? "bi-arrow-down-up" : sortITAsc ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
-    private IEnumerable<BAEntity> SortedRecentBA => sortITCol switch
-    {
-        "No. Surat" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.NomorSurat) : itStats.RecentBA.OrderByDescending(b => b.NomorSurat),
-        "Jenis" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Jenis) : itStats.RecentBA.OrderByDescending(b => b.Jenis),
-        "Penanggung Jawab" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Pj?.Nama) : itStats.RecentBA.OrderByDescending(b => b.Pj?.Nama),
-        "Dibuat Oleh" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Creator?.Nama) : itStats.RecentBA.OrderByDescending(b => b.Creator?.Nama),
-        "Tanggal" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Tanggal) : itStats.RecentBA.OrderByDescending(b => b.Tanggal),
-        "Status" => sortITAsc ? itStats.RecentBA.OrderBy(b => b.Status) : itStats.RecentBA.OrderByDescending(b => b.Status),
-        _ => itStats.RecentBA
-    };
 }
