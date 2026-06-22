@@ -94,7 +94,7 @@ else if (currentRole == "Approver")
         <div class="card">
             @foreach (var ba in baList)
             {
-                <NavLink class="queue-item" href="@($"/berita-acara/{ba.Id}")">
+                <NavLink class="queue-item" href="@($"/berita-acara/{ba.Id}?from=progress")">
                     <div style="display:flex;align-items:flex-start;justify-content:space-between;">
                         <div style="flex:1;">
                             <div class="queue-number">@ba.NomorSurat</div>
@@ -111,7 +111,6 @@ else if (currentRole == "Approver")
                         </div>
                         <div style="text-align:right;flex-shrink:0;">
                             <div style="font-size:13px;color:var(--text-muted);">@GetRelativeTime(ba.SubmittedAt)</div>
-                            <button class="btn-review" style="margin-top:8px;">Review</button>
                         </div>
                     </div>
                 </NavLink>

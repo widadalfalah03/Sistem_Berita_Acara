@@ -252,7 +252,7 @@ else
             </div>
             <div class="form-group">
                 <label class="form-label">Alasan Penolakan <span style="color:var(--danger)">*</span></label>
-                <textarea class="form-control" rows="4" @bind="rejectReason"
+                <textarea class="form-control" rows="4" @bind="rejectReason" style="resize:none;"
                           placeholder="Contoh: Dokumen tidak lengkap, nomor serial tidak sesuai..."></textarea>
             </div>
             @if (!string.IsNullOrEmpty(rejectError))
@@ -260,7 +260,6 @@ else
                 <div class="login-error" style="margin-bottom:12px;">@rejectError</div>
             }
             <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
-                <button class="btn btn-outline" @onclick="() => showRejectModal = false">Batal</button>
                 <button class="btn btn-danger @(isProcessing ? "btn-loading" : "")" @onclick="RejectAsync" disabled="@isProcessing">
                     <i class="bi bi-x-lg"></i> Tolak
                 </button>
@@ -498,10 +497,14 @@ else
 
     private void GoBack()
     {
-        var dest = currentRole == "Approver" ? "/progress"
-                 : From == "progress" ? "/progress"
+        var dest = From == "progress" ? "/progress"
                  : From == "archive" ? "/archive"
+                 : From == "dashboard" ? "/dashboard"
                  : "/draft";
+                 
+        if (currentRole == "Approver" && string.IsNullOrEmpty(From))
+            dest = "/dashboard";
+
         Navigation.NavigateTo(dest);
     }
 
