@@ -107,6 +107,58 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, subject, body);
     }
 
+    public async Task SendDueDateReminderAsync(string toEmail, string recipientName, string nomorSurat, string pjNama, string tanggalKembali, bool isOverdue, bool isForPj)
+    {
+        string statusColor = isOverdue ? "#dc2626" : "#d97706";
+        string statusBg = isOverdue ? "#fef2f2" : "#fffbeb";
+        string statusBorder = isOverdue ? "#dc2626" : "#d97706";
+        string statusText = isOverdue ? "TELAH JATUH TEMPO" : "JATUH TEMPO HARI INI";
+        string statusIcon = isOverdue ? "🚨" : "⏰";
+        
+        string actionText;
+        string callToAction;
+
+        if (isForPj)
+        {
+            actionText = isOverdue
+                ? $"Perangkat yang Anda pinjam <strong>telah melewati</strong> batas pengembalian ({tanggalKembali}). Segera kembalikan perangkat tersebut ke bagian IT / Gudang."
+                : $"Perangkat yang Anda pinjam <strong>jatuh tempo hari ini</strong> ({tanggalKembali}). Harap kembalikan perangkat tersebut ke bagian IT / Gudang sebelum akhir hari kerja.";
+            callToAction = "Abaikan email ini jika Anda sudah mengembalikan perangkat.";
+        }
+        else
+        {
+            actionText = isOverdue
+                ? $"Peminjaman ini <strong>telah melewati</strong> batas pengembalian ({tanggalKembali}). Harap segera hubungi Penanggung Jawab untuk menindaklanjuti pengembalian perangkat."
+                : $"Peminjaman ini <strong>jatuh tempo hari ini</strong> ({tanggalKembali}). Harap pantau pengembalian perangkat dari Penanggung Jawab hari ini.";
+            callToAction = "Login ke sistem untuk menandai perangkat sebagai sudah dikembalikan setelah menerima fisik perangkat.";
+        }
+
+        string body = $"""
+            <h2 style="color: {statusColor};">{statusIcon} Peminjaman Perangkat {statusText}</h2>
+            <p>Halo <strong>{recipientName}</strong>,</p>
+            <p>Berikut adalah informasi peminjaman perangkat yang memerlukan perhatian Anda:</p>
+            
+            <div style="background:{statusBg};border-left:4px solid {statusBorder};padding:16px 20px;margin:20px 0;border-radius:4px;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <tr><td style="padding:4px 0;color:#64748b;width:160px;">No. Surat BA</td><td style="font-weight:bold;">{nomorSurat}</td></tr>
+                    <tr><td style="padding:4px 0;color:#64748b;">Penanggung Jawab</td><td style="font-weight:bold;">{pjNama}</td></tr>
+                    <tr><td style="padding:4px 0;color:#64748b;">Batas Pengembalian</td><td style="font-weight:bold;color:{statusColor};">{tanggalKembali}</td></tr>
+                </table>
+            </div>
+            
+            <p>{actionText}</p>
+            <p>{callToAction}</p>
+            <br>
+            <p>Salam,<br><strong>Sistem Berita Acara IT</strong><br>PT Pertamina Patra Niaga</p>
+            """;
+
+        string subject = isOverdue
+            ? $"🚨 [OVERDUE] Peminjaman {nomorSurat} Telah Melewati Batas Pengembalian"
+            : $"⏰ Pengingat: Peminjaman {nomorSurat} Jatuh Tempo Hari Ini";
+
+        await SendEmailAsync(toEmail, subject, body);
+    }
+
     private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
     {
         if (string.IsNullOrEmpty(_user) || string.IsNullOrEmpty(_pass))
