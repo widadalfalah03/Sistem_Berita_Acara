@@ -67,12 +67,9 @@
         </div>
         <div style="padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Tanggal</div>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <i class="bi bi-calendar3" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
-                <input type="date"
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
-                       @bind="dateFilter" />
-            </div>
+            <input type="date" class="form-control"
+                   style="font-size:13px;padding:6px 10px;width:100%;"
+                   @bind="dateFilter" />
         </div>
     </div>
     @if (HasActiveFilter)
@@ -111,7 +108,7 @@ else
         {
             <div class="arsip-row" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}?from=archive"))">
                 <span class="arsip-row-number">@ba.NomorSurat</span>
-                <span class="arsip-row-jenis">@ba.Jenis</span>
+                <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:14px;flex-shrink:0;">
                     <span class="arsip-row-date">@ba.Tanggal.ToString("dd MMM yyyy")</span>
                     @if (!string.IsNullOrEmpty(ba.DocxFinalPath))
@@ -159,6 +156,13 @@ else
         .Where(b => string.IsNullOrEmpty(mengetahuiSearch) ||
                     (b.Mengetahui?.Nama ?? "").Contains(mengetahuiSearch, StringComparison.OrdinalIgnoreCase))
         .Where(b => !dateFilter.HasValue || b.Tanggal == DateOnly.FromDateTime(dateFilter.Value));
+
+    private static string GetJenisPill(string jenis) => jenis switch
+    {
+        "Alokasi" => "pill-alokasi",
+        "Peminjaman" => "pill-peminjaman",
+        _ => "pill-lainnya"
+    };
 
     protected override async Task OnInitializedAsync()
     {

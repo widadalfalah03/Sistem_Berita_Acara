@@ -70,7 +70,6 @@
                 <label class="form-label">Role <span style="color:var(--danger)">*</span></label>
                 <select class="form-control form-select" @bind="selectedRole">
                     <option value="">-- Pilih Role --</option>
-                    <option value="AdminIT">Admin IT</option>
                     <option value="AdminGudangBarang">Admin Gudang & Barang</option>
                     <option value="Approver">Approver</option>
                 </select>
@@ -177,7 +176,6 @@
             savedName = selectedPegawai.Nama;
             savedRole = selectedRole switch
             {
-                "AdminIT" => "Admin IT",
                 "AdminGudangBarang" => "Admin Gudang & Barang",
                 "Approver" => "Approver",
                 _ => selectedRole
