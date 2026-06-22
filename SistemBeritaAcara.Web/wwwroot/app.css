@@ -268,6 +268,7 @@ a:hover { color: var(--primary-hover); }
     color: white;
     font-size: 11px;
     font-weight: 700;
+    font-weight: 700;
     padding: 2px 8px;
     border-radius: var(--radius-full);
     min-width: 20px;
@@ -987,94 +988,275 @@ a:hover { color: var(--primary-hover); }
     color: var(--text-muted);
 }
 
-/* ── Notification Items ────────────────────────────────────────── */
-.notif-tabs {
+/* ══ Gmail-style Inbox ════════════════════════════════════════════ */
+.gmail-inbox {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    align-items: center;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
 }
 
-.notif-tab {
-    padding: 8px 20px;
-    border-radius: var(--radius-full);
-    font-size: 14px;
-    font-weight: 600;
+/* Toolbar */
+.gmail-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.gmail-tabs {
+    display: flex;
+    gap: 0;
+    flex: 1;
+}
+
+.gmail-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     border: none;
-    transition: var(--transition);
-    background: var(--bg);
+    background: none;
     color: var(--text-secondary);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
 }
 
-.notif-tab.active {
+.gmail-tab:hover { color: var(--primary); }
+
+.gmail-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.gmail-tab-count {
+    background: var(--bg);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    padding: 1px 7px;
+    min-width: 22px;
+    text-align: center;
+}
+
+.gmail-tab-count.unread {
     background: var(--primary);
     color: white;
 }
 
-.notif-mark-read {
-    margin-left: auto;
-    color: var(--primary);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    background: none;
-    border: none;
+.gmail-mark-all {
     display: flex;
     align-items: center;
     gap: 6px;
-}
-
-.notif-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--border-light);
-    transition: var(--transition);
+    padding: 7px 14px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    transition: var(--transition);
 }
 
-.notif-item:hover { background: var(--primary-light); }
-.notif-item.unread { background: #FAFBFF; }
+.gmail-mark-all:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+}
 
-.notif-icon {
-    width: 40px;
-    height: 40px;
+/* Date group header */
+.gmail-date-group {
+    padding: 6px 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border-light);
+}
+
+/* Gmail row */
+.gmail-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    height: 56px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.1s;
+    position: relative;
+}
+
+/* Unread = white + bold */
+.gmail-row.unread {
+    background: var(--surface);
+}
+
+/* Read = tinted gray */
+.gmail-row.read {
+    background: var(--bg);
+}
+
+.gmail-row:hover {
+    background: rgba(29, 78, 216, 0.04) !important;
+    box-shadow: inset 2px 0 0 var(--primary);
+}
+
+.gmail-row-icon {
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 15px;
     flex-shrink: 0;
 }
 
-.notif-icon.success { background: #F0FDF4; color: #22C55E; }
-.notif-icon.danger { background: #FEF2F2; color: #EF4444; }
-.notif-icon.warning { background: #FFFBEB; color: #F59E0B; }
-.notif-icon.info { background: #EFF6FF; color: #3B82F6; }
+.gmail-row-icon.success { background: #F0FDF4; color: #16A34A; }
+.gmail-row-icon.danger  { background: #FEF2F2; color: #DC2626; }
+.gmail-row-icon.warning { background: #FFFBEB; color: #D97706; }
+.gmail-row-icon.info    { background: #EFF6FF; color: #2563EB; }
 
+.gmail-row-body {
+    flex: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.gmail-row-title {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.gmail-row.unread .gmail-row-title {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.gmail-row-sep {
+    color: var(--text-muted);
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.gmail-row-preview {
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.gmail-row.unread .gmail-row-preview {
+    color: var(--text-secondary);
+}
+
+.gmail-row-time {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    white-space: nowrap;
+    text-align: right;
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+.gmail-row.unread .gmail-row-time {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.gmail-row-date {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.gmail-unread-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--primary);
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Empty state */
+.gmail-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 32px;
+    text-align: center;
+}
+
+.gmail-empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+
+.gmail-empty-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.gmail-empty-sub {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* ── Legacy notif classes (kept for compat) ──────────────────────── */
+.notif-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+}
+.notif-icon.success { background: #F0FDF4; color: #22C55E; }
+.notif-icon.danger  { background: #FEF2F2; color: #EF4444; }
+.notif-icon.warning { background: #FFFBEB; color: #F59E0B; }
+.notif-icon.info    { background: #EFF6FF; color: #3B82F6; }
 .notif-content { flex: 1; }
 .notif-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
 .notif-message { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
-
-.notif-meta {
-    text-align: right;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-}
-
 .notif-time { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
-
-.notif-dot {
-    width: 10px;
-    height: 10px;
-    background: var(--primary);
-    border-radius: 50%;
-}
+.notif-dot { width: 10px; height: 10px; background: var(--primary); border-radius: 50%; }
 
 /* ── BA Cards (Rejected/Archive) ───────────────────────────────── */
 .ba-card {
@@ -2285,8 +2467,8 @@ a:hover { color: var(--primary-hover); }
 
 /* -- BA Card (Arsip/Rejected/Detail) -------------------------- */
 .ba-card {
-    display: grid;
-    grid-template-columns: 280px 1fr;
+    display: flex;
+    gap: 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
@@ -2298,15 +2480,22 @@ a:hover { color: var(--primary-hover); }
 .ba-card:hover { box-shadow: var(--shadow-md); }
 
 .ba-card-left {
+    flex: 1;
     padding: 24px;
     border-right: 1px solid var(--border-light);
     background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
 .ba-card-right {
+    flex: 1;
     padding: 24px;
     display: flex;
     flex-direction: column;
+    gap: 0;
+    min-width: 0;
 }
 
 .ba-card-badge { margin-bottom: 12px; }
@@ -2395,7 +2584,8 @@ a:hover { color: var(--primary-hover); }
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 14px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+    width: 100%;
 }
 
 .pdf-icon {
