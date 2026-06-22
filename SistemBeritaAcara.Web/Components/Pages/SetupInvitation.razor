@@ -12,19 +12,10 @@
 
 <div class="login-page">
     <div class="login-card" style="max-width:480px;width:100%;">
-        <div class="login-card-bar"></div>
         <div class="login-card-body">
+            <!-- Logo only, no text heading -->
             <div class="login-logo">
-                <div class="logo-mark">
-                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="40" height="40" rx="8" fill="#1D4ED8"/>
-                        <text x="20" y="27" font-family="Inter" font-size="18" font-weight="800" fill="white" text-anchor="middle">P</text>
-                    </svg>
-                    <div>
-                        <div class="brand-name">Pertamina</div>
-                        <div style="font-size:11px;font-weight:600;color:#DC2626;text-transform:uppercase;letter-spacing:0.5px;">Patra Niaga</div>
-                    </div>
-                </div>
+                <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height:88px;width:auto;" alt="Pertamina Patra Niaga" />
                 <div style="font-size:13px;color:var(--text-muted);margin-top:12px;">Selamat datang, lengkapi profil Anda.</div>
             </div>
 
@@ -62,29 +53,21 @@
                     }
 
                     <div class="form-group">
-                        <label class="form-label">Email</label>
-                        <div class="search-input" style="background:#f1f5f9; cursor:not-allowed;">
-                            <i class="bi bi-envelope"></i>
-                            <input class="form-control" type="text" value="@email" readonly style="background:transparent; cursor:not-allowed; border:none;" />
-                        </div>
+                        <input class="login-input" type="email" value="@email" readonly style="background:transparent; cursor:not-allowed;" placeholder="Email Address" />
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Password Baru</label>
-                        <div class="search-input" style="position:relative;">
-                            <i class="bi bi-lock"></i>
-                            <input class="form-control" type="@pwType" @bind="newPassword" placeholder="Minimal 8 karakter" style="padding-right:44px;" />
-                            <button type="button" @onclick="TogglePwType" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">
+                        <div class="login-pw-wrap">
+                            <input class="login-input" type="@pwType" @bind="newPassword" placeholder="Password Baru (Min. 8 Karakter)" />
+                            <button type="button" class="login-pw-toggle" @onclick="TogglePwType" tabindex="-1">
                                 <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
                             </button>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Konfirmasi Password</label>
-                        <div class="search-input" style="position:relative;">
-                            <i class="bi bi-lock-fill"></i>
-                            <input class="form-control" type="@pwType" @bind="confirmPassword" placeholder="Tulis ulang password" style="padding-right:44px;" />
+                    <div class="form-group" style="margin-bottom:24px;">
+                        <div class="login-pw-wrap">
+                            <input class="login-input" type="@pwType" @bind="confirmPassword" placeholder="Konfirmasi Password" />
                         </div>
                     </div>
 

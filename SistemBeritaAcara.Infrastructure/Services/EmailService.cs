@@ -30,7 +30,7 @@ public class EmailService(IConfiguration config) : IEmailService
             
             <p style="font-size: 13px; color: #64748b;"><em>Catatan: Akses ini bersifat privat dan token akan otomatis kedaluwarsa dalam waktu 7 hari demi keamanan data.</em></p>
             <br>
-            <p>Salam hangat,<br><strong>Administrator IT Pertamina</strong></p>
+            <p>Salam hangat,<br><strong>Administrator IT Pertamina Patra Niaga</strong></p>
             """;
 
         await SendEmailAsync(toEmail, "Penting: Otorisasi Dokumen Berita Acara Terbaru", body);
@@ -46,7 +46,7 @@ public class EmailService(IConfiguration config) : IEmailService
         string link = $"{baseUrl.TrimEnd('/')}/invitation?email={encodedEmail}&token={encodedToken}";
 
         string body = $"""
-            <h2 style="color: #0f172a;">Selamat Datang di Sistem Berita Acara IT</h2>
+            <h2 style="color: #0f172a;">Selamat Datang di Sistem Informasi Berita Acara</h2>
             <p>Halo <strong>{userName}</strong>,</p>
             <p>Akun Anda telah didaftarkan oleh Administrator. Untuk menyelesaikan proses pendaftaran dan mulai menggunakan sistem, Anda perlu membuat password baru dan mengatur tanda tangan digital Anda.</p>
             
@@ -56,10 +56,33 @@ public class EmailService(IConfiguration config) : IEmailService
             
             <p style="font-size: 13px; color: #64748b;"><em>Catatan: Link ini hanya berlaku selama 24 jam demi keamanan data. Jika link kedaluwarsa, silakan hubungi Admin IT.</em></p>
             <br>
-            <p>Salam hangat,<br><strong>Administrator IT Pertamina</strong></p>
+            <p>Salam hangat,<br><strong>Administrator IT Pertamina Patra Niaga</strong></p>
             """;
 
         await SendEmailAsync(toEmail, "Undangan Pengguna: Setup Akun Sistem Berita Acara", body);
+    }
+
+    public async Task SendPasswordResetLinkAsync(string toEmail, string userName, string token, string baseUrl)
+    {
+        var encodedToken = Uri.EscapeDataString(token);
+        var encodedEmail = Uri.EscapeDataString(toEmail);
+        string link = $"{baseUrl.TrimEnd('/')}/reset-password?email={encodedEmail}&token={encodedToken}";
+
+        string body = $"""
+            <h2 style="color: #0f172a;">Permintaan Reset Password</h2>
+            <p>Halo <strong>{userName}</strong>,</p>
+            <p>Sistem menerima permintaan untuk mengatur ulang password akun Anda. Klik tombol di bawah ini untuk membuat password baru:</p>
+            
+            <div style="text-align: center; margin: 40px 0;">
+                <a href="{link}" style="background-color: #eab308; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #ca8a04;">Reset Password</a>
+            </div>
+            
+            <p style="font-size: 13px; color: #64748b;"><em>Catatan: Link ini hanya berlaku selama 24 jam. Jika Anda tidak pernah meminta reset password, abaikan email ini dan akun Anda akan tetap aman.</em></p>
+            <br>
+            <p>Salam hangat,<br><strong>Administrator IT Pertamina Patra Niaga</strong></p>
+            """;
+
+        await SendEmailAsync(toEmail, "Permintaan Reset Password - Sistem Berita Acara", body);
     }
 
     public async Task SendTtdUsedNotificationAsync(string toEmail, string pegawaiNama, string nomorSurat)
@@ -94,7 +117,7 @@ public class EmailService(IConfiguration config) : IEmailService
 
             <p style="font-size: 13px; color: #64748b;"><em>Anda akan diarahkan ke halaman login. Setelah berhasil login sebagai Approver, sistem akan otomatis membuka dokumen yang perlu ditinjau.</em></p>
             <br>
-            <p>Salam hangat,<br><strong>Sistem Berita Acara IT</strong></p>
+            <p>Salam hangat,<br><strong>Sistem Informasi Berita Acara</strong></p>
             """;
 
         await SendEmailAsync(toEmail, "Tindakan Diperlukan: Review & Persetujuan Berita Acara", body);
@@ -120,7 +143,7 @@ public class EmailService(IConfiguration config) : IEmailService
             <p>Berita Acara dengan nomor surat <strong>{nomorSurat}</strong> telah <strong style="color:{statusColor};">{statusText}</strong> oleh Approver.</p>
             {alasanSection}
             <br>
-            <p>Salam hangat,<br><strong>Sistem Berita Acara IT</strong></p>
+            <p>Salam hangat,<br><strong>Sistem Informasi Berita Acara</strong></p>
             """;
 
         string subject = approved
@@ -172,7 +195,7 @@ public class EmailService(IConfiguration config) : IEmailService
             <p>{actionText}</p>
             <p>{callToAction}</p>
             <br>
-            <p>Salam,<br><strong>Sistem Berita Acara IT</strong><br>PT Pertamina Patra Niaga</p>
+            <p>Salam,<br><strong>Sistem Informasi Berita Acara</strong><br>PT Pertamina Patra Niaga</p>
             """;
 
         string subject = isOverdue
@@ -193,7 +216,7 @@ public class EmailService(IConfiguration config) : IEmailService
 
         var message = new MimeMessage();
         // Set nama pengirim agar terlihat profesional dan tidak terdeteksi spam
-        message.From.Add(new MailboxAddress("Sistem Berita Acara IT", _from));
+        message.From.Add(new MailboxAddress("Sistem Informasi Berita Acara", _from));
         message.To.Add(MailboxAddress.Parse(toEmail));
         message.Subject = subject;
 
@@ -217,7 +240,7 @@ public class EmailService(IConfiguration config) : IEmailService
     <div class='container'>
         {htmlBody}
         <div class='footer'>
-            <p>Email ini dihasilkan secara otomatis oleh <strong>Sistem Berita Acara IT</strong> PT Pertamina Patra Niaga.</p>
+            <p>Email ini dihasilkan secara otomatis oleh <strong>Sistem Informasi Berita Acara</strong> PT Pertamina Patra Niaga.</p>
             <p>Mohon tidak membalas email ini (<em>No-Reply</em>).</p>
         </div>
     </div>
