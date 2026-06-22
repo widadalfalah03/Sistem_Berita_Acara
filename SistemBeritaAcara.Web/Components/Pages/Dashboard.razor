@@ -91,10 +91,9 @@ else if (currentRole == "AdminGudangBarang")
         <div class="jenis-card">
             <div class="jenis-title">Jenis BA</div>
             @{
-                var total = jenisData.Alokasi + jenisData.Peminjaman + jenisData.Lainnya;
+                var total = jenisData.Alokasi + jenisData.Peminjaman;
                 var pctAlokasi = total > 0 ? (int)Math.Round((double)jenisData.Alokasi / total * 100) : 0;
                 var pctPeminjaman = total > 0 ? (int)Math.Round((double)jenisData.Peminjaman / total * 100) : 0;
-                var pctLainnya = total > 0 ? (int)Math.Round((double)jenisData.Lainnya / total * 100) : 0;
             }
             <div class="jenis-item">
                 <div class="jenis-label">
@@ -109,13 +108,6 @@ else if (currentRole == "AdminGudangBarang")
                     <span class="jenis-pct">@pctPeminjaman%</span>
                 </div>
                 <div class="jenis-bar"><div class="jenis-fill peminjaman" style="width:@pctPeminjaman%"></div></div>
-            </div>
-            <div class="jenis-item">
-                <div class="jenis-label">
-                    <span class="jenis-name">Lainnya</span>
-                    <span class="jenis-pct">@pctLainnya%</span>
-                </div>
-                <div class="jenis-bar"><div class="jenis-fill lainnya" style="width:@pctLainnya%"></div></div>
             </div>
         </div>
 
