@@ -344,59 +344,74 @@
                 return;
             }
 
+            // Muat ulang entity BA dengan tracking agar EF bisa melacak perubahan.
+            // ba di state komponen ini adalah AsNoTracking — tidak bisa dipakai langsung untuk SaveChanges.
+            var trackedBa = await DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Pj)
+                .FirstOrDefaultAsync(b => b.Id == ba.Id);
+
+            if (trackedBa is null)
+            {
+                errorMessage = "Gagal submit: Berita Acara tidak ditemukan.";
+                isSubmitting = false;
+                return;
+            }
+
             // 1. Buat ApprovalToken untuk magic link PJ
+            // Gunakan BeritaAcara = trackedBa agar EF Core bisa memetakan shadow FK BeritaAcaraId
+            // dengan benar. trackedBa adalah entity yang sudah dilacak, sehingga tidak ada konflik.
             var tokenValue = Guid.NewGuid().ToString("N");
             DbContext.ApprovalToken.Add(new ApprovalToken
             {
-                BaId = ba.Id,
-                BeritaAcara = ba,
+                BaId = trackedBa.Id,
+                BeritaAcara = trackedBa,
                 Token = tokenValue,
                 TokenType = "PJ_SIGNATURE",
                 ExpiresAt = DateTime.Now.AddDays(7),
                 CreatedAt = DateTime.Now
             });
 
-            // Generate dokumen hanya jika belum ada — jika sudah ada berarti admin sudah
-            // edit manual via ONLYOFFICE, jangan timpa hasil editannya
-            if (string.IsNullOrEmpty(ba.DocxPath))
+            // Generate dokumen hanya jika belum ada
+            if (string.IsNullOrEmpty(trackedBa.DocxPath))
             {
-                ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+                trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(trackedBa);
                 await DbContext.SaveChangesAsync();
             }
 
             // Embed tanda tangan Admin Gudang (Yang Menyerahkan)
             var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-            await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, ttdPhysicalPath);
+            await DocumentService.EmbedTtdMenyerahkanAsync(trackedBa.Id, ttdPhysicalPath);
 
-            // 4. Update status → WaitingPJSign
-            ba.Status = "WaitingPJSign";
-            ba.SubmittedAt = DateTime.Now;
+            // Update status → WaitingPJSign
+            trackedBa.Status = "WaitingPJSign";
+            trackedBa.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
 
-            // 5. Kirim email magic link ke PJ — gunakan Navigation.BaseUri agar link
-            //    mengarah ke server yang benar (bukan hardcoded localhost)
+            // Kirim email magic link ke PJ
             var baseUrl = Navigation.BaseUri.TrimEnd('/');
             await EmailService.SendMagicLinkAsync(
-                ba.Pj!.Email ?? string.Empty,
-                ba.Pj.Nama,
-                ba.Id,
+                trackedBa.Pj!.Email ?? string.Empty,
+                trackedBa.Pj.Nama,
+                trackedBa.Id,
                 tokenValue,
                 baseUrl
             );
 
-            // 2. Kirim notifikasi in-app ke AdminGudangBarang
+            // Kirim notifikasi in-app ke AdminGudangBarang
             await NotificationService.SendAsync(
                 _currentUserId,
                 "WAITING_PJ_SIGN",
-                $"Draft BA telah diajukan. Menunggu tanda tangan PJ ({ba.Pj.Nama}).",
-                ba.Id
+                $"Draft BA telah diajukan. Menunggu tanda tangan PJ ({trackedBa.Pj.Nama}).",
+                trackedBa.Id
             );
 
-            // 6. Redirect ke halaman Progress
             Navigation.NavigateTo("/progress");
         }
         catch (Exception ex)
         {
+            // Bersihkan change tracker agar entitas yang pending (misal ApprovalToken)
+            // tidak ikut disimpan saat SaveChanges berikutnya dari halaman lain.
+            DbContext.ChangeTracker.Clear();
             errorMessage = $"Gagal submit: {ex.Message}";
         }
         finally { isSubmitting = false; }
