@@ -3951,6 +3951,8 @@ select option { background: var(--surface); color: var(--text-primary); }
     font-size: 13px;
     color: var(--danger);
     margin-bottom: 14px;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .rejected-item-actions {
