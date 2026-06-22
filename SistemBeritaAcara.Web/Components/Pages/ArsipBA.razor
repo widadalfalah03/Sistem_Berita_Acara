@@ -26,44 +26,75 @@
 }
 
 <!-- Filter Panel -->
-<div class="card" style="margin-bottom:16px;overflow:hidden;">
+<div class="card" style="margin-bottom:16px;overflow:hidden;padding:0;">
+    <!-- Row 1: No. Surat | PJ | Yang Menyerahkan -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border-light);">
-        <div style="padding:0;border-right:1px solid var(--border-light);">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px 6px;">No. Surat</div>
-            <div style="display:flex;align-items:center;gap:8px;padding:0 16px 10px;">
-                <i class="bi bi-search" style="color:var(--text-muted);font-size:13px;flex-shrink:0;"></i>
+        <div style="border-right:1px solid var(--border-light);padding:10px 16px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">No. Surat</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
                 <input type="text" placeholder="Cari nomor surat..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:14px;color:var(--text-primary);"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
                        @bind="search" @bind:event="oninput" />
             </div>
         </div>
-        <div style="padding:0;border-right:1px solid var(--border-light);">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px 6px;">Penanggung Jawab</div>
-            <div style="display:flex;align-items:center;gap:8px;padding:0 16px 10px;">
-                <i class="bi bi-person" style="color:var(--text-muted);font-size:13px;flex-shrink:0;"></i>
+        <div style="border-right:1px solid var(--border-light);padding:10px 16px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Penanggung Jawab</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-person" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
                 <input type="text" placeholder="Nama PJ..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:14px;color:var(--text-primary);"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
                        @bind="pjSearch" @bind:event="oninput" />
             </div>
         </div>
-        <div style="padding:0;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px 6px;">Yang Menyerahkan</div>
-            <div style="display:flex;align-items:center;gap:8px;padding:0 16px 10px;">
-                <i class="bi bi-person-badge" style="color:var(--text-muted);font-size:13px;flex-shrink:0;"></i>
+        <div style="padding:10px 16px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Yang Menyerahkan</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-person-badge" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
                 <input type="text" placeholder="Nama..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:14px;color:var(--text-primary);"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
                        @bind="menyerahkanSearch" @bind:event="oninput" />
+            </div>
+        </div>
+    </div>
+    <!-- Row 2: Yang Mengetahui | Tanggal Dari | Tanggal Sampai -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;">
+        <div style="border-right:1px solid var(--border-light);padding:10px 16px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Yang Mengetahui</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-person-check" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
+                <input type="text" placeholder="Nama approver..."
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
+                       @bind="mengetahuiSearch" @bind:event="oninput" />
+            </div>
+        </div>
+        <div style="border-right:1px solid var(--border-light);padding:10px 16px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Tanggal Dari</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-calendar3" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
+                <input type="date"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
+                       @bind="dateFrom" />
+            </div>
+        </div>
+        <div style="padding:10px 16px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Tanggal Sampai</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-calendar3" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
+                <input type="date"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
+                       @bind="dateTo" />
             </div>
         </div>
     </div>
     @if (HasActiveFilter)
     {
-        <div style="padding:10px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);">
+        <div style="padding:8px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-top:1px solid var(--border-light);">
             <span style="font-size:13px;color:var(--text-secondary);">
                 <strong>@FilteredBA.Count()</strong> dari <strong>@allBA.Count</strong> dokumen
             </span>
-            <button @onclick="ClearFilters" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--primary);font-weight:500;padding:0;">
-                <i class="bi bi-x-circle" style="margin-right:4px;"></i>Bersihkan
+            <button @onclick="ClearFilters" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--primary);font-weight:500;padding:0;display:flex;align-items:center;gap:4px;">
+                <i class="bi bi-x-circle"></i> Bersihkan
             </button>
         </div>
     }
@@ -91,7 +122,6 @@ else
         @foreach (var ba in FilteredBA)
         {
             <div class="arsip-row" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}?from=archive"))">
-                <span class="pill pill-approved" style="flex-shrink:0;">DITERIMA</span>
                 <span class="arsip-row-number">@ba.NomorSurat</span>
                 <span class="arsip-row-jenis">@ba.Jenis</span>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:14px;flex-shrink:0;">
@@ -122,11 +152,16 @@ else
     private string pjSearch = string.Empty;
     private string menyerahkanSearch = string.Empty;
     private string mengetahuiSearch = string.Empty;
+    private DateTime? dateFrom;
+    private DateTime? dateTo;
 
     private bool HasActiveFilter =>
         !string.IsNullOrEmpty(search) ||
         !string.IsNullOrEmpty(pjSearch) ||
-        !string.IsNullOrEmpty(menyerahkanSearch);
+        !string.IsNullOrEmpty(menyerahkanSearch) ||
+        !string.IsNullOrEmpty(mengetahuiSearch) ||
+        dateFrom.HasValue ||
+        dateTo.HasValue;
 
     private IEnumerable<BeritaAcaraEntity> FilteredBA => allBA
         .Where(b => string.IsNullOrEmpty(search) ||
@@ -134,7 +169,11 @@ else
         .Where(b => string.IsNullOrEmpty(pjSearch) ||
                     (b.Pj?.Nama ?? "").Contains(pjSearch, StringComparison.OrdinalIgnoreCase))
         .Where(b => string.IsNullOrEmpty(menyerahkanSearch) ||
-                    (b.Menyerahkan?.Nama ?? "").Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase));
+                    (b.Menyerahkan?.Nama ?? "").Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase))
+        .Where(b => string.IsNullOrEmpty(mengetahuiSearch) ||
+                    (b.Mengetahui?.Nama ?? "").Contains(mengetahuiSearch, StringComparison.OrdinalIgnoreCase))
+        .Where(b => !dateFrom.HasValue || b.Tanggal >= DateOnly.FromDateTime(dateFrom.Value))
+        .Where(b => !dateTo.HasValue || b.Tanggal <= DateOnly.FromDateTime(dateTo.Value));
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,6 +202,9 @@ else
         search = string.Empty;
         pjSearch = string.Empty;
         menyerahkanSearch = string.Empty;
+        mengetahuiSearch = string.Empty;
+        dateFrom = null;
+        dateTo = null;
     }
 
     private async Task ExportExcelAsync()
