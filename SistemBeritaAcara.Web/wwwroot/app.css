@@ -385,17 +385,17 @@ a:hover { color: var(--primary-hover); }
 
 .dashboard-fill .dashboard-grid {
     margin-bottom: 0;
-}
-
-.dashboard-fill .dashboard-grid:last-child {
     flex: 1;
     min-height: 0;
 }
 
-.dashboard-fill .dashboard-grid:last-child .jenis-card,
-.dashboard-fill .dashboard-grid:last-child .due-section {
+.dashboard-fill .dashboard-grid .chart-card,
+.dashboard-fill .dashboard-grid .jenis-card,
+.dashboard-fill .dashboard-grid .due-section {
     height: 100%;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .page-header {
@@ -3988,7 +3988,8 @@ select option { background: var(--surface); color: var(--text-primary); }
     display: flex;
     flex-direction: column;
     gap: 0;
-    max-height: 144px; /* Fixed height to match 2 items */
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     scrollbar-width: thin; /* Firefox */
 }
