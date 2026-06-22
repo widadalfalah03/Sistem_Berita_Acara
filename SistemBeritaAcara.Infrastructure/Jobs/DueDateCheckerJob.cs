@@ -1,39 +1,112 @@
 using Microsoft.EntityFrameworkCore;
+using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Core.Interfaces;
 using SistemBeritaAcara.Infrastructure.Data;
 
 namespace SistemBeritaAcara.Infrastructure.Jobs;
 
-public class DueDateCheckerJob(AppDbContext db, INotificationService notificationService)
+public class DueDateCheckerJob(
+    AppDbContext db,
+    INotificationService notificationService,
+    IEmailService emailService)
 {
     public async Task CheckDueDatesAsync()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var tomorrow = today.AddDays(1);
 
-        var dueTomorrow = await db.BeritaAcara
-            .Where(ba => ba.Status == "Approved"
-                && ba.TanggalKembali == tomorrow
-                && ba.Jenis == "Peminjaman")
-            .Include(ba => ba.Creator)
-            .ToListAsync();
-
-        foreach (var ba in dueTomorrow)
-        {
-            string msg = $"Peminjaman BA {ba.NomorSurat} jatuh tempo besok ({tomorrow:dd/MM/yyyy}).";
-            await notificationService.SendAsync(ba.CreatedBy, "DUE_REMINDER", msg, ba.Id);
-        }
-
+        // ── 1. Jatuh tempo HARI INI (H-0) ─────────────────────────────────────
         var dueToday = await db.BeritaAcara
             .Where(ba => ba.Status == "Approved"
+                && ba.Jenis == "Peminjaman"
                 && ba.TanggalKembali == today
-                && ba.Jenis == "Peminjaman")
+                && !ba.IsReturned)
+            .Include(ba => ba.Creator)
+            .Include(ba => ba.Pj)
             .ToListAsync();
 
         foreach (var ba in dueToday)
         {
-            string msg = $"Peminjaman BA {ba.NomorSurat} jatuh tempo hari ini ({today:dd/MM/yyyy}).";
-            await notificationService.SendAsync(ba.CreatedBy, "DUE_TODAY", msg, ba.Id);
+            string tglStr = today.ToString("dd/MM/yyyy");
+            string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
+            string pjNama = ba.Pj?.Nama ?? "–";
+
+            // Notifikasi Inbox ke Admin Gudang yang buat BA
+            string msgInbox = $"⏰ Peminjaman {nomorSurat} (PJ: {pjNama}) jatuh tempo hari ini ({tglStr}). Harap segera koordinasikan pengembalian perangkat.";
+            await notificationService.SendAsync(ba.CreatedBy, "DUE_TODAY", msgInbox, ba.Id);
+
+            // Email ke Admin Gudang
+            if (!string.IsNullOrEmpty(ba.Creator?.Email))
+            {
+                await emailService.SendDueDateReminderAsync(
+                    ba.Creator.Email,
+                    ba.Creator.Nama ?? "Admin",
+                    nomorSurat,
+                    pjNama,
+                    tglStr,
+                    isOverdue: false,
+                    isForPj: false);
+            }
+
+            // Email ke PJ
+            if (!string.IsNullOrEmpty(ba.Pj?.Email))
+            {
+                await emailService.SendDueDateReminderAsync(
+                    ba.Pj.Email,
+                    pjNama,
+                    nomorSurat,
+                    pjNama,
+                    tglStr,
+                    isOverdue: false,
+                    isForPj: true);
+            }
+        }
+
+        // ── 2. Sudah LEWAT jatuh tempo (overdue) ──────────────────────────────
+        // Kirim pengingat sekali sehari untuk yang sudah overdue
+        var overdue = await db.BeritaAcara
+            .Where(ba => ba.Status == "Approved"
+                && ba.Jenis == "Peminjaman"
+                && ba.TanggalKembali < today
+                && !ba.IsReturned)
+            .Include(ba => ba.Creator)
+            .Include(ba => ba.Pj)
+            .ToListAsync();
+
+        foreach (var ba in overdue)
+        {
+            string tglStr = ba.TanggalKembali!.Value.ToString("dd/MM/yyyy");
+            string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
+            string pjNama = ba.Pj?.Nama ?? "–";
+
+            // Notifikasi Inbox ke Admin Gudang
+            string msgInbox = $"🚨 Peminjaman {nomorSurat} (PJ: {pjNama}) telah melewati batas pengembalian ({tglStr}). Segera tindak lanjuti!";
+            await notificationService.SendAsync(ba.CreatedBy, "DUE_OVERDUE", msgInbox, ba.Id);
+
+            // Email ke Admin Gudang
+            if (!string.IsNullOrEmpty(ba.Creator?.Email))
+            {
+                await emailService.SendDueDateReminderAsync(
+                    ba.Creator.Email,
+                    ba.Creator.Nama ?? "Admin",
+                    nomorSurat,
+                    pjNama,
+                    tglStr,
+                    isOverdue: true,
+                    isForPj: false);
+            }
+
+            // Email ke PJ
+            if (!string.IsNullOrEmpty(ba.Pj?.Email))
+            {
+                await emailService.SendDueDateReminderAsync(
+                    ba.Pj.Email,
+                    pjNama,
+                    nomorSurat,
+                    pjNama,
+                    tglStr,
+                    isOverdue: true,
+                    isForPj: true);
+            }
         }
     }
 }
