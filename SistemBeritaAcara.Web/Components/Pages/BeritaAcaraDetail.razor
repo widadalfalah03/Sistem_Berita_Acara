@@ -18,6 +18,17 @@
 
 <PageTitle>Detail Berita Acara — Sistem Berita Acara</PageTitle>
 
+
+@* ── Fullscreen overlay saat approver memproses Setuju / Tolak ── *@
+@if (isProcessing && isApproverAction)
+{
+    <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+        <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">@approverActionLabel</div>
+        <div style="font-size:13px;color:var(--text-muted);">@approverActionSubLabel</div>
+    </div>
+}
+
 @if (isLoading)
 {
     <div class="loading-spinner"><div class="spinner"></div><span>Memuat detail...</span></div>
@@ -281,6 +292,9 @@ else
     private string actionMessage = string.Empty;
     private string currentRole = string.Empty;
     private bool isProcessing = false;
+    private bool isApproverAction = false;
+    private string approverActionLabel = string.Empty;
+    private string approverActionSubLabel = string.Empty;
 
     private string sortColumn = "Perangkat";
     private bool sortAscending = true;
@@ -369,6 +383,10 @@ else
     private async Task ApproveAsync()
     {
         isProcessing = true;
+        isApproverAction = true;
+        approverActionLabel = "Menyetujui dokumen...";
+        approverActionSubLabel = "Menyematkan tanda tangan dan membuat dokumen final";
+        await InvokeAsync(StateHasChanged);
         try
         {
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -438,13 +456,17 @@ else
             await LoadAsync();
         }
         catch (Exception ex) { actionMessage = $"Gagal: {ex.Message}"; }
-        finally { isProcessing = false; }
+        finally { isProcessing = false; isApproverAction = false; }
     }
 
     private async Task RejectAsync()
     {
         if (string.IsNullOrWhiteSpace(rejectReason)) { rejectError = "Alasan penolakan wajib diisi."; return; }
         isProcessing = true;
+        isApproverAction = true;
+        approverActionLabel = "Menolak dokumen...";
+        approverActionSubLabel = "Menyimpan alasan penolakan dan mengirim notifikasi";
+        await InvokeAsync(StateHasChanged);
         try
         {
             ba!.Status = "Rejected";
@@ -469,7 +491,7 @@ else
             await LoadAsync();
         }
         catch (Exception ex) { rejectError = $"Gagal: {ex.Message}"; }
-        finally { isProcessing = false; }
+        finally { isProcessing = false; isApproverAction = false; }
     }
 
     private static string GetStatusPill(string s) => s switch
