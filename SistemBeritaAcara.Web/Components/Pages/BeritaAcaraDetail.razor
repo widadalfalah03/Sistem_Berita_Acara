@@ -357,7 +357,8 @@ else
             ba!.Status = "WaitingPJSign";
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
-            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue);
+            var baseUrl = Navigation.BaseUri.TrimEnd('/');
+            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl);
             await NotificationService.SendToRoleAsync("AdminGudangBarang", "WAITING_PJ_SIGN", $"BA {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
             actionMessage = "Magic link berhasil dikirim ke email PJ.";
             await LoadAsync();

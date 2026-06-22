@@ -302,12 +302,15 @@
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
 
-            // 5. Kirim email magic link ke PJ
+            // 5. Kirim email magic link ke PJ — gunakan Navigation.BaseUri agar link
+            //    mengarah ke server yang benar (bukan hardcoded localhost)
+            var baseUrl = Navigation.BaseUri.TrimEnd('/');
             await EmailService.SendMagicLinkAsync(
                 ba.Pj!.Email ?? string.Empty,
                 ba.Pj.Nama,
                 ba.Id,
-                tokenValue
+                tokenValue,
+                baseUrl
             );
 
             // 2. Kirim notifikasi in-app ke AdminGudangBarang
