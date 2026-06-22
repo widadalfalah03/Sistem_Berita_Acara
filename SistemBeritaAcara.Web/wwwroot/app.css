@@ -2465,7 +2465,133 @@ a:hover { color: var(--primary-hover); }
 .due-badge.h1 { background: #FFFBEB; color: #B45309; }
 .due-badge.h2 { background: #F0FDF4; color: #15803D; }
 
-/* -- BA Card (Arsip/Rejected/Detail) -------------------------- */
+/* -- Archive Card (Clean vertical layout) --------------------- */
+.archive-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 14px;
+    transition: box-shadow 0.2s, background 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.archive-card:hover {
+    box-shadow: var(--shadow-md);
+    background: var(--bg);
+}
+
+.archive-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.archive-badge { margin: 0; }
+
+.archive-number {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: monospace;
+    min-width: 100px;
+}
+
+.archive-jenis {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    background: var(--primary-light);
+    border-radius: var(--radius-full);
+    font-weight: 500;
+}
+
+.archive-date {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.archive-body {
+    display: flex;
+    gap: 20px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.archive-person {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.archive-person .label {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.archive-person .name {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.archive-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    gap: 16px;
+}
+
+.archive-file {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.file-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-type {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.archive-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* -- BA Card (Arsip/Rejected/Detail) - Deprecated but kept for compatibility */
 .ba-card {
     display: flex;
     gap: 0;
