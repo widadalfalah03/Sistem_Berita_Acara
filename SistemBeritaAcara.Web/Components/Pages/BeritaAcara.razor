@@ -566,6 +566,7 @@
         editId = EditIdParam;
         if (editId.HasValue)
         {
+            DbContext.ChangeTracker.Clear();
             var existing = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Perangkat)
                 .Include(b => b.BuktiFotos)
@@ -683,6 +684,7 @@
         {
             if (!editId.HasValue) { autoSaveStatus = AutoSaveState.Error; StateHasChanged(); return; }
 
+            DbContext.ChangeTracker.Clear();
             var existing = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Perangkat)
                 .FirstOrDefaultAsync(b => b.Id == editId.Value);
@@ -1030,6 +1032,7 @@
 
             if (editId.HasValue)
             {
+                DbContext.ChangeTracker.Clear();
                 var existing = await DbContext.Set<BeritaAcaraEntity>()
                     .Include(b => b.Perangkat)
                     .Include(b => b.BuktiFotos)
@@ -1065,9 +1068,9 @@
                     }
                 }
 
-                // Jika data form berubah, dokumen HARUS digenerate ulang dari template
+                // Jika data form berubah, ATAU status sebelumnya Rejected, dokumen HARUS digenerate ulang dari template
                 // dengan menghapus path lama, EditorBA akan mengenerate ulan.
-                if (isChanged)
+                if (isChanged || existing.Status == "Rejected")
                 {
                     existing.DocxPath = null;
                 }
