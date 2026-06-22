@@ -181,7 +181,7 @@
     <div class="form-section">
         <div class="form-section-title">3. Daftar Perangkat</div>
 
-        <table class="perangkat-table" style="margin-bottom:12px;">
+        <table class="perangkat-table" style="margin-bottom:12px;table-layout:fixed;">
             <thead>
                 <tr>
                     <th style="width:28%">Jenis Perangkat <span style="color:var(--danger)">*</span></th>
@@ -189,7 +189,7 @@
                     <th style="width:12%">Satuan <span style="color:var(--danger)">*</span></th>
                     <th style="width:20%">No. Serial <span style="color:var(--danger)">*</span></th>
                     <th style="width:24%">Keterangan <span style="color:var(--danger)">*</span></th>
-                    <th style="width:44px;padding:0;"></th>
+                    <th style="width:6%;padding:0 0 0 4px;"></th>
                 </tr>
             </thead>
             <tbody>
@@ -252,8 +252,9 @@
                                    @onchange="@(e => { p.NoSerial = e.Value?.ToString(); TriggerAutoSave(); })" /></td>
                         <td><input type="text" value="@p.Keterangan"
                                    @onchange="@(e => { p.Keterangan = e.Value?.ToString(); TriggerAutoSave(); })" /></td>
-                        <td style="width:44px;padding:0;text-align:center;vertical-align:middle;">
-                            <button type="button" class="perangkat-delete" @onclick="() => RemovePerangkat(p)">
+                        <td style="padding:0 0 0 4px;vertical-align:middle;">
+                            <button type="button" class="perangkat-delete" @onclick="() => RemovePerangkat(p)"
+                                    style="width:100%;border-radius:var(--radius-sm);">
                                 <i class="bi bi-trash3"></i>
                             </button>
                         </td>
