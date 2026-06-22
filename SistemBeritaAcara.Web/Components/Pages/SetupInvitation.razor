@@ -1,0 +1,319 @@
+@page "/invitation"
+@layout EmptyLayout
+@using Microsoft.AspNetCore.Identity
+@using SistemBeritaAcara.Core.Entities
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@rendermode InteractiveServer
+
+<PageTitle>Setup Akun — Sistem Berita Acara</PageTitle>
+
+<div class="login-page">
+    <div class="login-card" style="max-width:480px;width:100%;">
+        <div class="login-card-bar"></div>
+        <div class="login-card-body">
+            <div class="login-logo">
+                <div class="logo-mark">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="40" height="40" rx="8" fill="#1D4ED8"/>
+                        <text x="20" y="27" font-family="Inter" font-size="18" font-weight="800" fill="white" text-anchor="middle">P</text>
+                    </svg>
+                    <div>
+                        <div class="brand-name">Pertamina</div>
+                        <div style="font-size:11px;font-weight:600;color:#DC2626;text-transform:uppercase;letter-spacing:0.5px;">Patra Niaga</div>
+                    </div>
+                </div>
+                <div style="font-size:13px;color:var(--text-muted);margin-top:12px;">Selamat datang, lengkapi profil Anda.</div>
+            </div>
+
+            @if (isLoading)
+            {
+                <div style="text-align:center;padding:24px;">
+                    <div class="spinner"></div>
+                    <div style="margin-top:8px;font-size:13px;color:var(--text-secondary);">Memvalidasi undangan...</div>
+                </div>
+            }
+            else if (invalidToken)
+            {
+                <div style="text-align:center;padding:24px;">
+                    <i class="bi bi-x-circle-fill" style="font-size:48px;color:var(--danger);margin-bottom:16px;"></i>
+                    <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Undangan Tidak Valid</h3>
+                    <p style="font-size:14px;color:var(--text-secondary);margin-bottom:24px;">
+                        Tautan undangan ini tidak valid atau telah kedaluwarsa. Silakan hubungi Administrator IT untuk meminta undangan baru.
+                    </p>
+                    <a href="/login" class="btn btn-outline" style="width:100%;">Kembali ke Login</a>
+                </div>
+            }
+            else
+            {
+                @if (step == 1)
+                {
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;text-align:center;">Buat Password Baru</h3>
+                    <p style="font-size:13px;color:var(--text-secondary);text-align:center;margin-bottom:24px;">Silakan buat password untuk akun Anda sebelum mulai menggunakan sistem.</p>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="login-error" style="margin-bottom:16px;">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            @errorMessage
+                        </div>
+                    }
+
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <div class="search-input" style="background:#f1f5f9; cursor:not-allowed;">
+                            <i class="bi bi-envelope"></i>
+                            <input class="form-control" type="text" value="@email" readonly style="background:transparent; cursor:not-allowed; border:none;" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Password Baru</label>
+                        <div class="search-input" style="position:relative;">
+                            <i class="bi bi-lock"></i>
+                            <input class="form-control" type="@pwType" @bind="newPassword" placeholder="Minimal 8 karakter" style="padding-right:44px;" />
+                            <button type="button" @onclick="TogglePwType" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;">
+                                <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Konfirmasi Password</label>
+                        <div class="search-input" style="position:relative;">
+                            <i class="bi bi-lock-fill"></i>
+                            <input class="form-control" type="@pwType" @bind="confirmPassword" placeholder="Tulis ulang password" style="padding-right:44px;" />
+                        </div>
+                    </div>
+
+                    <button class="login-btn" @onclick="ProcessStep1">
+                        <span>Selanjutnya <i class="bi bi-arrow-right"></i></span>
+                    </button>
+                }
+                else if (step == 2)
+                {
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;text-align:center;">Buat Tanda Tangan</h3>
+                    <p style="font-size:13px;color:var(--text-secondary);text-align:center;margin-bottom:24px;">Gambarkan tanda tangan digital Anda. Ini akan digunakan untuk menandatangani Berita Acara secara otomatis.</p>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="login-error" style="margin-bottom:16px;">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            @errorMessage
+                        </div>
+                    }
+
+                    <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg-card);margin-bottom:12px;overflow:hidden;">
+                        <canvas id="setup-ttd-canvas" width="400" height="200" 
+                                style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"
+                                @onmousedown="OnCanvasMouseDown"
+                                @onmousemove="OnCanvasMouseMove"
+                                @onmouseup="OnCanvasMouseUp"
+                                @onmouseout="OnCanvasMouseUp"
+                                @ontouchstart="OnTouchStart"
+                                @ontouchmove="OnTouchMove"
+                                @ontouchend="OnTouchEnd"></canvas>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+                        <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
+                            <i class="bi bi-eraser"></i> Hapus Tanda Tangan
+                        </button>
+                    </div>
+
+                    <button class="login-btn" @onclick="ProcessStep2" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span>Memproses...</span>
+                        }
+                        else
+                        {
+                            <span>Selesai & Login <i class="bi bi-box-arrow-in-right"></i></span>
+                        }
+                    </button>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+<form id="autoLogin" method="post" action="/account/login" style="display:none;">
+    <input type="hidden" name="email" value="@email" />
+    <input type="hidden" name="password" value="@newPassword" />
+    <input type="hidden" name="returnUrl" value="/dashboard" />
+</form>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string email { get; set; } = string.Empty;
+
+    [SupplyParameterFromQuery]
+    public string token { get; set; } = string.Empty;
+
+    private int step = 1;
+    private bool isLoading = true;
+    private bool invalidToken = false;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+    private ApplicationUser? user;
+
+    private string pwType = "password";
+    private string newPassword = string.Empty;
+    private string confirmPassword = string.Empty;
+    private bool _canvasInitialized = false;
+    private bool isDrawingActive = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(token))
+        {
+            invalidToken = true;
+            isLoading = false;
+            return;
+        }
+
+        user = await UserManager.FindByEmailAsync(email);
+        if (user == null || user.IsDeleted)
+        {
+            invalidToken = true;
+            isLoading = false;
+            return;
+        }
+
+        // We verify the token implicitly by doing nothing. If we want to strictly verify without resetting:
+        var isValid = await UserManager.VerifyUserTokenAsync(user, UserManager.Options.Tokens.PasswordResetTokenProvider, "ResetPassword", token);
+        if (!isValid)
+        {
+            invalidToken = true;
+        }
+
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (step == 2 && !_canvasInitialized)
+        {
+            _canvasInitialized = true;
+            try { await JS.InvokeVoidAsync("setupCanvas.init"); } catch { }
+        }
+    }
+
+    private void TogglePwType()
+    {
+        pwType = pwType == "password" ? "text" : "password";
+    }
+
+    private void ProcessStep1()
+    {
+        errorMessage = string.Empty;
+        if (string.IsNullOrWhiteSpace(newPassword))
+        {
+            errorMessage = "Password baru wajib diisi.";
+            return;
+        }
+        if (newPassword.Length < 8)
+        {
+            errorMessage = "Password baru minimal 8 karakter.";
+            return;
+        }
+        if (newPassword != confirmPassword)
+        {
+            errorMessage = "Konfirmasi password tidak cocok.";
+            return;
+        }
+
+        step = 2;
+    }
+
+    private async Task OnCanvasMouseDown(MouseEventArgs e) 
+    {
+        isDrawingActive = true;
+        await JS.InvokeVoidAsync("setupCanvas.start", e);
+    }
+    
+    private async Task OnCanvasMouseMove(MouseEventArgs e) 
+    {
+        if (!isDrawingActive) return;
+        await JS.InvokeVoidAsync("setupCanvas.move", e);
+    }
+    
+    private async Task OnCanvasMouseUp(MouseEventArgs e) 
+    {
+        isDrawingActive = false;
+        await JS.InvokeVoidAsync("setupCanvas.stop");
+    }
+    
+    private async Task OnTouchStart(TouchEventArgs e) 
+    {
+        isDrawingActive = true;
+        await JS.InvokeVoidAsync("setupCanvas.start", e.Touches[0]);
+    }
+    
+    private async Task OnTouchMove(TouchEventArgs e) 
+    {
+        if (!isDrawingActive) return;
+        await JS.InvokeVoidAsync("setupCanvas.move", e.Touches[0]);
+    }
+    
+    private async Task OnTouchEnd(TouchEventArgs e) 
+    {
+        isDrawingActive = false;
+        await JS.InvokeVoidAsync("setupCanvas.stop");
+    }
+    
+    private async Task ClearCanvasAsync() => await JS.InvokeVoidAsync("setupCanvas.clear");
+
+    private async Task ProcessStep2()
+    {
+        if (user == null) return;
+        errorMessage = string.Empty;
+        
+        bool isEmpty = await JS.InvokeAsync<bool>("setupCanvas.isEmpty");
+        if (isEmpty)
+        {
+            errorMessage = "Tanda tangan tidak boleh kosong.";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            // Reset Password First
+            var resetResult = await UserManager.ResetPasswordAsync(user, token, newPassword);
+            if (!resetResult.Succeeded)
+            {
+                errorMessage = "Gagal memproses undangan: " + string.Join(", ", resetResult.Errors.Select(e => e.Description));
+                isSaving = false;
+                return;
+            }
+
+            // Save Signature
+            var dataUrl = await JS.InvokeAsync<string>("setupCanvas.getDataUrl");
+            var base64 = dataUrl.Split(',')[1];
+            var bytes = Convert.FromBase64String(base64);
+
+            var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
+            var fileName = $"ttd-user-{user.Id}.png";
+            var filePath = Path.Combine(dir, fileName);
+            await File.WriteAllBytesAsync(filePath, bytes);
+
+            user.TtdPath = $"files/signatures/{fileName}";
+            user.MustChangePw = false;
+            
+            var updateResult = await UserManager.UpdateAsync(user);
+
+            // Execute auto-login
+            await JS.InvokeVoidAsync("eval", "document.getElementById('autoLogin').submit();");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Terjadi kesalahan: {ex.Message}";
+            isSaving = false;
+        }
+    }
+}

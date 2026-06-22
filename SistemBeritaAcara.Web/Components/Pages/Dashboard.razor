@@ -510,12 +510,15 @@ else if (currentRole == "AdminIT")
         currentRole = appUser.Role;
         currentUserId = appUser.Id;
 
-        if (currentRole == "AdminGudangBarang")
+        if (currentRole == "AdminIT")
+        {
+            Navigation.NavigateTo("/pengguna");
+            return;
+        }
+        else if (currentRole == "AdminGudangBarang")
             await LoadGudangDataAsync();
         else if (currentRole == "Approver")
             await LoadApproverDataAsync();
-        else if (currentRole == "AdminIT")
-            await LoadAdminITDataAsync();
 
         isLoading = false;
     }

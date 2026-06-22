@@ -39,6 +39,29 @@ public class EmailService(IConfiguration config) : IEmailService
     public async Task SendNotificationAsync(string toEmail, string subject, string htmlBody)
         => await SendEmailAsync(toEmail, subject, htmlBody);
 
+    public async Task SendUserInvitationAsync(string toEmail, string userName, string token, string baseUrl)
+    {
+        var encodedToken = Uri.EscapeDataString(token);
+        var encodedEmail = Uri.EscapeDataString(toEmail);
+        string link = $"{baseUrl.TrimEnd('/')}/invitation?email={encodedEmail}&token={encodedToken}";
+
+        string body = $"""
+            <h2 style="color: #0f172a;">Selamat Datang di Sistem Berita Acara IT</h2>
+            <p>Halo <strong>{userName}</strong>,</p>
+            <p>Akun Anda telah didaftarkan oleh Administrator. Untuk menyelesaikan proses pendaftaran dan mulai menggunakan sistem, Anda perlu membuat password baru dan mengatur tanda tangan digital Anda.</p>
+            
+            <div style="text-align: center; margin: 40px 0;">
+                <a href="{link}" style="background-color: #0284c7; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #0369a1;">Selesaikan Setup Akun</a>
+            </div>
+            
+            <p style="font-size: 13px; color: #64748b;"><em>Catatan: Link ini hanya berlaku selama 24 jam demi keamanan data. Jika link kedaluwarsa, silakan hubungi Admin IT.</em></p>
+            <br>
+            <p>Salam hangat,<br><strong>Administrator IT Pertamina</strong></p>
+            """;
+
+        await SendEmailAsync(toEmail, "Undangan Pengguna: Setup Akun Sistem Berita Acara", body);
+    }
+
     public async Task SendTtdUsedNotificationAsync(string toEmail, string pegawaiNama, string nomorSurat)
     {
         string body = $"""
