@@ -230,7 +230,6 @@ else
                 <input type="password" class="form-control" @bind="pwConfirm" style="font-size:13px;" />
             </div>
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
-                <button class="btn btn-outline" @onclick="() => showPwModal = false">Batal</button>
                 <button class="btn btn-primary" @onclick="ChangePasswordAsync" disabled="@isChangingPw">
                     @if (isChangingPw) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
                     else { <span>Simpan</span> }
@@ -272,7 +271,6 @@ else
                     <i class="bi bi-eraser"></i> Hapus TTD
                 </button>
                 <div style="display:flex;gap:8px;">
-                    <button class="btn btn-outline" @onclick="CloseTtdModal">Batal</button>
                     <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@(isCanvasEmpty || isSavingTtd)">
                         @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
                         else { <i class="bi bi-save"></i> <span>Simpan</span> }
