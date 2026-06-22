@@ -95,78 +95,206 @@ else if (currentRole == "AdminGudangBarang")
                 var pctAlokasi = total > 0 ? (int)Math.Round((double)jenisData.Alokasi / total * 100) : 0;
                 var pctPeminjaman = total > 0 ? (int)Math.Round((double)jenisData.Peminjaman / total * 100) : 0;
             }
-            <div class="jenis-item">
-                <div class="jenis-label">
-                    <span class="jenis-name">Alokasi</span>
-                    <span class="jenis-pct">@pctAlokasi%</span>
-                </div>
-                <div class="jenis-bar"><div class="jenis-fill alokasi" style="width:@pctAlokasi%"></div></div>
-            </div>
-            <div class="jenis-item">
-                <div class="jenis-label">
-                    <span class="jenis-name">Peminjaman</span>
-                    <span class="jenis-pct">@pctPeminjaman%</span>
-                </div>
-                <div class="jenis-bar"><div class="jenis-fill peminjaman" style="width:@pctPeminjaman%"></div></div>
-            </div>
+              <div class="jenis-item">
+                  <div class="jenis-label">
+                      <span class="jenis-name">Alokasi</span>
+                      <span class="jenis-pct">@pctAlokasi%</span>
+                  </div>
+                  <div class="jenis-bar"><div class="jenis-fill alokasi" style="width:@pctAlokasi%"></div></div>
+              </div>
+              <div class="jenis-item">
+                  <div class="jenis-label">
+                      <span class="jenis-name">Peminjaman</span>
+                      <span class="jenis-pct">@pctPeminjaman%</span>
+                  </div>
+                  <div class="jenis-bar"><div class="jenis-fill peminjaman" style="width:@pctPeminjaman%"></div></div>
+              </div>
         </div>
 
-        <!-- Due Date table -->
+        <!-- Peminjaman card -->
         <div class="due-section">
             <div class="due-header">
                 <div class="due-title">
                     <i class="bi bi-alarm"></i>
-                    Peminjaman Jatuh Tempo
+                    Peminjaman Aktif
                 </div>
-                <a class="due-link" href="/archive">Lihat Semua</a>
+                @if (activePeminjaman.Any(b => (b.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days < 0))
+                {
+                    <span class="pill" style="background:var(--danger-light);color:var(--danger);font-size:11px;">@activePeminjaman.Count(b => (b.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days < 0) Overdue</span>
+                }
             </div>
-            @if (!dueDates.Any())
+            @if (!activePeminjaman.Any())
             {
                 <div style="text-align:center;padding:24px;color:var(--text-muted);">
                     <i class="bi bi-check-circle" style="font-size:24px;"></i>
-                    <div style="margin-top:8px;font-size:14px;">Tidak ada jatuh tempo mendekati</div>
+                    <div style="margin-top:8px;font-size:14px;">Tidak ada peminjaman aktif</div>
                 </div>
             }
             else
             {
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th style="cursor:pointer;" @onclick="@(() => SortDue("No. Surat"))">No. Surat <i class="bi @GetDueSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                            <th style="cursor:pointer;" @onclick="@(() => SortDue("PJ"))">Penanggung Jawab <i class="bi @GetDueSortIcon("PJ")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                            <th style="cursor:pointer;" @onclick="@(() => SortDue("Tgl Kembali"))">Tgl Kembali <i class="bi @GetDueSortIcon("Tgl Kembali")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                            <th style="cursor:pointer;" @onclick="@(() => SortDue("Status"))">Status <i class="bi @GetDueSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var d in SortedDueDates)
-                        {
-                            var daysLeft = (d.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
-                            <tr>
-                                <td><span class="fw-semibold">@d.NomorSurat</span></td>
-                                <td>@d.Pj?.Nama</td>
-                                <td>@d.TanggalKembali?.ToString("dd MMM yyyy")</td>
-                                <td>
-                                    @if (daysLeft == 0)
-                                    {
-                                        <span class="due-badge today">Hari Ini</span>
-                                    }
-                                    else if (daysLeft == 1)
-                                    {
-                                        <span class="due-badge h1">H-1</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="due-badge h2">H-@daysLeft</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <div class="due-list">
+                    @foreach (var d in activePeminjaman)
+                    {
+                        var daysLeft = (d.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
+                        var badgeClass = daysLeft < 0 ? "due-badge overdue" : daysLeft == 0 ? "due-badge today" : daysLeft <= 2 ? "due-badge h1" : "due-badge h2";
+                        var badgeText = daysLeft < 0 ? $"Lewat {Math.Abs(daysLeft)}h" : daysLeft == 0 ? "Hari Ini" : $"H-{daysLeft}";
+                        <div class="due-item">
+                            <div class="due-item-info">
+                                <div class="due-item-surat">@d.NomorSurat</div>
+                                <div class="due-item-pj"><i class="bi bi-person" style="font-size:11px;"></i> @d.Pj?.Nama</div>
+                                <div class="due-item-tgl"><i class="bi bi-calendar-event" style="font-size:11px;"></i> @d.TanggalKembali?.ToString("dd MMM yyyy")</div>
+                            </div>
+                            <div class="due-item-right">
+                                <span class="@badgeClass">@badgeText</span>
+                                <button class="btn-detail-loan" @onclick="@(() => OpenDetailModal(d.Id))">
+                                    <i class="bi bi-eye"></i> Detail
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
             }
         </div>
     </div>
+    </div>
+}
+
+<!-- ═══ MODAL DETAIL PEMINJAMAN ═══ -->
+@if (modalBA is not null)
+{
+    <div class="loan-modal-overlay" @onclick="CloseModal">
+        <div class="loan-modal" @onclick:stopPropagation="true">
+            <!-- Modal Header -->
+            <div class="loan-modal-header">
+                <div>
+                    <div class="loan-modal-label">Detail Peminjaman</div>
+                    <div class="loan-modal-title">@modalBA.NomorSurat</div>
+                </div>
+                @{
+                    var mDaysLeft = (modalBA.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
+                    var mBadgeClass = mDaysLeft < 0 ? "due-badge overdue" : mDaysLeft == 0 ? "due-badge today" : mDaysLeft <= 2 ? "due-badge h1" : "due-badge h2";
+                    var mBadgeText = mDaysLeft < 0 ? $"Lewat {Math.Abs(mDaysLeft)} Hari" : mDaysLeft == 0 ? "Jatuh Tempo Hari Ini" : $"H-{mDaysLeft}";
+                }
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span class="@mBadgeClass" style="font-size:13px;padding:6px 14px;">@mBadgeText</span>
+                    <button class="loan-modal-close" @onclick="CloseModal"><i class="bi bi-x-lg"></i></button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="loan-modal-body">
+                <!-- Info Grid -->
+                <div class="loan-info-grid">
+                    <div class="loan-info-block">
+                        <div class="loan-info-label">Jenis BA</div>
+                        <div class="loan-info-value"><span class="pill pill-peminjaman" style="font-size:12px;">@modalBA.Jenis</span></div>
+                    </div>
+                    <div class="loan-info-block">
+                        <div class="loan-info-label">Tanggal BA</div>
+                        <div class="loan-info-value">@modalBA.Tanggal.ToString("dd MMMM yyyy")</div>
+                    </div>
+                    <div class="loan-info-block">
+                        <div class="loan-info-label">Tanggal Kembali</div>
+                        <div class="loan-info-value" style="color:@(mDaysLeft < 0 ? "var(--danger)" : "var(--text-primary)");font-weight:700;">
+                            @modalBA.TanggalKembali?.ToString("dd MMMM yyyy")
+                        </div>
+                    </div>
+                    <div class="loan-info-block">
+                        <div class="loan-info-label">No. Tiket SSC</div>
+                        <div class="loan-info-value">@(modalBA.TiketSscNo ?? "—")</div>
+                    </div>
+                </div>
+
+                <div class="loan-info-grid">
+                    <div class="loan-info-block">
+                        <div class="loan-info-label"><i class="bi bi-person-fill" style="color:var(--primary);"></i> Penanggung Jawab</div>
+                        <div class="loan-info-value">@modalBA.Pj?.Nama</div>
+                        <div class="loan-info-sub">@modalBA.Pj?.Jabatan · @modalBA.Pj?.FungsiDirektorat</div>
+                    </div>
+                    <div class="loan-info-block">
+                        <div class="loan-info-label"><i class="bi bi-person-badge-fill" style="color:var(--warning);"></i> Yang Menyerahkan</div>
+                        <div class="loan-info-value">@modalBA.Menyerahkan?.Nama</div>
+                        <div class="loan-info-sub">@modalBA.Menyerahkan?.FungsiDirektorat</div>
+                    </div>
+                    <div class="loan-info-block">
+                        <div class="loan-info-label"><i class="bi bi-person-check-fill" style="color:var(--success);"></i> Yang Mengetahui</div>
+                        <div class="loan-info-value">@modalBA.Mengetahui?.Nama</div>
+                        <div class="loan-info-sub">@modalBA.Mengetahui?.Jabatan</div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(modalBA.PjNoTelp))
+                    {
+                        <div class="loan-info-block">
+                            <div class="loan-info-label"><i class="bi bi-telephone-fill" style="color:var(--primary);"></i> No. Telp PJ</div>
+                            <div class="loan-info-value">@modalBA.PjNoTelp</div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Daftar Perangkat -->
+                <div class="loan-section-title"><i class="bi bi-cpu"></i> Daftar Perangkat</div>
+                @if (modalBA.Perangkat.Any())
+                {
+                    <table class="data-table" style="margin-top:0;">
+                        <thead>
+                            <tr>
+                                <th>Nama Perangkat</th>
+                                <th>Jumlah</th>
+                                <th>Satuan</th>
+                                <th>No. Serial</th>
+                                <th>Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in modalBA.Perangkat)
+                            {
+                                <tr>
+                                    <td><span style="font-weight:600;">@p.Barang?.NamaBarang</span></td>
+                                    <td>@p.Jumlah</td>
+                                    <td style="color:var(--text-secondary);">@p.Satuan</td>
+                                    <td style="font-family:monospace;font-size:12px;">@(p.NoSerial ?? "—")</td>
+                                    <td style="color:var(--text-secondary);">@(p.Keterangan ?? "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">
+                        <i class="bi bi-box"></i> Tidak ada data perangkat
+                    </div>
+                }
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="loan-modal-footer">
+                @if (isReturning)
+                {
+                    <div style="display:flex;align-items:center;gap:10px;background:var(--warning-light);padding:10px 16px;border-radius:var(--radius);border:1px solid var(--warning);flex:1;">
+                        <i class="bi bi-exclamation-triangle-fill" style="color:var(--warning);"></i>
+                        <span style="font-size:13px;">Memproses pengembalian...</span>
+                        <div class="spinner" style="width:16px;height:16px;border-width:2px;margin-left:auto;"></div>
+                    </div>
+                }
+                else if (confirmReturnId == modalBA.Id)
+                {
+                    <div style="display:flex;align-items:center;gap:10px;background:var(--warning-light);padding:10px 16px;border-radius:var(--radius);border:1px solid var(--warning);flex:1;">
+                        <i class="bi bi-exclamation-triangle-fill" style="color:var(--warning);"></i>
+                        <span style="font-size:13px;font-weight:600;">Konfirmasi: semua perangkat di atas sudah dikembalikan?</span>
+                        <div style="display:flex;gap:8px;margin-left:auto;">
+                            <button class="btn btn-sm btn-success" @onclick="ConfirmReturn">Ya, Dikembalikan</button>
+                            <button class="btn btn-sm btn-outline" @onclick="CancelReturn">Batal</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <button class="btn btn-success" @onclick="@(() => InitiateReturn(modalBA.Id, modalBA.NomorSurat ?? $"BA-{modalBA.Id}"))">
+                        <i class="bi bi-box-arrow-in-down"></i> Tandai Sudah Dikembalikan
+                    </button>
+                }
+            </div>
+        </div>
     </div>
 }
 else if (currentRole == "Approver")
@@ -436,8 +564,14 @@ else if (currentRole == "AdminIT")
     // Gudang stats
     private (int Draft, int Progress, int Approved, int Rejected) stat;
     private (int Alokasi, int Peminjaman, int Lainnya) jenisData;
-    private List<BAEntity> dueDates = new();
+    private List<BAEntity> activePeminjaman = new();
     private List<int[]> trendData = new(); // [month-6..month-0]
+
+    // Return action state
+    private int? confirmReturnId = null;
+    private string confirmReturnNomorSurat = string.Empty;
+    private bool isReturning = false;
+    private BAEntity? modalBA = null;
 
     // Approver stats
     private (int Pending, int Total, int Approved, int Rejected, int ApprovedPct, int RejectedPct) approverStat;
@@ -520,6 +654,9 @@ else if (currentRole == "AdminIT")
     {
         var myBA = await DbCtx.Set<BAEntity>()
             .Include(b => b.Pj)
+            .Include(b => b.Menyerahkan)
+            .Include(b => b.Mengetahui)
+            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
             .Where(b => b.CreatedBy == currentUserId)
             .ToListAsync();
 
@@ -532,14 +669,10 @@ else if (currentRole == "AdminIT")
         jenisData.Peminjaman = myBA.Count(b => b.Jenis == "Peminjaman");
         jenisData.Lainnya = myBA.Count(b => b.Jenis != "Alokasi" && b.Jenis != "Peminjaman");
 
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        dueDates = myBA
-            .Where(b => b.Jenis == "Peminjaman" && b.TanggalKembali.HasValue &&
-                        b.TanggalKembali.Value >= today &&
-                        b.TanggalKembali.Value <= today.AddDays(2) &&
-                        b.Status != "Approved")
+        activePeminjaman = myBA
+            .Where(b => b.Jenis == "Peminjaman" && b.TanggalKembali.HasValue
+                        && b.Status == "Approved" && !b.IsReturned)
             .OrderBy(b => b.TanggalKembali)
-            .Take(5)
             .ToList();
     }
 
@@ -648,21 +781,59 @@ else if (currentRole == "AdminIT")
         _ => status
     };
 
-    // Sort variables and logic for Admin Gudang (Due Dates)
-    private string sortDueCol = "Tgl Kembali";
-    private bool sortDueAsc = true;
-    private void SortDue(string col) { if (sortDueCol == col) sortDueAsc = !sortDueAsc; else { sortDueCol = col; sortDueAsc = true; } }
-    private string GetDueSortIcon(string col) => sortDueCol != col ? "bi-arrow-down-up" : sortDueAsc ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
-    private IEnumerable<BAEntity> SortedDueDates => sortDueCol switch
+    // Modal actions
+    private void OpenDetailModal(int baId)
     {
-        "No. Surat" => sortDueAsc ? dueDates.OrderBy(b => b.NomorSurat) : dueDates.OrderByDescending(b => b.NomorSurat),
-        "PJ" => sortDueAsc ? dueDates.OrderBy(b => b.Pj?.Nama) : dueDates.OrderByDescending(b => b.Pj?.Nama),
-        "Tgl Kembali" => sortDueAsc ? dueDates.OrderBy(b => b.TanggalKembali) : dueDates.OrderByDescending(b => b.TanggalKembali),
-        "Status" => sortDueAsc ? dueDates.OrderBy(b => (b.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days) : dueDates.OrderByDescending(b => (b.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days),
-        _ => dueDates
-    };
+        modalBA = activePeminjaman.FirstOrDefault(b => b.Id == baId);
+        confirmReturnId = null;
+    }
 
-    // Sort variables and logic for Approver
+    private void CloseModal()
+    {
+        if (isReturning) return;
+        modalBA = null;
+        confirmReturnId = null;
+        confirmReturnNomorSurat = string.Empty;
+    }
+
+    // Return actions
+    private void InitiateReturn(int baId, string nomorSurat)
+    {
+        confirmReturnId = baId;
+        confirmReturnNomorSurat = nomorSurat;
+    }
+
+    private void CancelReturn()
+    {
+        confirmReturnId = null;
+        confirmReturnNomorSurat = string.Empty;
+    }
+
+    private async Task ConfirmReturn()
+    {
+        if (confirmReturnId is null) return;
+        isReturning = true;
+        try
+        {
+            var ba = await DbCtx.Set<BAEntity>().FindAsync(confirmReturnId.Value);
+            if (ba is not null)
+            {
+                ba.IsReturned = true;
+                ba.ReturnedAt = DateTime.Now;
+                await DbCtx.SaveChangesAsync();
+                activePeminjaman.RemoveAll(b => b.Id == confirmReturnId.Value);
+                modalBA = null;
+            }
+        }
+        finally
+        {
+            isReturning = false;
+            confirmReturnId = null;
+            confirmReturnNomorSurat = string.Empty;
+        }
+    }
+
+    // Approver sort
     private string sortAppCol = "Tanggal Submit";
     private bool sortAppAsc = true;
     private void SortApprover(string col) { if (sortAppCol == col) sortAppAsc = !sortAppAsc; else { sortAppCol = col; sortAppAsc = true; } }

@@ -7,4 +7,5 @@ public interface IEmailService
     Task SendTtdUsedNotificationAsync(string toEmail, string pegawaiNama, string nomorSurat);
     Task SendApprovalRequestAsync(string toEmail, string approverName, string baseUrl, int baId);
     Task SendApprovalResultAsync(string toEmail, string recipientName, string nomorSurat, bool approved, string? alasan = null);
+    Task SendDueDateReminderAsync(string toEmail, string recipientName, string nomorSurat, string pjNama, string tanggalKembali, bool isOverdue, bool isForPj);
 }

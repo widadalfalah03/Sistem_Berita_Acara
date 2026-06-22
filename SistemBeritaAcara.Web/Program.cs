@@ -27,6 +27,10 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             ALTER TABLE [Users] ADD [ProfilePicPath] nvarchar(500) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'PjNoTelp')
             ALTER TABLE [BeritaAcara] ADD [PjNoTelp] nvarchar(50) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'IsReturned')
+            ALTER TABLE [BeritaAcara] ADD [IsReturned] bit NOT NULL DEFAULT 0;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'ReturnedAt')
+            ALTER TABLE [BeritaAcara] ADD [ReturnedAt] datetime2 NULL;
     ");
 
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
