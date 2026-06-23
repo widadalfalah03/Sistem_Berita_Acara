@@ -36,13 +36,12 @@ else if (currentRole == "AdminGudangBarang")
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Tanggal Submit <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Approver"))">Approver <i class="bi @GetSortIcon("Approver")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var ba in SortedBaList)
                     {
-                        <tr>
+                        <tr style="cursor:pointer; transition: background 0.2s;" class="hover-row" @onclick="@(() => ViewBA(ba.Id))">
                             <td>
                                 <div class="cell-main">Berita Acara @ba.Jenis</div>
                                 <div class="cell-sub">Penanggung Jawab: @ba.Pj?.Nama</div>
@@ -66,11 +65,6 @@ else if (currentRole == "AdminGudangBarang")
                                         <i class="bi bi-hourglass-split" style="margin-right:4px;"></i> Menunggu Approval
                                     </span>
                                 }
-                            </td>
-                            <td>
-                                <NavLink class="btn-icon" href="@($"/berita-acara/{ba.Id}?from=progress")">
-                                    <i class="bi bi-eye"></i>
-                                </NavLink>
                             </td>
                         </tr>
                     }
@@ -130,8 +124,20 @@ else if (currentRole == "Approver")
 
     private void SortTable(string column)
     {
-        if (sortColumn == column) sortAscending = !sortAscending;
-        else { sortColumn = column; sortAscending = true; }
+        if (sortColumn == column)
+        {
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            sortColumn = column;
+            sortAscending = true;
+        }
+    }
+
+    private void ViewBA(int id)
+    {
+        Navigation.NavigateTo($"/berita-acara/{id}?from=progress");
     }
 
     private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";

@@ -82,7 +82,7 @@ else
                 <div class="card-body">
                     <div class="form-group">
                         <label class="form-label">Role</label>
-                        <select class="form-control form-select" @bind="editRole">
+                        <select class="form-control form-select" value="@editRole" @onchange="OnRoleChanged">
                             <option value="AdminGudangBarang">Admin Gudang & Barang</option>
                             <option value="Approver">Approver</option>
                         </select>
@@ -127,13 +127,6 @@ else
         </div>
     </div>
 
-    <!-- Form actions -->
-    <div class="form-actions" style="margin-top:24px;">
-        <NavLink class="btn btn-outline" href="/dashboard">Batal</NavLink>
-        <button class="btn btn-primary @(isSaving ? "btn-loading" : "")" @onclick="SaveAsync" disabled="@isSaving">
-            <i class="bi bi-floppy"></i> Simpan Perubahan
-        </button>
-    </div>
 }
 
 @code {
@@ -159,21 +152,25 @@ else
         isLoading = false;
     }
 
-    private async Task SaveAsync()
+    private async Task OnRoleChanged(ChangeEventArgs e)
     {
         if (appUser is null) return;
+        var newRole = e.Value?.ToString();
+        if (string.IsNullOrEmpty(newRole) || newRole == editRole) return;
+        
         isSaving = true;
         errorMsg = string.Empty;
         try
         {
             var oldRoles = await UserManager.GetRolesAsync(appUser);
             await UserManager.RemoveFromRolesAsync(appUser, oldRoles);
-            await UserManager.AddToRoleAsync(appUser, editRole);
+            await UserManager.AddToRoleAsync(appUser, newRole);
 
-            appUser.Role = editRole;
+            appUser.Role = newRole;
+            editRole = newRole;
 
             await UserManager.UpdateAsync(appUser);
-            successMsg = "Perubahan berhasil disimpan.";
+            successMsg = "Role berhasil diperbarui.";
         }
         catch (Exception ex) { errorMsg = ex.Message; }
         finally { isSaving = false; }
