@@ -45,7 +45,7 @@ else
         <div class="stat-card">
             <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Admin Gudang</div>
+                <div class="stat-card-label">Admin Gudang & Barang</div>
                 <div class="stat-card-value green">@stats.AdminGudang</div>
             </div>
         </div>
@@ -64,12 +64,29 @@ else
             <input type="text" placeholder="Cari nama atau email..."
                    @bind="userSearch" @bind:event="oninput" />
         </div>
-        <select class="filter-select" @bind="roleFilter">
-            <option value="">Semua Role</option>
-            <option value="AdminIT">Admin IT</option>
-            <option value="AdminGudangBarang">Admin Gudang</option>
-            <option value="Approver">Approver</option>
-        </select>
+        <div style="position:relative;">
+            <div @onclick="() => showRoleDropdown = !showRoleDropdown"
+                 style="padding:8px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:180px;">
+                <span style="font-weight:500;">@(string.IsNullOrEmpty(roleFilter) ? "Semua Role" : GetRoleLabel(roleFilter))</span>
+                <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showRoleDropdown ? "transform:rotate(180deg);" : "")"></i>
+            </div>
+            @if (showRoleDropdown)
+            {
+                <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
+                <div style="position:absolute;top:100%;left:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:180px;margin-top:4px;overflow:hidden;">
+                    @foreach (var role in new[] { "", "AdminIT", "AdminGudangBarang", "Approver" })
+                    {
+                        var label = string.IsNullOrEmpty(role) ? "Semua Role" : GetRoleLabel(role);
+                        <div @onclick="@(() => { roleFilter = role; showRoleDropdown = false; })"
+                             style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(roleFilter == role ? "600" : "400");background:@(roleFilter == role ? "var(--primary)" : "transparent");color:@(roleFilter == role ? "white" : "var(--text-primary)");"
+                             onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
+                             onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
+                            @label
+                        </div>
+                    }
+                </div>
+            }
+        </div>
         <label class="toggle-wrapper" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);">
             <div class="toggle-switch @(showInactive ? "active" : "")" @onclick="() => showInactive = !showInactive"></div>
             <span>Tampilkan Non-Aktif</span>
@@ -141,6 +158,7 @@ else
     private string userSearch = string.Empty;
     private string roleFilter = string.Empty;
     private bool showInactive = false;
+    private bool showRoleDropdown = false;
     private (int Total, int AdminIT, int AdminGudang, int Approver) stats;
 
     private string sortColumn = "Nama";
@@ -214,7 +232,7 @@ else
     private static string GetRoleLabel(string role) => role switch
     {
         "AdminIT" => "Admin IT",
-        "AdminGudangBarang" => "Admin Gudang",
+        "AdminGudangBarang" => "Admin Gudang & Barang",
         "Approver" => "Approver",
         _ => role
     };
