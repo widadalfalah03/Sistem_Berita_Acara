@@ -180,6 +180,8 @@
                 return;
             }
 
+            await UserManager.AddToRoleAsync(user, selectedRole);
+
             var token = await UserManager.GeneratePasswordResetTokenAsync(user);
             var baseUrl = Config["App:PublicUrl"] ?? Config["App:BaseUrl"] ?? "http://localhost:5000";
             await EmailService.SendUserInvitationAsync(user.Email, user.Nama, token, baseUrl);

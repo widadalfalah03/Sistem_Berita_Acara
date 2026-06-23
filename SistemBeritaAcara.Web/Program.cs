@@ -109,6 +109,16 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     if (usersNeedJabatan.Any())
         await db.SaveChangesAsync();
 
+    // ── Fix: Sync Identity Roles for users missing it in AspNetUserRoles ──
+    var allUsers = await db.Users.ToListAsync();
+    foreach (var u in allUsers)
+    {
+        if (!string.IsNullOrEmpty(u.Role) && !await userManager.IsInRoleAsync(u, u.Role))
+        {
+            await userManager.AddToRoleAsync(u, u.Role);
+        }
+    }
+
     // ── 4. Seed MasterBarang (54 item dari data Excel dummy, kode brg-1 s/d brg-54) ──
     if (!db.MasterBarang.Any())
     {
