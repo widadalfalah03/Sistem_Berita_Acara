@@ -427,7 +427,7 @@ else if (currentRole == "AdminIT")
         <div class="stat-card">
             <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Admin Gudang</div>
+                <div class="stat-card-label">Admin Gudang & Barang</div>
                 <div class="stat-card-value green">@userStats.AdminGudang</div>
                 <div class="stat-card-desc">Pembuat Berita Acara</div>
             </div>
@@ -566,7 +566,7 @@ else if (currentRole == "AdminIT")
         else if (currentRole == "AdminIT")
         {
             await JS.InvokeVoidAsync("chartInterop.createDonutChart", "adminITDonut",
-                new[] { "Admin IT", "Admin Gudang", "Approver" },
+                new[] { "Admin IT", "Admin Gudang & Barang", "Approver" },
                 new[] { userStats.AdminIT, userStats.AdminGudang, userStats.Approver },
                 new[] { "#64748B", "#22C55E", "#3B82F6" });
         }
