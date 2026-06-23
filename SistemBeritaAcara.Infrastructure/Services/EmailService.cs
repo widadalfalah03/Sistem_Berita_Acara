@@ -21,7 +21,7 @@ public class EmailService(IConfiguration config) : IEmailService
         string link = $"{baseUrl.TrimEnd('/')}/pj/sign/{token}";
         string body = $"""
             <h2 style="color: #0f172a;">Pemberitahuan Sistem: Persetujuan Dokumen</h2>
-            <p>Halo <strong>{toPjName}</strong>,</p>
+            <p>Yth. <strong>{toPjName}</strong>,</p>
             <p>Terdapat satu dokumen Berita Acara baru yang membutuhkan otorisasi dan tanda tangan digital Anda untuk dapat diproses lebih lanjut.</p>
             
             <div style="text-align: center; margin: 40px 0;">
@@ -47,7 +47,7 @@ public class EmailService(IConfiguration config) : IEmailService
 
         string body = $"""
             <h2 style="color: #0f172a;">Selamat Datang di Sistem Informasi Berita Acara</h2>
-            <p>Halo <strong>{userName}</strong>,</p>
+            <p>Yth. <strong>{userName}</strong>,</p>
             <p>Akun Anda telah didaftarkan oleh Administrator. Untuk menyelesaikan proses pendaftaran dan mulai menggunakan sistem, Anda perlu membuat password baru dan mengatur tanda tangan digital Anda.</p>
             
             <div style="text-align: center; margin: 40px 0;">
@@ -70,7 +70,7 @@ public class EmailService(IConfiguration config) : IEmailService
 
         string body = $"""
             <h2 style="color: #0f172a;">Permintaan Reset Password</h2>
-            <p>Halo <strong>{userName}</strong>,</p>
+            <p>Yth. <strong>{userName}</strong>,</p>
             <p>Sistem menerima permintaan untuk mengatur ulang password akun Anda. Klik tombol di bawah ini untuk membuat password baru:</p>
             
             <div style="text-align: center; margin: 40px 0;">
@@ -108,8 +108,8 @@ public class EmailService(IConfiguration config) : IEmailService
 
         string body = $"""
             <h2 style="color: #0f172a;">Dokumen Berita Acara Menunggu Persetujuan Anda</h2>
-            <p>Halo <strong>{approverName}</strong>,</p>
-            <p>Penanggung Jawab (PJ) telah menandatangani Berita Acara dan dokumen tersebut kini menunggu persetujuan Anda.</p>
+            <p>Yth. <strong>{approverName}</strong>,</p>
+            <p>Penanggung Jawab telah menandatangani Berita Acara dan dokumen tersebut kini menunggu persetujuan Anda.</p>
 
             <div style="text-align: center; margin: 40px 0;">
                 <a href="{loginLink}" style="background-color: #0284c7; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #0369a1;">Login & Review Dokumen</a>
@@ -127,7 +127,6 @@ public class EmailService(IConfiguration config) : IEmailService
     {
         string statusColor = approved ? "#16a34a" : "#dc2626";
         string statusText = approved ? "DISETUJUI" : "DITOLAK";
-        string statusIcon = approved ? "✅" : "❌";
         string alasanSection = (!approved && !string.IsNullOrEmpty(alasan))
             ? $"""
               <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;margin:20px 0;border-radius:4px;">
@@ -138,8 +137,8 @@ public class EmailService(IConfiguration config) : IEmailService
             : string.Empty;
 
         string body = $"""
-            <h2 style="color: {statusColor};">{statusIcon} Berita Acara {statusText}</h2>
-            <p>Halo <strong>{recipientName}</strong>,</p>
+            <h2 style="color: {statusColor};">Berita Acara {statusText}</h2>
+            <p>Yth. <strong>{recipientName}</strong>,</p>
             <p>Berita Acara dengan nomor surat <strong>{nomorSurat}</strong> telah <strong style="color:{statusColor};">{statusText}</strong> oleh Approver.</p>
             {alasanSection}
             <br>
@@ -159,7 +158,6 @@ public class EmailService(IConfiguration config) : IEmailService
         string statusBg = isOverdue ? "#fef2f2" : "#fffbeb";
         string statusBorder = isOverdue ? "#dc2626" : "#d97706";
         string statusText = isOverdue ? "TELAH JATUH TEMPO" : "JATUH TEMPO HARI INI";
-        string statusIcon = isOverdue ? "🚨" : "⏰";
         
         string actionText;
         string callToAction;
@@ -180,8 +178,8 @@ public class EmailService(IConfiguration config) : IEmailService
         }
 
         string body = $"""
-            <h2 style="color: {statusColor};">{statusIcon} Peminjaman Perangkat {statusText}</h2>
-            <p>Halo <strong>{recipientName}</strong>,</p>
+            <h2 style="color: {statusColor};">Peminjaman Perangkat {statusText}</h2>
+            <p>Yth. <strong>{recipientName}</strong>,</p>
             <p>Berikut adalah informasi peminjaman perangkat yang memerlukan perhatian Anda:</p>
             
             <div style="background:{statusBg};border-left:4px solid {statusBorder};padding:16px 20px;margin:20px 0;border-radius:4px;">
@@ -199,8 +197,8 @@ public class EmailService(IConfiguration config) : IEmailService
             """;
 
         string subject = isOverdue
-            ? $"🚨 [OVERDUE] Peminjaman {nomorSurat} Telah Melewati Batas Pengembalian"
-            : $"⏰ Pengingat: Peminjaman {nomorSurat} Jatuh Tempo Hari Ini";
+            ? $"[OVERDUE] Peminjaman {nomorSurat} Telah Melewati Batas Pengembalian"
+            : $"Pengingat: Peminjaman {nomorSurat} Jatuh Tempo Hari Ini";
 
         await SendEmailAsync(toEmail, subject, body);
     }
