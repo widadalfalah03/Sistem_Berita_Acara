@@ -152,28 +152,49 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, subject, body);
     }
 
-    public async Task SendDueDateReminderAsync(string toEmail, string recipientName, string nomorSurat, string pjNama, string tanggalKembali, bool isOverdue, bool isForPj)
+    public async Task SendDueDateReminderAsync(string toEmail, string recipientName, string nomorSurat, string pjNama, string tanggalKembali, int daysUntilDue, bool isForPj)
     {
-        string statusColor = isOverdue ? "#dc2626" : "#d97706";
-        string statusBg = isOverdue ? "#fef2f2" : "#fffbeb";
-        string statusBorder = isOverdue ? "#dc2626" : "#d97706";
-        string statusText = isOverdue ? "TELAH JATUH TEMPO" : "JATUH TEMPO HARI INI";
+        bool isOverdue = daysUntilDue < 0;
+        bool isH1 = daysUntilDue == 1;
+
+        string statusColor = isOverdue ? "#dc2626" : (isH1 ? "#0284c7" : "#d97706");
+        string statusBg = isOverdue ? "#fef2f2" : (isH1 ? "#f0f9ff" : "#fffbeb");
+        string statusBorder = isOverdue ? "#dc2626" : (isH1 ? "#0284c7" : "#d97706");
+        string statusText = isOverdue ? "TELAH JATUH TEMPO" : (isH1 ? "JATUH TEMPO BESOK (H-1)" : "JATUH TEMPO HARI INI");
         
         string actionText;
         string callToAction;
 
         if (isForPj)
         {
-            actionText = isOverdue
-                ? $"Perangkat yang Anda pinjam <strong>telah melewati</strong> batas pengembalian ({tanggalKembali}). Segera kembalikan perangkat tersebut ke bagian IT / Gudang."
-                : $"Perangkat yang Anda pinjam <strong>jatuh tempo hari ini</strong> ({tanggalKembali}). Harap kembalikan perangkat tersebut ke bagian IT / Gudang sebelum akhir hari kerja.";
+            if (isOverdue)
+            {
+                actionText = $"Perangkat yang Anda pinjam <strong>telah melewati</strong> batas pengembalian ({tanggalKembali}). Segera kembalikan perangkat tersebut ke bagian IT / Gudang.";
+            }
+            else if (isH1)
+            {
+                actionText = $"Perangkat yang Anda pinjam <strong>akan jatuh tempo besok</strong> ({tanggalKembali}). Harap persiapkan perangkat untuk dikembalikan ke bagian IT / Gudang.";
+            }
+            else
+            {
+                actionText = $"Perangkat yang Anda pinjam <strong>jatuh tempo hari ini</strong> ({tanggalKembali}). Harap kembalikan perangkat tersebut ke bagian IT / Gudang sebelum akhir hari kerja.";
+            }
             callToAction = "Abaikan email ini jika Anda sudah mengembalikan perangkat.";
         }
         else
         {
-            actionText = isOverdue
-                ? $"Peminjaman ini <strong>telah melewati</strong> batas pengembalian ({tanggalKembali}). Harap segera hubungi Penanggung Jawab untuk menindaklanjuti pengembalian perangkat."
-                : $"Peminjaman ini <strong>jatuh tempo hari ini</strong> ({tanggalKembali}). Harap pantau pengembalian perangkat dari Penanggung Jawab hari ini.";
+            if (isOverdue)
+            {
+                actionText = $"Peminjaman ini <strong>telah melewati</strong> batas pengembalian ({tanggalKembali}). Harap segera hubungi Penanggung Jawab untuk menindaklanjuti pengembalian perangkat.";
+            }
+            else if (isH1)
+            {
+                actionText = $"Peminjaman ini <strong>akan jatuh tempo besok</strong> ({tanggalKembali}). Harap informasikan ke Penanggung Jawab agar mempersiapkan pengembalian.";
+            }
+            else
+            {
+                actionText = $"Peminjaman ini <strong>jatuh tempo hari ini</strong> ({tanggalKembali}). Harap pantau pengembalian perangkat dari Penanggung Jawab hari ini.";
+            }
             callToAction = "Login ke sistem untuk menandai perangkat sebagai sudah dikembalikan setelah menerima fisik perangkat.";
         }
 
@@ -198,7 +219,7 @@ public class EmailService(IConfiguration config) : IEmailService
 
         string subject = isOverdue
             ? $"[OVERDUE] Peminjaman {nomorSurat} Telah Melewati Batas Pengembalian"
-            : $"Pengingat: Peminjaman {nomorSurat} Jatuh Tempo Hari Ini";
+            : (isH1 ? $"[H-1] Pengingat: Peminjaman {nomorSurat} Jatuh Tempo Besok" : $"Pengingat: Peminjaman {nomorSurat} Jatuh Tempo Hari Ini");
 
         await SendEmailAsync(toEmail, subject, body);
     }
