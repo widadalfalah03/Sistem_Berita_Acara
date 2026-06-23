@@ -22,26 +22,12 @@
 </div>
 
 <!-- Stat Card -->
-<div class="stat-cards" style="grid-template-columns:repeat(3,1fr);max-width:640px;margin-bottom:24px;">
+<div class="stat-cards" style="grid-template-columns:repeat(1,1fr);max-width:220px;margin-bottom:24px;">
     <div class="stat-card">
         <div class="stat-card-icon total"><i class="bi bi-person-badge"></i></div>
         <div class="stat-card-info">
             <div class="stat-card-label">Total Pegawai</div>
             <div class="stat-card-value">@allPegawai.Count</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-icon approved"><i class="bi bi-person-check"></i></div>
-        <div class="stat-card-info">
-            <div class="stat-card-label">Aktif</div>
-            <div class="stat-card-value green">@allPegawai.Count(p => p.IsAktif)</div>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-icon neutral"><i class="bi bi-person-x"></i></div>
-        <div class="stat-card-info">
-            <div class="stat-card-label">Nonaktif</div>
-            <div class="stat-card-value">@allPegawai.Count(p => !p.IsAktif)</div>
         </div>
     </div>
 </div>

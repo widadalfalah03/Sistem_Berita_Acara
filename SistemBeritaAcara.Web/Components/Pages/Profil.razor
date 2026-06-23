@@ -26,10 +26,7 @@ else if (currentUser is null)
 }
 else
 {
-    <div class="page-header">
-        <h1 class="page-title">Profil Saya</h1>
-        <p class="page-subtitle">Kelola informasi profil, tanda tangan, dan keamanan akun Anda</p>
-    </div>
+
 
     @if (!string.IsNullOrEmpty(globalMessage))
     {
@@ -175,10 +172,7 @@ else
                 </div>
             </div>
 
-            <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" @onclick="() => showPwModal = true">
-                <i class="bi bi-shield-lock"></i> Ganti Password
-            </button>
-            
+
             @if (currentUser.Role != "AdminIT")
             {
                 @if (!string.IsNullOrEmpty(currentUser.TtdPath))
@@ -195,49 +189,6 @@ else
     </div>
 }
 
-<!-- Modals -->
-
-@if (showPwModal)
-{
-    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1050;" @onclick="() => showPwModal = false">
-        <div style="background:var(--bg);width:400px;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-lg);" @onclick:stopPropagation="true">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <h4 style="margin:0;font-size:18px;"><i class="bi bi-lock" style="color:var(--primary);margin-right:6px;"></i> Ganti Password</h4>
-                <button class="btn-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);" @onclick="() => showPwModal = false">&times;</button>
-            </div>
-            
-            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Buat password baru yang kuat dan mudah diingat.</p>
-
-            @if (!string.IsNullOrEmpty(pwMessage))
-            {
-                var isErr = pwMessage.StartsWith("Gagal");
-                <div style="background:@(isErr?"var(--danger-light)":"#F0FDF4");color:@(isErr?"var(--danger)":"#16A34A");padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-                    <i class="bi @(isErr?"bi-exclamation-circle":"bi-check-circle")"></i>
-                    @pwMessage
-                </div>
-            }
-
-            <div class="form-group">
-                <label class="form-label" style="font-size:12px;">Password Lama</label>
-                <input type="password" class="form-control" @bind="pwOld" style="font-size:13px;" />
-            </div>
-            <div class="form-group">
-                <label class="form-label" style="font-size:12px;">Password Baru</label>
-                <input type="password" class="form-control" @bind="pwNew" style="font-size:13px;" />
-            </div>
-            <div class="form-group">
-                <label class="form-label" style="font-size:12px;">Konfirmasi Password Baru</label>
-                <input type="password" class="form-control" @bind="pwConfirm" style="font-size:13px;" />
-            </div>
-            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;">
-                <button class="btn btn-primary" @onclick="ChangePasswordAsync" disabled="@isChangingPw">
-                    @if (isChangingPw) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
-                    else { <span>Simpan</span> }
-                </button>
-            </div>
-        </div>
-    </div>
-}
 
 @if (showTtdModal && currentUser?.Role != "AdminIT")
 {
@@ -289,7 +240,6 @@ else
     private string globalMessage = string.Empty;
 
     // Modals
-    private bool showPwModal = false;
     private bool showTtdModal = false;
 
     // Profile pic
@@ -302,12 +252,7 @@ else
     private bool isCanvasEmpty = true;
     private bool isDrawingActive = false;
 
-    // Password
-    private string pwOld = string.Empty;
-    private string pwNew = string.Empty;
-    private string pwConfirm = string.Empty;
-    private string pwMessage = string.Empty;
-    private bool isChangingPw;
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -460,43 +405,7 @@ else
         finally { isSavingPic = false; }
     }
 
-    // ── Change Password ──
 
-    private async Task ChangePasswordAsync()
-    {
-        pwMessage = string.Empty;
-        if (string.IsNullOrWhiteSpace(pwOld) || string.IsNullOrWhiteSpace(pwNew))
-        {
-            pwMessage = "Gagal: Semua kolom password wajib diisi."; return;
-        }
-        if (pwNew != pwConfirm)
-        {
-            pwMessage = "Gagal: Konfirmasi password tidak cocok."; return;
-        }
-        if (pwNew.Length < 8)
-        {
-            pwMessage = "Gagal: Password baru minimal 8 karakter."; return;
-        }
-        isChangingPw = true;
-        try
-        {
-            var result = await UserManager.ChangePasswordAsync(currentUser!, pwOld, pwNew);
-            if (result.Succeeded)
-            {
-                currentUser!.MustChangePw = false;
-                await UserManager.UpdateAsync(currentUser);
-                globalMessage = "Password berhasil diubah!";
-                pwOld = pwNew = pwConfirm = string.Empty;
-                showPwModal = false;
-            }
-            else
-            {
-                pwMessage = "Gagal: " + string.Join("; ", result.Errors.Select(e => e.Description));
-            }
-        }
-        catch (Exception ex) { pwMessage = $"Gagal: {ex.Message}"; }
-        finally { isChangingPw = false; }
-    }
 
     private static string GetInitials(string name)
     {
