@@ -270,6 +270,49 @@ public class DocumentService : IDocumentService
         return relativePath;
     }
 
+    /// <summary>
+    /// Mengganti teks nomor surat lama ("Draft") dengan nomor surat final
+    /// di dalam DOCX yang sudah ada — tanpa meregenerasi dokumen dari template.
+    /// Digunakan saat BA yang sudah diedit via ONLYOFFICE disetujui.
+    /// </summary>
+    public async Task PatchNomorSuratAsync(int baId, string nomorSurat)
+    {
+        var ba = await _db.BeritaAcara.FindAsync(baId)
+            ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
+        string physicalPath = GetPhysicalPath(ba.DocxPath!);
+        EnsureFileExists(physicalPath);
+
+        // Ganti semua teks "Draft" (yang merupakan nilai placeholder {{NomorSurat}}
+        // sebelum nomor surat di-generate) dengan nomor surat final.
+        using (var wordDoc = WordprocessingDocument.Open(physicalPath, true))
+        {
+            var mainPart = wordDoc.MainDocumentPart!;
+            bool changed = false;
+
+            foreach (var text in mainPart.Document.Body!.Descendants<Text>())
+            {
+                if (text.Text == "Draft")
+                {
+                    text.Text = nomorSurat;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+                mainPart.Document.Save();
+        }
+
+        // Regenerasi PDF agar preview diperbarui
+        try
+        {
+            await Task.Run(() => ConvertDocxToPdfInternal(physicalPath, physicalPath.Replace(".docx", ".pdf")));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PatchNomorSurat] Gagal regenerasi PDF: {ex.Message}");
+        }
+    }
+
     public async Task<string> EmbedTtdMenyerahkanAsync(int baId, string ttdPath)
     {
         var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
