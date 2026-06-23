@@ -179,11 +179,6 @@ else
             .Include(b => b.Mengetahui)
             .Where(b => b.Status == "Approved");
 
-        if (currentRole == "AdminGudangBarang")
-            query = query.Where(b => b.CreatedBy == currentUserId);
-        else if (currentRole == "Approver")
-            query = query.Where(b => b.MengetahuiId == currentUserId);
-
         allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();
         isLoading = false;
     }

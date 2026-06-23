@@ -214,7 +214,22 @@ public class DocumentService : IDocumentService
                         };
                         using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
 
-                        var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), 5400000L, 3960000L, Path.GetFileName(fotoPhysical), imgId++);
+                        var dims = GetImageDimensions(fotoPhysical);
+                        long cx = 5400000L;
+                        long cy = 3960000L;
+                        if (dims.width > 0 && dims.height > 0)
+                        {
+                            double imgRatio = (double)dims.width / dims.height;
+                            if (imgRatio > 1.0) { // Landscape
+                                cx = 5400000L;
+                                cy = (long)(5400000L / imgRatio);
+                            } else { // Portrait or Square
+                                cy = 5400000L;
+                                cx = (long)(5400000L * imgRatio);
+                            }
+                        }
+
+                        var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId++);
                         var imgPara = new Paragraph(new Run(drawing));
                         imgPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
                         mainPart.Document.Body!.Append(imgPara);
@@ -244,7 +259,22 @@ public class DocumentService : IDocumentService
                     };
                     using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
 
-                    var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), 5400000L, 3960000L, Path.GetFileName(fotoPhysical), imgId++);
+                    var dims = GetImageDimensions(fotoPhysical);
+                    long cx = 5400000L;
+                    long cy = 3960000L;
+                    if (dims.width > 0 && dims.height > 0)
+                    {
+                        double imgRatio = (double)dims.width / dims.height;
+                        if (imgRatio > 1.0) { // Landscape
+                            cx = 5400000L;
+                            cy = (long)(5400000L / imgRatio);
+                        } else { // Portrait or Square
+                            cy = 5400000L;
+                            cx = (long)(5400000L * imgRatio);
+                        }
+                    }
+
+                    var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId++);
                     var imgPara = new Paragraph(new Run(drawing));
                     imgPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
                     mainPart.Document.Body!.Append(imgPara);

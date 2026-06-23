@@ -278,50 +278,11 @@
             <!-- Yang Menyerahkan -->
             <div class="ttd-col">
                 <div class="ttd-label">Yang Menyerahkan</div>
-                <div class="form-group" style="position:relative;">
-                    <div @onclick="OpenMenyerahkanSearch"
-                         style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
-                         onmouseover="this.style.background='var(--primary-light)'"
-                         onmouseout="this.style.background='var(--surface)'">
-                        <span style="@(model.MenyerahkanId == 0 ? "color:var(--text-muted);" : "")">
-                            @(model.MenyerahkanId > 0 ? (adminGudangUsers.FirstOrDefault(u => u.PegawaiId == model.MenyerahkanId)?.Nama ?? "Pilih Yang Menyerahkan...") : "Cari yang menyerahkan...")
-                        </span>
-                        <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);flex-shrink:0;"></i>
-                    </div>
-                    @if (showMenyerahkanSearch)
-                    {
-                        <div @onclick="CloseMenyerahkanSearch"
-                             style="position:fixed;inset:0;z-index:99;"></div>
-                        <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;margin-top:4px;">
-                            <div style="padding:8px;border-bottom:1px solid var(--border-light);">
-                                <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;">
-                                    <i class="bi bi-search" style="font-size:13px;color:var(--text-muted);"></i>
-                                    <input type="text" placeholder="Cari nama..."
-                                           value="@menyerahkanSearchQuery"
-                                           @onchange="OnMenyerahkanSearchInput" @oninput="OnMenyerahkanSearchInput"
-                                           style="border:none;outline:none;background:transparent;font-size:14px;width:100%;" />
-                                </div>
-                            </div>
-                            @if (menyerahkanSearchResults.Any())
-                            {
-                                <div style="max-height:200px;overflow-y:auto;">
-                                    @foreach (var u in menyerahkanSearchResults)
-                                    {
-                                        <div @onclick="() => SelectMenyerahkan(u)"
-                                             style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;"
-                                             onmouseover="this.style.background='var(--primary-light)'"
-                                             onmouseout="this.style.background='transparent'">
-                                            @u.Nama
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div style="padding:12px 14px;font-size:14px;color:var(--text-muted);">Tidak ada hasil</div>
-                            }
-                        </div>
-                    }
+                <div style="padding:10px 0;font-size:14px;color:var(--text-secondary);">
+                    <span style="font-weight:600;color:var(--text-primary);">
+                        <i class="bi bi-person-check" style="color:var(--success);"></i>
+                        @(currentUserObj?.Nama ?? "Admin Gudang")
+                    </span>
                 </div>
             </div>
 
@@ -480,30 +441,6 @@
 
 </EditForm>
 
-<style>
-    .upload-btn-styled {
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        background: var(--primary-light);
-        border: 2px dashed var(--primary);
-        border-radius: var(--radius);
-        padding: 20px 36px;
-        color: var(--primary);
-        transition: background 0.15s, border-color 0.15s, transform 0.12s;
-        user-select: none;
-    }
-    .upload-btn-styled:hover {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
-        transform: translateY(-1px);
-    }
-    .upload-btn-styled:hover span {
-        color: white !important;
-    }
-</style>
 
 @code {
     [SupplyParameterFromQuery(Name = "edit")]
@@ -541,15 +478,14 @@
     private PerangkatRow? activeSearchRow = null;
     private ElementReference barangSearchRef;
 
-    // Search state for Yang Menyerahkan
-    private bool showMenyerahkanSearch;
-    private string menyerahkanSearchQuery = string.Empty;
-    private List<ApplicationUser> menyerahkanSearchResults = new();
+
 
     // Search state for Yang Mengetahui
     private bool showMengetahuiSearch;
     private string mengetahuiSearchQuery = string.Empty;
     private List<ApplicationUser> mengetahuiSearchResults = new();
+    private ApplicationUser? currentUserObj;
+    private bool photosChanged = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -561,6 +497,12 @@
         approvers = await DbContext.Users.Where(u => u.Role == "Approver" && !u.IsDeleted).OrderBy(u => u.Nama).ToListAsync();
         adminGudangUsers = await DbContext.Users.Where(u => u.Role == "AdminGudangBarang" && !u.IsDeleted).OrderBy(u => u.Nama).ToListAsync();
         barangOptions = await DbContext.MasterBarang.Where(b => b.IsAktif).OrderBy(b => b.NamaBarang).ToListAsync();
+
+        currentUserObj = adminGudangUsers.FirstOrDefault(u => u.Id == _currentUserId);
+        if (currentUserObj != null && !editId.HasValue)
+        {
+            model.MenyerahkanId = currentUserObj.PegawaiId ?? 0;
+        }
 
         // Mode Edit: load data BA yang sudah ada
         editId = EditIdParam;
@@ -825,9 +767,6 @@
         barangSearchResults = new();
         showBarangSearch = false;
         activeSearchRow = null;
-        showMenyerahkanSearch = false;
-        menyerahkanSearchQuery = string.Empty;
-        menyerahkanSearchResults = new();
         showMengetahuiSearch = false;
         mengetahuiSearchQuery = string.Empty;
         mengetahuiSearchResults = new();
@@ -886,6 +825,7 @@
 
     private async Task OnPhotosSelected(InputFileChangeEventArgs e)
     {
+        photosChanged = true;
         photoFiles = e.GetMultipleFiles(10).ToList();
         photoDataUrls.Clear();
 
@@ -915,7 +855,7 @@
                 foreach (var file in photoFiles)
                 {
                     var ext = Path.GetExtension(file.Name);
-                    var saveName = $"ba-{editId.Value}-photo-{idx}{ext}";
+                    var saveName = $"ba-{editId.Value}-photo-{idx}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{ext}";
                     var fullPath = Path.Combine(photoFolder, saveName);
                     var relPath = $"files/photos/{saveName}";
 
@@ -983,8 +923,8 @@
         // ── Validasi lengkap ──
         if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
         if (string.IsNullOrWhiteSpace(model.PjNoTelp)) { errorMessage = "No. Telp/HP PJ wajib diisi."; return; }
-        if (model.MenyerahkanId == 0) { errorMessage = "Pilih Yang Menyerahkan terlebih dahulu."; return; }
-        if (model.MengetahuiId == 0) { errorMessage = "Pilih Approver (Yang Mengetahui) terlebih dahulu."; return; }
+        if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
+        if (model.MengetahuiId == 0 || !approvers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Approver (Yang Mengetahui) yang valid (akun mungkin telah dinonaktifkan)."; return; }
         if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC wajib diisi."; return; }
         if (model.Jenis == "Peminjaman" && !model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk Peminjaman."; return; }
 
@@ -1068,9 +1008,9 @@
                     }
                 }
 
-                // Jika data form berubah, ATAU status sebelumnya Rejected, dokumen HARUS digenerate ulang dari template
-                // dengan menghapus path lama, EditorBA akan mengenerate ulan.
-                if (isChanged || existing.Status == "Rejected")
+                // Jika data form berubah, ATAU status sebelumnya Rejected, ATAU foto diganti,
+                // dokumen HARUS digenerate ulang dari template
+                if (isChanged || existing.Status == "Rejected" || photosChanged || (photoFiles.Any() && !existingPhotoUrls.Any()))
                 {
                     existing.DocxPath = null;
                 }
@@ -1128,7 +1068,7 @@
                     foreach (var file in photoFiles)
                     {
                         var ext = Path.GetExtension(file.Name);
-                        var saveName = $"ba-{existing.Id}-photo-{idx2}{ext}";
+                        var saveName = $"ba-{existing.Id}-photo-{idx2}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{ext}";
                         await using var fs = File.Create(Path.Combine(photoFolder, saveName));
                         await file.OpenReadStream(5_000_000).CopyToAsync(fs);
                         DbContext.BuktiFoto.Add(new BuktiFoto { BaId = existing.Id, BeritaAcara = existing, FilePath = $"files/photos/{saveName}" });
@@ -1196,31 +1136,6 @@
             await JSRuntime.InvokeVoidAsync("appLoading.hide");
         }
         finally { isSaving = false; }
-    }
-
-    // ── Search methods for Menyerahkan ──
-    private void OpenMenyerahkanSearch()
-    {
-        menyerahkanSearchQuery = string.Empty;
-        menyerahkanSearchResults = adminGudangUsers.Take(8).ToList();
-        showMenyerahkanSearch = true;
-    }
-    
-    private void CloseMenyerahkanSearch() => showMenyerahkanSearch = false;
-    
-    private void OnMenyerahkanSearchInput(ChangeEventArgs e)
-    {
-        menyerahkanSearchQuery = e.Value?.ToString() ?? string.Empty;
-        menyerahkanSearchResults = string.IsNullOrWhiteSpace(menyerahkanSearchQuery)
-            ? adminGudangUsers.Take(8).ToList()
-            : adminGudangUsers.Where(a => a.Nama.Contains(menyerahkanSearchQuery, StringComparison.OrdinalIgnoreCase)).Take(8).ToList();
-    }
-    
-    private void SelectMenyerahkan(ApplicationUser u)
-    {
-        model.MenyerahkanId = u.PegawaiId ?? 0; // simpan Pegawai.Id, bukan ApplicationUser.Id
-        showMenyerahkanSearch = false;
-        _ = AutoSaveAsync();
     }
 
     // ── Search methods for Mengetahui ──

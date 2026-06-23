@@ -26,7 +26,14 @@
         </div>
     </div>
 
-    @if (results.Any())
+    @if (isSearching)
+    {
+        <div style="text-align:center;padding:32px;color:var(--text-muted);">
+            <div class="spinner" style="margin:0 auto 12px;width:28px;height:28px;border-width:3px;"></div>
+            <div style="font-size:14px;">Mencari pegawai...</div>
+        </div>
+    }
+    else if (results.Any())
     {
         <div style="margin-top:16px;">
             @foreach (var p in results)
@@ -125,9 +132,11 @@
     private string selectedRole = string.Empty;
     private string errorMsg = string.Empty;
     private bool isSaving = false;
+    private bool isSearching = false;
     private bool formSaved = false;
     private string savedName = string.Empty;
     private string savedRole = string.Empty;
+    private CancellationTokenSource? _searchCts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,13 +145,46 @@
         existingUserIds = usersWithPegawai.ToHashSet();
     }
 
-    private void OnSearch(ChangeEventArgs e)
+    private async Task OnSearch(ChangeEventArgs e)
     {
         searchQuery = e.Value?.ToString() ?? string.Empty;
-        results = string.IsNullOrWhiteSpace(searchQuery) ? new() :
-            allPegawai.Where(p => p.Nama.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                                  p.NoPekerja.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
-                      .Take(8).ToList();
+
+        // Batalkan debounce sebelumnya — JANGAN Dispose di sini karena
+        // finally block dari search lama masih bisa berjalan dan akan throw
+        // ObjectDisposedException saat mengakses cts.IsCancellationRequested.
+        _searchCts?.Cancel();
+
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            results = new();
+            isSearching = false;
+            return;
+        }
+
+        isSearching = true;
+        StateHasChanged();
+
+        var cts = new CancellationTokenSource();
+        _searchCts = cts;
+
+        try
+        {
+            await Task.Delay(300, cts.Token); // debounce 300ms
+
+            // Hanya update state jika search ini tidak dibatalkan
+            results = allPegawai
+                .Where(p => p.Nama.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                            p.NoPekerja.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+                .Take(8).ToList();
+
+            isSearching = false;
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Pencarian dibatalkan karena ada keystroke baru — biarkan OnSearch berikutnya
+            // yang menangani state. Tidak perlu update apapun di sini.
+        }
     }
 
     private void SelectPegawai(PegawaiEntity p)
@@ -179,6 +221,8 @@
                 errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
                 return;
             }
+
+            await UserManager.AddToRoleAsync(user, selectedRole);
 
             var token = await UserManager.GeneratePasswordResetTokenAsync(user);
             var baseUrl = Config["App:PublicUrl"] ?? Config["App:BaseUrl"] ?? "http://localhost:5000";
