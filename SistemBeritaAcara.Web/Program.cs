@@ -7,6 +7,15 @@ using SistemBeritaAcara.Infrastructure.Data;
 using SistemBeritaAcara.Infrastructure.Jobs;
 using SistemBeritaAcara.Web.Components;
 using SistemBeritaAcara.Web.Filters;
+using System.Globalization;
+
+// ── Atur kultur global ke Bahasa Indonesia ──────────────────────────────────
+// Semua format tanggal (ToString("MMMM"), dll.) otomatis menggunakan nama bulan
+// dalam Bahasa Indonesia (misal: "Juni" bukan "June") tanpa perlu CultureInfo
+// per-panggilan di seluruh aplikasi.
+var idCulture = new CultureInfo("id-ID");
+CultureInfo.DefaultThreadCurrentCulture   = idCulture;
+CultureInfo.DefaultThreadCurrentUICulture = idCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -154,7 +163,7 @@ builder.Services.ConfigureApplicationCookie(opt =>
 {
     opt.LoginPath = "/login";
     opt.AccessDeniedPath = "/akses-ditolak";
-    opt.ExpireTimeSpan = TimeSpan.FromHours(8);
+    opt.ExpireTimeSpan = TimeSpan.FromDays(14); // Diperpanjang agar Remember Me bertahan lama
     opt.SlidingExpiration = true;
 });
 

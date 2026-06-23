@@ -17,10 +17,6 @@
             style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;transition:all 0.15s;
                    @(activeTab == "all" ? "background:var(--primary);color:white;" : "background:transparent;color:var(--text-secondary);")">
         Semua
-        @if (notifications.Any())
-        {
-            <span style="margin-left:5px;">(@notifications.Count)</span>
-        }
     </button>
     <button @onclick="SetTabUnread"
             style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:500;font-family:inherit;transition:all 0.15s;
