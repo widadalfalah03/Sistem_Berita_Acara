@@ -409,8 +409,26 @@ else
                 ba.NomorSurat = next.nomorSurat;
             }
 
-            // Regenerate dokumen final dengan nomor surat yang sudah ada
-            ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+            // ── Perbarui dokumen untuk versi final ─────────────────────────────────
+            // JANGAN regenerasi dari template jika DOCX sudah ada di disk —
+            // itu akan menghapus semua hasil edit ONLYOFFICE.
+            // Cukup patch nomor surat di file yang sudah ada.
+            // Jika file belum ada (kasus langka: BA belum pernah melewati editor), baru generate.
+            var docxPhysicalPath = string.IsNullOrEmpty(ba!.DocxPath)
+                ? null
+                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                      ba.DocxPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+
+            if (docxPhysicalPath != null && File.Exists(docxPhysicalPath))
+            {
+                // File sudah ada → hanya patch NomorSurat
+                await DocumentService.PatchNomorSuratAsync(ba.Id, ba.NomorSurat!);
+            }
+            else
+            {
+                // File belum ada → generate dari template (fallback)
+                ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+            }
 
             // Re-embed TTD Yang Menyerahkan (Admin Gudang yang membuat BA)
             var creatorForTtd = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
