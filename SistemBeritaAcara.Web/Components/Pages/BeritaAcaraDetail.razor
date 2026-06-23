@@ -522,6 +522,7 @@ else
         var dest = From == "progress" ? "/progress"
                  : From == "archive" ? "/archive"
                  : From == "dashboard" ? "/dashboard"
+                 : From == "notifikasi" ? "/notifikasi"
                  : "/draft";
                  
         if (currentRole == "Approver" && string.IsNullOrEmpty(From))
