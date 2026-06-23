@@ -97,7 +97,10 @@ else
 
     private async Task LoadAsync()
     {
+        // AsNoTracking() memastikan data selalu dibaca segar dari DB,
+        // tidak terpengaruh oleh entity yang sudah di-cache di change tracker.
         notifications = await DbContext.Notification
+            .AsNoTracking()
             .Where(n => n.UserId == currentUserId)
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync();
@@ -107,6 +110,9 @@ else
     private async Task MarkAllReadAsync()
     {
         await NotificationService.MarkAllReadAsync(currentUserId);
+        // Bersihkan change tracker agar LoadAsync membaca data segar dari DB,
+        // bukan entity lama yang masih di-cache dengan IsRead = false.
+        DbContext.ChangeTracker.Clear();
         await LoadAsync();
     }
 
@@ -114,11 +120,14 @@ else
     {
         if (!n.IsRead)
         {
-            n.IsRead = true;
-            await DbContext.SaveChangesAsync();
+            // Gunakan ExecuteUpdateAsync karena entity di-load dengan AsNoTracking
+            await DbContext.Notification
+                .Where(x => x.Id == n.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsRead, true));
+            n.IsRead = true; // update in-memory agar UI langsung berubah
         }
         if (n.BaId.HasValue)
-            Navigation.NavigateTo($"/berita-acara/{n.BaId.Value}");
+            Navigation.NavigateTo($"/berita-acara/{n.BaId.Value}?from=notifikasi");
     }
 
     private static string GetNotifIconClass(string tipe) => tipe switch
