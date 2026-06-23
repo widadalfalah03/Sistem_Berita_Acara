@@ -278,11 +278,11 @@
             <!-- Yang Menyerahkan -->
             <div class="ttd-col">
                 <div class="ttd-label">Yang Menyerahkan</div>
-                <div class="form-group" style="position:relative; margin-top:14px; text-align:center;">
-                    <i class="bi bi-person-badge" style="font-size:24px; color:var(--primary); margin-bottom:8px; display:block;"></i>
-                    <div style="font-size:14px; font-weight:600; color:var(--text-primary);">
+                <div style="padding:10px 0;font-size:14px;color:var(--text-secondary);">
+                    <span style="font-weight:600;color:var(--text-primary);">
+                        <i class="bi bi-person-check" style="color:var(--success);"></i>
                         @(currentUserObj?.Nama ?? "Admin Gudang")
-                    </div>
+                    </span>
                 </div>
             </div>
 
@@ -441,30 +441,6 @@
 
 </EditForm>
 
-<style>
-    .upload-btn-styled {
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        background: var(--primary-light);
-        border: 2px dashed var(--primary);
-        border-radius: var(--radius);
-        padding: 20px 36px;
-        color: var(--primary);
-        transition: background 0.15s, border-color 0.15s, transform 0.12s;
-        user-select: none;
-    }
-    .upload-btn-styled:hover {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
-        transform: translateY(-1px);
-    }
-    .upload-btn-styled:hover span {
-        color: white !important;
-    }
-</style>
 
 @code {
     [SupplyParameterFromQuery(Name = "edit")]
@@ -509,6 +485,7 @@
     private string mengetahuiSearchQuery = string.Empty;
     private List<ApplicationUser> mengetahuiSearchResults = new();
     private ApplicationUser? currentUserObj;
+    private bool photosChanged = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -848,6 +825,7 @@
 
     private async Task OnPhotosSelected(InputFileChangeEventArgs e)
     {
+        photosChanged = true;
         photoFiles = e.GetMultipleFiles(10).ToList();
         photoDataUrls.Clear();
 
@@ -877,7 +855,7 @@
                 foreach (var file in photoFiles)
                 {
                     var ext = Path.GetExtension(file.Name);
-                    var saveName = $"ba-{editId.Value}-photo-{idx}{ext}";
+                    var saveName = $"ba-{editId.Value}-photo-{idx}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{ext}";
                     var fullPath = Path.Combine(photoFolder, saveName);
                     var relPath = $"files/photos/{saveName}";
 
@@ -1030,9 +1008,9 @@
                     }
                 }
 
-                // Jika data form berubah, ATAU status sebelumnya Rejected, dokumen HARUS digenerate ulang dari template
-                // dengan menghapus path lama, EditorBA akan mengenerate ulan.
-                if (isChanged || existing.Status == "Rejected")
+                // Jika data form berubah, ATAU status sebelumnya Rejected, ATAU foto diganti,
+                // dokumen HARUS digenerate ulang dari template
+                if (isChanged || existing.Status == "Rejected" || photosChanged || (photoFiles.Any() && !existingPhotoUrls.Any()))
                 {
                     existing.DocxPath = null;
                 }
@@ -1090,7 +1068,7 @@
                     foreach (var file in photoFiles)
                     {
                         var ext = Path.GetExtension(file.Name);
-                        var saveName = $"ba-{existing.Id}-photo-{idx2}{ext}";
+                        var saveName = $"ba-{existing.Id}-photo-{idx2}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{ext}";
                         await using var fs = File.Create(Path.Combine(photoFolder, saveName));
                         await file.OpenReadStream(5_000_000).CopyToAsync(fs);
                         DbContext.BuktiFoto.Add(new BuktiFoto { BaId = existing.Id, BeritaAcara = existing, FilePath = $"files/photos/{saveName}" });

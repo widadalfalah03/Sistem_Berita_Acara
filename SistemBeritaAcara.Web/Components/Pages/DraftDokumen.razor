@@ -55,7 +55,8 @@ else
                 @foreach (var ba in SortedDrafts)
                 {
                     var isRejected = ba.Status == "Rejected";
-                    <tr style="@(isRejected ? "background:var(--danger-light,#FEF2F2);" : "")">
+                    <tr style="cursor:pointer; transition: background 0.2s; @(isRejected ? "background:var(--danger-light,#FEF2F2);" : "")" 
+                        class="hover-row" @onclick="@(() => EditDraft(ba.Id))">
                         <td>
                             <div style="display:flex;align-items:center;gap:10px;">
                                 <i class="bi @(isRejected ? "bi-file-earmark-x" : "bi-file-earmark-text")"
@@ -90,12 +91,7 @@ else
                             }
                         </td>
                         <td>
-                            <div style="display:flex;gap:4px;">
-                                <NavLink class="btn-icon" href="@($"/buat-ba?edit={ba.Id}")"
-                                         title="@(isRejected ? "Revisi" : "Edit Draft")"
-                                         style="@(isRejected ? "color:var(--danger);" : "")">
-                                    <i class="bi @(isRejected ? "bi-arrow-counterclockwise" : "bi-pencil")"></i>
-                                </NavLink>
+                            <div style="display:flex;gap:4px;" @onclick:stopPropagation>
                                 <button class="btn-icon" title="Hapus"
                                         style="color:var(--danger);"
                                         @onclick="() => ConfirmDelete(ba.Id)">
@@ -175,8 +171,20 @@ else
 
     private void SortTable(string column)
     {
-        if (sortColumn == column) sortAscending = !sortAscending;
-        else { sortColumn = column; sortAscending = true; }
+        if (sortColumn == column)
+        {
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            sortColumn = column;
+            sortAscending = true;
+        }
+    }
+
+    private void EditDraft(int id)
+    {
+        Navigation.NavigateTo($"/buat-ba?edit={id}");
     }
 
     private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
