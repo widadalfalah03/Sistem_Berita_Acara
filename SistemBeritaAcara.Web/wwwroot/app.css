@@ -1807,7 +1807,7 @@ a:hover { color: var(--primary-hover); }
 .login-input {
     width: 100%;
     padding: 13px 20px;
-    border: 1.5px solid var(--border);
+    border: 1px solid var(--border);
     border-radius: var(--radius-full);
     font-size: 14px;
     color: var(--text-primary);
@@ -1826,7 +1826,8 @@ a:hover { color: var(--primary-hover); }
 
 .login-input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 1.5px var(--primary);
+    box-shadow: none;
+    outline: none !important;
     background: var(--surface);
 }
 

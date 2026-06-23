@@ -153,7 +153,7 @@ builder.Services.ConfigureApplicationCookie(opt =>
 {
     opt.LoginPath = "/login";
     opt.AccessDeniedPath = "/akses-ditolak";
-    opt.ExpireTimeSpan = TimeSpan.FromHours(8);
+    opt.ExpireTimeSpan = TimeSpan.FromDays(14); // Diperpanjang agar Remember Me bertahan lama
     opt.SlidingExpiration = true;
 });
 

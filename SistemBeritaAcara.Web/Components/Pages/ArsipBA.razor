@@ -32,44 +32,46 @@
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">No. Surat</div>
             <div style="display:flex;align-items:center;gap:6px;">
-                <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
                 <input type="text" placeholder="Cari nomor..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
                        @bind="search" @bind:event="oninput" />
+                <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
             </div>
         </div>
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Penanggung Jawab</div>
             <div style="display:flex;align-items:center;gap:6px;">
-                <i class="bi bi-person" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
                 <input type="text" placeholder="Nama PJ..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
                        @bind="pjSearch" @bind:event="oninput" />
+                <i class="bi bi-person" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
             </div>
         </div>
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Yang Menyerahkan</div>
             <div style="display:flex;align-items:center;gap:6px;">
-                <i class="bi bi-person-badge" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
                 <input type="text" placeholder="Nama..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
                        @bind="menyerahkanSearch" @bind:event="oninput" />
+                <i class="bi bi-person-badge" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
             </div>
         </div>
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Yang Mengetahui</div>
             <div style="display:flex;align-items:center;gap:6px;">
-                <i class="bi bi-person-check" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
                 <input type="text" placeholder="Nama approver..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
                        @bind="mengetahuiSearch" @bind:event="oninput" />
+                <i class="bi bi-person-check" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
             </div>
         </div>
         <div style="padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Tanggal</div>
-            <input type="date" class="form-control"
-                   style="font-size:13px;padding:6px 10px;width:100%;"
-                   @bind="dateFilter" />
+            <div style="display:flex;align-items:center;gap:6px;">
+                <input type="date"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
+                       @bind="dateFilter" />
+            </div>
         </div>
     </div>
     @if (HasActiveFilter)
