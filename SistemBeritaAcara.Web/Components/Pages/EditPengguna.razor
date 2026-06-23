@@ -166,6 +166,10 @@ else
         errorMsg = string.Empty;
         try
         {
+            var oldRoles = await UserManager.GetRolesAsync(appUser);
+            await UserManager.RemoveFromRolesAsync(appUser, oldRoles);
+            await UserManager.AddToRoleAsync(appUser, editRole);
+
             appUser.Role = editRole;
 
             await UserManager.UpdateAsync(appUser);
