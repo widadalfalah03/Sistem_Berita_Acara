@@ -126,6 +126,15 @@ else
             </div>
         }
     </div>
+    
+    @if (TotalFilteredItems > 0)
+    {
+        <SistemBeritaAcara.Web.Components.Shared.Pagination
+            CurrentPage="@currentPage"
+            TotalItems="@TotalFilteredItems"
+            PageSize="@pageSize"
+            CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+    }
 }
 
 @code {
@@ -135,11 +144,43 @@ else
     private string currentRole = string.Empty;
     private int currentUserId;
 
-    private string search = string.Empty;
-    private string pjSearch = string.Empty;
-    private string menyerahkanSearch = string.Empty;
-    private string mengetahuiSearch = string.Empty;
-    private DateTime? dateFilter;
+    private string _search = string.Empty;
+    private string search 
+    {
+        get => _search;
+        set { _search = value; currentPage = 1; }
+    }
+    
+    private string _pjSearch = string.Empty;
+    private string pjSearch
+    {
+        get => _pjSearch;
+        set { _pjSearch = value; currentPage = 1; }
+    }
+    
+    private string _menyerahkanSearch = string.Empty;
+    private string menyerahkanSearch
+    {
+        get => _menyerahkanSearch;
+        set { _menyerahkanSearch = value; currentPage = 1; }
+    }
+    
+    private string _mengetahuiSearch = string.Empty;
+    private string mengetahuiSearch
+    {
+        get => _mengetahuiSearch;
+        set { _mengetahuiSearch = value; currentPage = 1; }
+    }
+    
+    private DateTime? _dateFilter;
+    private DateTime? dateFilter
+    {
+        get => _dateFilter;
+        set { _dateFilter = value; currentPage = 1; }
+    }
+    
+    private int currentPage = 1;
+    private int pageSize = 10;
 
     private bool HasActiveFilter =>
         !string.IsNullOrEmpty(search) ||
@@ -148,7 +189,7 @@ else
         !string.IsNullOrEmpty(mengetahuiSearch) ||
         dateFilter.HasValue;
 
-    private IEnumerable<BeritaAcaraEntity> FilteredBA => allBA
+    private int TotalFilteredItems => allBA
         .Where(b => string.IsNullOrEmpty(search) ||
                     (b.NomorSurat ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
         .Where(b => string.IsNullOrEmpty(pjSearch) ||
@@ -157,7 +198,26 @@ else
                     (b.Menyerahkan?.Nama ?? "").Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase))
         .Where(b => string.IsNullOrEmpty(mengetahuiSearch) ||
                     (b.Mengetahui?.Nama ?? "").Contains(mengetahuiSearch, StringComparison.OrdinalIgnoreCase))
-        .Where(b => !dateFilter.HasValue || b.Tanggal == DateOnly.FromDateTime(dateFilter.Value));
+        .Count(b => !dateFilter.HasValue || b.Tanggal == DateOnly.FromDateTime(dateFilter.Value));
+
+    private IEnumerable<BeritaAcaraEntity> FilteredBA
+    {
+        get
+        {
+            var query = allBA
+                .Where(b => string.IsNullOrEmpty(search) ||
+                            (b.NomorSurat ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
+                .Where(b => string.IsNullOrEmpty(pjSearch) ||
+                            (b.Pj?.Nama ?? "").Contains(pjSearch, StringComparison.OrdinalIgnoreCase))
+                .Where(b => string.IsNullOrEmpty(menyerahkanSearch) ||
+                            (b.Menyerahkan?.Nama ?? "").Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase))
+                .Where(b => string.IsNullOrEmpty(mengetahuiSearch) ||
+                            (b.Mengetahui?.Nama ?? "").Contains(mengetahuiSearch, StringComparison.OrdinalIgnoreCase))
+                .Where(b => !dateFilter.HasValue || b.Tanggal == DateOnly.FromDateTime(dateFilter.Value));
+                
+            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
 
     private static string GetJenisPill(string jenis) => jenis switch
     {

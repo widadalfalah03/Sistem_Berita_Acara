@@ -39,6 +39,9 @@
         <input type="text" placeholder="Cari nama barang..."
                @bind="search" @bind:event="oninput" />
     </div>
+    <div style="font-size:13px; color:var(--text-secondary); margin-left:12px;">
+        Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, TotalFilteredItems) dari @TotalFilteredItems barang
+    </div>
 </div>
 
 @if (isLoading)
@@ -80,6 +83,15 @@ else
                 }
             </tbody>
         </table>
+        
+        @if (TotalFilteredItems > 0)
+        {
+            <SistemBeritaAcara.Web.Components.Shared.Pagination
+                CurrentPage="@currentPage"
+                TotalItems="@TotalFilteredItems"
+                PageSize="@pageSize"
+                CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+        }
     </div>
 }
 
@@ -120,12 +132,23 @@ else
     private bool isLoading = true;
     private bool showUpload = false;
     private bool isImporting = false;
-    private bool showInactive = false;
-    private string search = string.Empty;
     private string importResult = string.Empty;
 
     private string sortColumn = "Jenis / Nama Barang";
     private bool sortAscending = true;
+    
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private string _search = string.Empty;
+    private string search 
+    {
+        get => _search;
+        set 
+        {
+            _search = value;
+            currentPage = 1; // reset page saat pencarian berubah
+        }
+    }
 
     private void SortTable(string column)
     {
@@ -138,6 +161,7 @@ else
             sortColumn = column;
             sortAscending = true;
         }
+        currentPage = 1; // reset page saat sort berubah
     }
 
     private string GetSortIcon(string column)
@@ -145,6 +169,11 @@ else
         if (sortColumn != column) return "bi-arrow-down-up";
         return sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
     }
+
+    private int TotalFilteredItems => allBarang
+        .Where(b => b.IsAktif)
+        .Count(b => string.IsNullOrEmpty(search) ||
+                    b.NamaBarang.Contains(search, StringComparison.OrdinalIgnoreCase));
 
     private IEnumerable<MasterBarangEntity> FilteredBarang
     {
@@ -155,13 +184,14 @@ else
                 .Where(b => string.IsNullOrEmpty(search) ||
                             b.NamaBarang.Contains(search, StringComparison.OrdinalIgnoreCase));
 
-            return sortColumn switch
+            query = sortColumn switch
             {
-
                 "Jenis / Nama Barang" => sortAscending ? query.OrderBy(b => b.NamaBarang) : query.OrderByDescending(b => b.NamaBarang),
                 "Status" => sortAscending ? query.OrderByDescending(b => b.IsAktif) : query.OrderBy(b => b.IsAktif),
                 _ => query
             };
+            
+            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
         }
     }
 

@@ -29,7 +29,7 @@
                 </div>
             }
 
-            <form method="post" action="/account/login">
+            <form method="post" action="/account/login" onsubmit="handleLoginSubmit(this)">
                 <AntiforgeryToken />
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
 
@@ -52,7 +52,7 @@
                     <a href="/forgot-password" class="login-forgot">Forgot Password?</a>
                 </div>
 
-                <button type="submit" class="login-btn">Login</button>
+                <button type="submit" class="login-btn" id="login-submit-btn">Login</button>
             </form>
 
         </div>
@@ -66,5 +66,32 @@
         if (!inp) return;
         inp.type = inp.type === 'password' ? 'text' : 'password';
         icon.className = inp.type === 'text' ? 'bi bi-eye-slash' : 'bi bi-eye';
+    }
+
+    function handleLoginSubmit(form) {
+        var btn = document.getElementById('login-submit-btn');
+        if (btn) {
+            btn.disabled = true;
+        }
+
+        var overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.inset = '0';
+        overlay.style.zIndex = '10000';
+        overlay.style.background = 'rgba(255,255,255,0.93)';
+        overlay.style.backdropFilter = 'blur(6px)';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.gap = '16px';
+        
+        overlay.innerHTML = `
+            <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
+            <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">Memproses login...</div>
+            <div style="font-size:13px;color:var(--text-muted);">Sedang mengautentikasi akun, harap tunggu</div>
+        `;
+        
+        document.body.appendChild(overlay);
     }
 </script>

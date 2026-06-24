@@ -453,7 +453,7 @@ else
                 }
             }
 
-            // Embed TTD Yang Mengetahui
+            // Embed TTD Yang Mengetahui (Approver)
             await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, approverTtdPhysical);
             ba.Status = "Approved";
             ba.ApprovedAt = DateTime.Now;

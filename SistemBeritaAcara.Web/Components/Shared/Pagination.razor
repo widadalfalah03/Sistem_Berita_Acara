@@ -1,0 +1,76 @@
+<div class="pagination-container" style="gap:6px;">
+    <button class="page-btn" disabled="@(!HasPreviousPage)" @onclick="OnPreviousPage" style="padding: 0; min-width: 36px; height: 36px;">
+        <i class="bi bi-chevron-left" style="font-size:12px;"></i>
+    </button>
+
+    @foreach (var p in GetPageNumbers())
+    {
+        <button class="page-btn @(p == CurrentPage ? "active" : "")" @onclick="() => OnPageClicked(p)" style="padding: 0; min-width: 36px; height: 36px;">
+            @p
+        </button>
+    }
+
+    <button class="page-btn" disabled="@(!HasNextPage)" @onclick="OnNextPage" style="padding: 0; min-width: 36px; height: 36px;">
+        <i class="bi bi-chevron-right" style="font-size:12px;"></i>
+    </button>
+</div>
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalItems { get; set; }
+    [Parameter] public int PageSize { get; set; } = 10;
+    [Parameter] public EventCallback<int> CurrentPageChanged { get; set; }
+
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling((double)TotalItems / PageSize));
+    public bool HasPreviousPage => CurrentPage > 1;
+    public bool HasNextPage => CurrentPage < TotalPages;
+
+    private IEnumerable<int> GetPageNumbers()
+    {
+        var pages = new List<int>();
+        var startPage = Math.Max(1, CurrentPage - 1);
+        var endPage = Math.Min(TotalPages, CurrentPage + 1);
+
+        // Sesuaikan jika kita berada di halaman awal
+        if (CurrentPage == 1)
+        {
+            endPage = Math.Min(TotalPages, 3);
+        }
+        
+        // Sesuaikan jika kita berada di akhir halaman
+        if (CurrentPage == TotalPages && TotalPages > 0)
+        {
+            startPage = Math.Max(1, TotalPages - 2);
+        }
+
+        for (int i = startPage; i <= endPage; i++)
+        {
+            pages.Add(i);
+        }
+        return pages;
+    }
+
+    private async Task OnPageClicked(int page)
+    {
+        if (page != CurrentPage)
+        {
+            await CurrentPageChanged.InvokeAsync(page);
+        }
+    }
+
+    private async Task OnPreviousPage()
+    {
+        if (HasPreviousPage)
+        {
+            await CurrentPageChanged.InvokeAsync(CurrentPage - 1);
+        }
+    }
+
+    private async Task OnNextPage()
+    {
+        if (HasNextPage)
+        {
+            await CurrentPageChanged.InvokeAsync(CurrentPage + 1);
+        }
+    }
+}
