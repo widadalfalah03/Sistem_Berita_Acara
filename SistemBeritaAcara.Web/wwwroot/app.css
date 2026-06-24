@@ -4405,3 +4405,18 @@ select option { background: var(--surface); color: var(--text-primary); }
     color: white;
     border-color: var(--primary);
 }
+
+.custom-dropdown-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 400;
+    background: transparent;
+    color: var(--text-primary);
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.custom-dropdown-item:hover, .custom-dropdown-item.selected {
+    background: var(--primary) !important;
+    color: white !important;
+    font-weight: 500;
+}
