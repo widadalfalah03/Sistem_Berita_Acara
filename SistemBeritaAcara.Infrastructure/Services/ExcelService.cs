@@ -118,55 +118,25 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
         var sheet = workbook.Worksheet(1);
         var rows = sheet.RowsUsed().Skip(1).ToList();
 
-        var kodeInExcel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var namaInExcel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var row in rows)
         {
-            string col1 = row.Cell(1).Value.ToString().Trim();
-            string col2 = row.Cell(2).Value.ToString().Trim();
+            // Hanya menggunakan Kolom 1 sebagai Nama Barang
+            string nama = row.Cell(1).Value.ToString().Trim();
 
-            if (string.IsNullOrEmpty(col1) && string.IsNullOrEmpty(col2)) continue;
-
-            string kode = "";
-            string nama = "";
-
-            if (!string.IsNullOrEmpty(col2))
-            {
-                // Format lama: Kolom 1 = Kode, Kolom 2 = Nama
-                kode = col1;
-                nama = col2;
-            }
-            else
-            {
-                // Format baru: Kolom 1 = Nama, Kode di-generate otomatis
-                nama = col1;
-            }
+            if (string.IsNullOrEmpty(nama)) continue;
 
             if (nama.Length > 100) nama = nama.Substring(0, 100);
 
-            MasterBarang? existing = null;
-            if (!string.IsNullOrEmpty(kode))
-            {
-                existing = await db.MasterBarang.FirstOrDefaultAsync(b => b.KodeBarang == kode);
-            }
-            else
-            {
-                existing = await db.MasterBarang.FirstOrDefaultAsync(b => b.NamaBarang == nama);
-            }
+            if (!namaInExcel.Add(nama)) continue; // Skip duplikat di dalam file yang sama
+
+            MasterBarang? existing = await db.MasterBarang.FirstOrDefaultAsync(b => b.NamaBarang == nama);
 
             if (existing is null)
             {
-                if (string.IsNullOrEmpty(kode))
-                {
-                    kode = $"BRG-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}";
-                }
-                if (kode.Length > 20) kode = kode.Substring(0, 20);
-
-                if (!kodeInExcel.Add(kode)) continue;
-
                 db.MasterBarang.Add(new MasterBarang
                 {
-                    KodeBarang = kode,
                     NamaBarang = nama,
                     IsAktif = true
                 });
@@ -174,17 +144,18 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
             }
             else
             {
-                existing.NamaBarang = nama;
-                existing.IsAktif = true;
-                updated++;
-                kodeInExcel.Add(existing.KodeBarang);
+                if (!existing.IsAktif)
+                {
+                    existing.IsAktif = true;
+                    updated++;
+                }
             }
         }
 
         await db.SaveChangesAsync();
 
         var toDeactivate = await db.MasterBarang
-            .Where(b => b.IsAktif && !kodeInExcel.Contains(b.KodeBarang))
+            .Where(b => b.IsAktif && !namaInExcel.Contains(b.NamaBarang))
             .ToListAsync();
 
         foreach (var b in toDeactivate)
