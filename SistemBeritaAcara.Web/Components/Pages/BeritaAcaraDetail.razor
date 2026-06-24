@@ -50,9 +50,8 @@ else
 
     @if (!string.IsNullOrEmpty(actionMessage))
     {
-        var isError = actionMessage.StartsWith("Gagal");
-        <div style="background:@(isError ? "var(--danger-light)" : "#F0FDF4");border:1px solid @(isError ? "var(--danger)" : "#22C55E");border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:@(isError ? "var(--danger)" : "#16A34A");">
-            <i class="bi @(isError ? "bi-exclamation-circle-fill" : "bi-check-circle-fill")"></i>
+        <div style="background:@(actionIsError ? "var(--danger-light)" : "#F0FDF4");border:1px solid @(actionIsError ? "var(--danger)" : "#22C55E");border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:@(actionIsError ? "var(--danger)" : "#16A34A");">
+            <i class="bi @(actionIsError ? "bi-exclamation-circle-fill" : "bi-check-circle-fill")"></i>
             @actionMessage
         </div>
     }
@@ -290,6 +289,7 @@ else
     private string rejectReason = string.Empty;
     private string rejectError = string.Empty;
     private string actionMessage = string.Empty;
+    private bool actionIsError = false;
     private string currentRole = string.Empty;
     private bool isProcessing = false;
     private bool isApproverAction = false;
@@ -373,10 +373,10 @@ else
             var baseUrl = Navigation.BaseUri.TrimEnd('/');
             await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl);
             await NotificationService.SendToRoleAsync("AdminGudangBarang", "WAITING_PJ_SIGN", $"BA {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
-            actionMessage = "Magic link berhasil dikirim ke email PJ.";
+            actionIsError = false; actionMessage = "Magic link berhasil dikirim ke email PJ.";
             await LoadAsync();
         }
-        catch (Exception ex) { actionMessage = $"Gagal: {ex.Message}"; }
+        catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}"; }
         finally { isProcessing = false; }
     }
 
@@ -389,6 +389,13 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
+            // Server-side guard: cegah approval jika status sudah berubah
+            if (ba!.Status != "WaitingApproval")
+            {
+                actionIsError = true; actionMessage = "Gagal: Status BA sudah berubah. Refresh halaman dan coba lagi.";
+                isProcessing = false; isApproverAction = false; return;
+            }
+
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
             var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
             var approverTtdPhysical = string.IsNullOrWhiteSpace(currentUser?.TtdPath)
@@ -396,7 +403,7 @@ else
                 : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
             if (currentUser is null || approverTtdPhysical is null || !File.Exists(approverTtdPhysical))
             {
-                actionMessage = "Gagal: Approver belum memiliki file TTD yang valid. Silakan setup TTD di halaman Profil terlebih dahulu.";
+                actionIsError = true; actionMessage = "Gagal: Approver belum memiliki file TTD yang valid. Silakan setup TTD di halaman Profil terlebih dahulu.";
                 isProcessing = false;
                 return;
             }
@@ -457,8 +464,14 @@ else
             await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, approverTtdPhysical);
             ba.Status = "Approved";
             ba.ApprovedAt = DateTime.Now;
+            ba.ExcelExported = false; // akan di-set true setelah berhasil export
             await DbContext.SaveChangesAsync();
-            await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
+            if (!ba.ExcelExported)
+            {
+                await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
+                ba.ExcelExported = true;
+                await DbContext.SaveChangesAsync();
+            }
             await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"BA {ba.NomorSurat} telah disetujui.", ba.Id);
 
             // Email ke Admin Gudang & Barang (creator)
@@ -470,10 +483,10 @@ else
             if (!string.IsNullOrEmpty(ba.Pj?.Email))
                 await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.NomorSurat!, true);
 
-            actionMessage = "Berita Acara berhasil disetujui!";
+            actionIsError = false; actionMessage = "Berita Acara berhasil disetujui!";
             await LoadAsync();
         }
-        catch (Exception ex) { actionMessage = $"Gagal: {ex.Message}"; }
+        catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}"; }
         finally { isProcessing = false; isApproverAction = false; }
     }
 
@@ -487,6 +500,13 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
+            // Server-side guard: cegah reject jika status sudah berubah
+            if (ba!.Status != "WaitingApproval")
+            {
+                rejectError = "Status BA sudah berubah. Refresh halaman dan coba lagi.";
+                isProcessing = false; isApproverAction = false; return;
+            }
+
             ba!.Status = "Rejected";
             ba.AlasanReject = rejectReason;
             ba.ApprovedAt = DateTime.Now;
@@ -505,7 +525,7 @@ else
 
             showRejectModal = false;
             rejectReason = string.Empty;
-            actionMessage = "Berita Acara telah ditolak.";
+            actionIsError = false; actionMessage = "Berita Acara telah ditolak.";
             await LoadAsync();
         }
         catch (Exception ex) { rejectError = $"Gagal: {ex.Message}"; }
