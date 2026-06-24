@@ -542,17 +542,10 @@ else if (currentRole == "AdminIT")
         }
         else if (currentRole == "Approver")
         {
-            var approverTrendLabels = new List<string>();
-            for (int i = 5; i >= 0; i--)
-            {
-                var month = DateTime.Now.AddMonths(-i);
-                approverTrendLabels.Add(month.ToString("MMM"));
-                var approvedCount = approverQueue.Count(b => b.Status == "Approved" && b.ApprovedAt?.Month == month.Month && b.ApprovedAt?.Year == month.Year);
-                approverTrendApproved.Add(approvedCount);
-            }
+            var approverTrendLabels = GetLast6MonthLabels();
 
             await JS.InvokeVoidAsync("chartInterop.createLineChart", "approverTrendChart",
-                approverTrendLabels.ToArray(),
+                approverTrendLabels,
                 new[]
                 {
                     new { label = "Disetujui", data = approverTrendApproved, color = "#22C55E" }
@@ -615,6 +608,14 @@ else if (currentRole == "AdminIT")
             .Where(b => b.Status == "WaitingApproval")
             .OrderBy(b => b.SubmittedAt)
             .ToList();
+
+        approverTrendApproved.Clear();
+        for (int i = 5; i >= 0; i--)
+        {
+            var month = DateTime.Now.AddMonths(-i);
+            var count = approvedBA.Count(b => b.ApprovedAt?.Month == month.Month && b.ApprovedAt?.Year == month.Year);
+            approverTrendApproved.Add(count);
+        }
     }
 
     private async Task LoadAdminITDataAsync()
