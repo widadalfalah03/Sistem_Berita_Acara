@@ -4225,3 +4225,183 @@ select option { background: var(--surface); color: var(--text-primary); }
 .upload-btn-styled:hover span {
     color: white !important;
 }
+
+/* -- Responsive & Mobile ----------------------------------------- */
+.mobile-menu-toggle {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+    margin-right: 12px;
+}
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 102; /* Di bawah sidebar (103), di atas topbar (101) */
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.sidebar-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .stat-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: block;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -300px;
+        width: 280px;
+        height: 100vh;
+        background: var(--surface);
+        padding: 16px;
+        box-shadow: var(--shadow-lg);
+        z-index: 103;
+        transition: left 0.3s ease;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+    
+    .sidebar-nav-card {
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    .main-content {
+        margin-left: 0 !important;
+        margin-right: 0;
+        margin-top: var(--topbar-height);
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .topbar {
+        padding: 0 16px;
+    }
+    
+    .topbar-user {
+        gap: 6px;
+    }
+    
+    .topbar-username {
+        display: none; /* Sembunyikan nama di HP agar muat */
+    }
+
+    .dashboard-fill .dashboard-grid {
+        flex-direction: column;
+    }
+
+    .stat-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .page-title {
+        font-size: 22px;
+    }
+    
+    .card-header {
+        padding: 16px;
+    }
+    
+    .card-body {
+        padding: 16px;
+    }
+    
+    /* Responsive forms */
+    .form-row, .ba-form-grid, .two-columns {
+        grid-template-columns: 1fr !important;
+        gap: 16px;
+    }
+}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.grid-aside { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+
+@media (max-width: 768px) {
+    .grid-2, .grid-3, .grid-4, .grid-5, .grid-aside {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* -- Pagination -------------------------------------------------- */
+.pagination-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 16px;
+    margin-bottom: 16px;
+    margin-right: 24px;
+}
+
+.pagination-info {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.page-btn:hover:not(:disabled) {
+    background: var(--bg);
+}
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.page-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
