@@ -58,7 +58,7 @@
             }
         </div>
     }
-    else if (!string.IsNullOrEmpty(searchQuery))
+    else if (selectedPegawai is null && !string.IsNullOrEmpty(searchQuery))
     {
         <div style="text-align:center;padding:32px;color:var(--text-muted);">
             <i class="bi bi-search" style="font-size:32px;display:block;margin-bottom:12px;"></i>
@@ -75,13 +75,34 @@
                 Untuk: <strong>@selectedPegawai.Nama</strong>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" style="position:relative;">
                 <label class="form-label">Role <span style="color:var(--danger)">*</span></label>
-                <select class="form-control form-select" @bind="selectedRole">
-                    <option value="">-- Pilih Role --</option>
-                    <option value="AdminGudangBarang">Admin Gudang & Barang</option>
-                    <option value="Approver">Approver</option>
-                </select>
+                <div @onclick="() => showRoleDropdown = !showRoleDropdown"
+                     style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <span style="font-weight:500;">
+                        @(selectedRole == "AdminGudangBarang" ? "Admin Gudang & Barang" : selectedRole == "Approver" ? "Approver" : "-- Pilih Role --")
+                    </span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showRoleDropdown ? "transform:rotate(180deg);" : "")"></i>
+                </div>
+                @if (showRoleDropdown)
+                {
+                    <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
+                    <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);margin-top:4px;overflow:hidden;">
+                        @{
+                            var roles = new[] {
+                                new { Value = "AdminGudangBarang", Text = "Admin Gudang & Barang" },
+                                new { Value = "Approver", Text = "Approver" }
+                            };
+                            foreach (var r in roles)
+                            {
+                                <div class="custom-dropdown-item @(selectedRole == r.Value ? "selected" : "")"
+                                     @onclick="() => { selectedRole = r.Value; showRoleDropdown = false; }">
+                                    @r.Text
+                                </div>
+                            }
+                        }
+                    </div>
+                }
             </div>
 
             <div class="form-group" style="margin-top:16px; background:#eff6ff; padding:12px; border-radius:6px; border:1px solid #bfdbfe;">
@@ -136,6 +157,7 @@
     private bool formSaved = false;
     private string savedName = string.Empty;
     private string savedRole = string.Empty;
+    private bool showRoleDropdown = false;
     private CancellationTokenSource? _searchCts;
 
     protected override async Task OnInitializedAsync()
