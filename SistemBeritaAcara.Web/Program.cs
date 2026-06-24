@@ -1,4 +1,5 @@
 using Hangfire;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SistemBeritaAcara.Core.Entities;
@@ -173,6 +174,19 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
 }
+
+// Baca X-Forwarded-* headers dari reverse proxy/ngrok agar redirect URL pakai host ngrok
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+});
+
+// Izinkan ngrok melewati header verifikasi (hanya berpengaruh saat pakai ngrok di development)
+app.Use(async (context, next) =>
+{
+    context.Request.Headers["ngrok-skip-browser-warning"] = "true";
+    await next();
+});
 
 app.UseHttpsRedirection();
 app.UseAntiforgery();
