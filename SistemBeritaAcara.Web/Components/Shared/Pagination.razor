@@ -1,16 +1,16 @@
 <div class="pagination-container" style="gap:6px;">
-    <button class="page-btn" disabled="@(!HasPreviousPage)" @onclick="OnPreviousPage" style="padding: 0; min-width: 36px; height: 36px;">
+    <button class="page-btn" disabled="@(!HasPreviousPage)" @onclick="OnPreviousPage">
         <i class="bi bi-chevron-left" style="font-size:12px;"></i>
     </button>
 
     @foreach (var p in GetPageNumbers())
     {
-        <button class="page-btn @(p == CurrentPage ? "active" : "")" @onclick="() => OnPageClicked(p)" style="padding: 0; min-width: 36px; height: 36px;">
+        <button class="page-btn @(p == CurrentPage ? "active" : "")" @onclick="() => OnPageClicked(p)">
             @p
         </button>
     }
 
-    <button class="page-btn" disabled="@(!HasNextPage)" @onclick="OnNextPage" style="padding: 0; min-width: 36px; height: 36px;">
+    <button class="page-btn" disabled="@(!HasNextPage)" @onclick="OnNextPage">
         <i class="bi bi-chevron-right" style="font-size:12px;"></i>
     </button>
 </div>
@@ -29,18 +29,12 @@
     {
         var pages = new List<int>();
         var startPage = Math.Max(1, CurrentPage - 1);
-        var endPage = Math.Min(TotalPages, CurrentPage + 1);
+        var endPage = Math.Min(TotalPages, startPage + 3);
 
-        // Sesuaikan jika kita berada di halaman awal
-        if (CurrentPage == 1)
+        // Adjust if we hit the end
+        if (endPage - startPage < 3 && TotalPages >= 4)
         {
-            endPage = Math.Min(TotalPages, 3);
-        }
-        
-        // Sesuaikan jika kita berada di akhir halaman
-        if (CurrentPage == TotalPages && TotalPages > 0)
-        {
-            startPage = Math.Max(1, TotalPages - 2);
+            startPage = Math.Max(1, endPage - 3);
         }
 
         for (int i = startPage; i <= endPage; i++)
