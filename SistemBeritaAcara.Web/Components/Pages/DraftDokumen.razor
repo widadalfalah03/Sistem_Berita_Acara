@@ -269,7 +269,7 @@ else
         if (!deleteConfirmId.HasValue) return;
         var ba = await DbContext.Set<BeritaAcaraEntity>()
             .Include(b => b.BuktiFotos)
-            .FirstOrDefaultAsync(b => b.Id == deleteConfirmId.Value);
+            .FirstOrDefaultAsync(b => b.Id == deleteConfirmId.Value && b.CreatedBy == currentUserId);
         if (ba is not null)
         {
             // Hapus file dokumen (DOCX + PDF) dari disk

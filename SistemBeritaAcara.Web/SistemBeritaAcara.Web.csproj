@@ -5,6 +5,15 @@
     <ProjectReference Include="..\SistemBeritaAcara.Infrastructure\SistemBeritaAcara.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- File yang di-upload user (foto, dokumen, TTD, profil) tidak perlu di-bundle saat publish.
+       File-file ini ada di disk server dan diakses langsung via wwwroot. -->
+  <ItemGroup>
+    <Content Remove="wwwroot\files\photos\**" />
+    <Content Remove="wwwroot\files\documents\**" />
+    <Content Remove="wwwroot\files\signatures\**" />
+    <Content Remove="wwwroot\files\profiles\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

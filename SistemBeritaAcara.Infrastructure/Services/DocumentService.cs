@@ -6,6 +6,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using A = DocumentFormat.OpenXml.Drawing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
+using Microsoft.Extensions.Logging;
 using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Core.Interfaces;
 using SistemBeritaAcara.Infrastructure.Data;
@@ -15,12 +16,14 @@ namespace SistemBeritaAcara.Infrastructure.Services;
 public class DocumentService : IDocumentService
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<DocumentService> _logger;
     private readonly string _outputRoot;
     private readonly string _templatesDir;
 
-    public DocumentService(AppDbContext db)
+    public DocumentService(AppDbContext db, ILogger<DocumentService> logger)
     {
         _db = db;
+        _logger = logger;
         _outputRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
         _templatesDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "templates");
         Directory.CreateDirectory(_outputRoot);
@@ -294,7 +297,7 @@ public class DocumentService : IDocumentService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Gagal membuat PDF preview: {ex.Message}");
+            _logger.LogWarning(ex, "Gagal membuat PDF preview");
         }
 
         return relativePath;
@@ -339,7 +342,7 @@ public class DocumentService : IDocumentService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[PatchNomorSurat] Gagal regenerasi PDF: {ex.Message}");
+            _logger.LogWarning(ex, "[PatchNomorSurat] Gagal regenerasi PDF");
         }
     }
 
@@ -397,7 +400,7 @@ public class DocumentService : IDocumentService
         return finalRelativePath;
     }
 
-    private static async Task EmbedSignatureSpireAsync(string docPath, string imagePath, string placeholder)
+    private async Task EmbedSignatureSpireAsync(string docPath, string imagePath, string placeholder)
     {
         if (!File.Exists(imagePath)) throw new FileNotFoundException("File tanda tangan tidak ditemukan.", imagePath);
 
@@ -533,7 +536,7 @@ public class DocumentService : IDocumentService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[EmbedSignatureSpire] Gagal konversi PDF setelah embed TTD: {ex.Message}");
+            _logger.LogWarning(ex, "[EmbedSignatureSpire] Gagal konversi PDF setelah embed TTD");
         }
     }
 

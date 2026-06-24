@@ -12,6 +12,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject ILogger<BeritaAcara> Logger
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
@@ -703,7 +704,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[AutoSaveAsync Error] {ex.Message} | Inner: {ex.InnerException?.Message}");
+            Logger.LogError(ex, "[AutoSaveAsync] Error saat auto-save BA");
             autoSaveStatus = AutoSaveState.Error;
             StateHasChanged();
         }
@@ -891,7 +892,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[OnPhotosSelected Error] {ex.Message} | Inner: {ex.InnerException?.Message}");
+                Logger.LogError(ex, "[OnPhotosSelected] Error saat upload foto");
                 // Preview tetap tampil meski save gagal
                 autoSaveStatus = AutoSaveState.Error;
                 StateHasChanged();
@@ -923,6 +924,7 @@
         // ── Validasi lengkap ──
         if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
         if (string.IsNullOrWhiteSpace(model.PjNoTelp)) { errorMessage = "No. Telp/HP PJ wajib diisi."; return; }
+        if (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
         if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
         if (model.MengetahuiId == 0 || !approvers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Approver (Yang Mengetahui) yang valid (akun mungkin telah dinonaktifkan)."; return; }
         if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC wajib diisi."; return; }
