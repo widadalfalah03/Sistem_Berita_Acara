@@ -163,7 +163,7 @@ builder.Services.ConfigureApplicationCookie(opt =>
 {
     opt.LoginPath = "/login";
     opt.AccessDeniedPath = "/akses-ditolak";
-    opt.ExpireTimeSpan = TimeSpan.FromDays(14); // Diperpanjang agar Remember Me bertahan lama
+    opt.ExpireTimeSpan = TimeSpan.FromDays(1);
     opt.SlidingExpiration = true;
 });
 
@@ -200,7 +200,6 @@ app.MapPost("/account/login", async (
     var form = await ctx.Request.ReadFormAsync();
     var email = form["email"].ToString();
     var password = form["password"].ToString();
-    var rememberMe = form["rememberMe"].ToString() == "on";
     var returnUrl = form["returnUrl"].ToString();
     if (string.IsNullOrEmpty(returnUrl)) returnUrl = "/dashboard";
 
@@ -208,7 +207,7 @@ app.MapPost("/account/login", async (
     if (user is null || user.IsDeleted)
         return Results.Redirect($"/login?error=invalid");
 
-    var result = await signInManager.PasswordSignInAsync(user, password, rememberMe, lockoutOnFailure: false);
+    var result = await signInManager.PasswordSignInAsync(user, password, isPersistent: false, lockoutOnFailure: false);
     if (result.Succeeded)
     {
         if (user.MustChangePw && user.Role != "AdminIT")
