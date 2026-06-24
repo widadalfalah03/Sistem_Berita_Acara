@@ -82,11 +82,11 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             EmailConfirmed = true,
             Nama = name,
             Role = role,
-            MustChangePw = false,
+            MustChangePw = true,
             PegawaiId = pegawaiId
         };
 
-        var result = await userManager.CreateAsync(user, "Admin1234!");
+        var result = await userManager.CreateAsync(user, "Admin@1234");
         if (result.Succeeded)
             await userManager.AddToRoleAsync(user, role);
     }
@@ -201,21 +201,25 @@ app.MapPost("/account/login", async (
     var email = form["email"].ToString();
     var password = form["password"].ToString();
     var returnUrl = form["returnUrl"].ToString();
-    if (string.IsNullOrEmpty(returnUrl)) returnUrl = "/dashboard";
+    // Cegah open redirect: hanya izinkan path lokal (mulai dengan '/')
+    if (string.IsNullOrEmpty(returnUrl) || !returnUrl.StartsWith('/') || returnUrl.StartsWith("//"))
+        returnUrl = "/dashboard";
 
     var user = await userManager.FindByEmailAsync(email);
     if (user is null || user.IsDeleted)
         return Results.Redirect($"/login?error=invalid");
 
-    var result = await signInManager.PasswordSignInAsync(user, password, isPersistent: false, lockoutOnFailure: false);
+    var result = await signInManager.PasswordSignInAsync(user, password, isPersistent: false, lockoutOnFailure: true);
     if (result.Succeeded)
     {
-        if (user.MustChangePw && user.Role != "AdminIT")
+        if (user.MustChangePw)
         {
             return Results.Redirect("/setup-akun");
         }
         return Results.Redirect(returnUrl);
     }
+    if (result.IsLockedOut)
+        return Results.Redirect("/login?error=locked");
 
     return Results.Redirect("/login?error=invalid");
 });
