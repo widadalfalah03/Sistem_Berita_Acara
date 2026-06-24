@@ -464,8 +464,14 @@ else
             await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, approverTtdPhysical);
             ba.Status = "Approved";
             ba.ApprovedAt = DateTime.Now;
+            ba.ExcelExported = false; // akan di-set true setelah berhasil export
             await DbContext.SaveChangesAsync();
-            await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
+            if (!ba.ExcelExported)
+            {
+                await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
+                ba.ExcelExported = true;
+                await DbContext.SaveChangesAsync();
+            }
             await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"BA {ba.NomorSurat} telah disetujui.", ba.Id);
 
             // Email ke Admin Gudang & Barang (creator)

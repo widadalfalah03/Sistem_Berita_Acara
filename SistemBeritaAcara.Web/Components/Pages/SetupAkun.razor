@@ -160,7 +160,7 @@
             currentUser = await UserManager.FindByEmailAsync(userName);
         }
 
-        if (currentUser == null || !currentUser.MustChangePw || currentUser.Role == "AdminIT")
+        if (currentUser == null || !currentUser.MustChangePw)
         {
             Navigation.NavigateTo("/dashboard");
             return;
@@ -205,7 +205,9 @@
             return;
         }
 
-        if (!string.IsNullOrEmpty(currentUser?.TtdPath))
+        // AdminIT tidak perlu upload TTD (bukan penandatangan dokumen)
+        bool skipTtdStep = currentUser?.Role == "AdminIT" || !string.IsNullOrEmpty(currentUser?.TtdPath);
+        if (skipTtdStep)
         {
             isSaving = true;
             try

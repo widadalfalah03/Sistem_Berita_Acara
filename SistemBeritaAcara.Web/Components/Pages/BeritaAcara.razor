@@ -12,6 +12,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject ILogger<BeritaAcara> Logger
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
@@ -703,7 +704,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[AutoSaveAsync Error] {ex.Message} | Inner: {ex.InnerException?.Message}");
+            Logger.LogError(ex, "[AutoSaveAsync] Error saat auto-save BA");
             autoSaveStatus = AutoSaveState.Error;
             StateHasChanged();
         }
@@ -891,7 +892,7 @@
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[OnPhotosSelected Error] {ex.Message} | Inner: {ex.InnerException?.Message}");
+                Logger.LogError(ex, "[OnPhotosSelected] Error saat upload foto");
                 // Preview tetap tampil meski save gagal
                 autoSaveStatus = AutoSaveState.Error;
                 StateHasChanged();

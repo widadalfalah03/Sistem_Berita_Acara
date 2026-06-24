@@ -723,7 +723,8 @@ else if (currentRole == "AdminIT")
         isReturning = true;
         try
         {
-            var ba = await DbCtx.Set<BAEntity>().FindAsync(confirmReturnId.Value);
+            var ba = await DbCtx.Set<BAEntity>()
+                .FirstOrDefaultAsync(b => b.Id == confirmReturnId.Value && b.CreatedBy == currentUserId);
             if (ba is not null)
             {
                 ba.IsReturned = true;

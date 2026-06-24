@@ -8,7 +8,9 @@
     var uri = new Uri(Navigation.Uri);
     var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
     var errorParam = query["error"] ?? string.Empty;
-    var errorMessage = errorParam == "invalid" ? "Email atau password tidak valid." : string.Empty;
+    var errorMessage = errorParam == "invalid" ? "Email atau password tidak valid." :
+                      errorParam == "locked" ? "Akun terkunci sementara karena terlalu banyak percobaan gagal. Coba lagi dalam 5 menit." :
+                      string.Empty;
     var returnUrl = query["returnUrl"] ?? "/dashboard";
 }
 

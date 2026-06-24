@@ -10,6 +10,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject IConfiguration Configuration
+@inject ILogger<OnlyOfficeEditor> Logger
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 @implements IAsyncDisposable
@@ -227,12 +228,12 @@ else
                     {
                         var body = await resp.Content.ReadAsStringAsync();
                         commandServiceUsed = true;
-                        Console.WriteLine($"[OnlyOffice CommandService] key={_docKey} response={body}");
+                        Logger.LogInformation("[OnlyOffice CommandService] key={DocKey} response={Body}", _docKey, body);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[OnlyOffice CommandService] Gagal: {ex.Message}. Fallback ke client forceSave.");
+                    Logger.LogWarning(ex, "[OnlyOffice CommandService] Gagal, fallback ke client forceSave");
                 }
             }
 
