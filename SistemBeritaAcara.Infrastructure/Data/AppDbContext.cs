@@ -55,8 +55,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
         builder.Entity<MasterBarang>(e =>
         {
             e.HasKey(b => b.Id);
-            e.Property(b => b.KodeBarang).HasMaxLength(20).IsRequired();
-            e.HasIndex(b => b.KodeBarang).IsUnique();
             e.Property(b => b.NamaBarang).HasMaxLength(100).IsRequired();
         });
 
