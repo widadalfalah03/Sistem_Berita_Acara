@@ -287,9 +287,9 @@
                 </div>
             </div>
 
-            <!-- Yang Mengetahui -->
+            <!-- Yang Mengetahui (Approver) -->
             <div class="ttd-col">
-                <div class="ttd-label">Yang Mengetahui</div>
+                <div class="ttd-label">Yang Mengetahui (Approver)</div>
                 <div class="form-group" style="position:relative;">
                     <div @onclick="OpenMengetahuiSearch"
                          style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
@@ -926,7 +926,7 @@
         if (string.IsNullOrWhiteSpace(model.PjNoTelp)) { errorMessage = "No. Telp/HP PJ wajib diisi."; return; }
         if (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
         if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
-        if (model.MengetahuiId == 0 || !approvers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Yang Mengetahui yang valid (akun mungkin telah dinonaktifkan)."; return; }
+        if (model.MengetahuiId == 0 || !approvers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Approver (Yang Mengetahui) yang valid (akun mungkin telah dinonaktifkan)."; return; }
         if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC wajib diisi."; return; }
         if (model.Jenis == "Peminjaman" && !model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk Peminjaman."; return; }
 

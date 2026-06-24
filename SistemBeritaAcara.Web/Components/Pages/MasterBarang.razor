@@ -36,8 +36,11 @@
 <div class="search-bar">
     <div class="search-input" style="max-width:320px;">
         <i class="bi bi-search"></i>
-        <input type="text" placeholder="Cari nama atau kode barang..."
+        <input type="text" placeholder="Cari nama barang..."
                @bind="search" @bind:event="oninput" />
+    </div>
+    <div style="font-size:13px; color:var(--text-secondary); margin-left:12px;">
+        Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, TotalFilteredItems) dari @TotalFilteredItems barang
     </div>
 </div>
 
@@ -59,7 +62,6 @@ else
         <table class="data-table">
             <thead>
                 <tr>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Kode Barang"))">Kode Barang <i class="bi @GetSortIcon("Kode Barang")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis / Nama Barang"))">Jenis / Nama Barang <i class="bi @GetSortIcon("Jenis / Nama Barang")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                 </tr>
             </thead>
@@ -67,24 +69,29 @@ else
                 @foreach (var b in FilteredBarang)
                 {
                     <tr>
-                        <td>
-                            <span style="font-family:monospace;font-size:13px;background:var(--bg);padding:4px 8px;border-radius:4px;border:1px solid var(--border);">
-                                @b.KodeBarang
-                            </span>
-                        </td>
+
                         <td class="fw-semibold">@b.NamaBarang</td>
                     </tr>
                 }
                 @if (!FilteredBarang.Any())
                 {
                     <tr>
-                        <td colspan="2" style="text-align:center;padding:40px;color:var(--text-muted);">
+                        <td style="text-align:center;padding:40px;color:var(--text-muted);">
                             Tidak ada data barang yang sesuai filter
                         </td>
                     </tr>
                 }
             </tbody>
         </table>
+        
+        @if (TotalFilteredItems > 0)
+        {
+            <SistemBeritaAcara.Web.Components.Shared.Pagination
+                CurrentPage="@currentPage"
+                TotalItems="@TotalFilteredItems"
+                PageSize="@pageSize"
+                CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+        }
     </div>
 }
 
@@ -98,7 +105,7 @@ else
             </button>
             <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Import Data Barang</div>
             <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">
-                Upload file Excel (.xlsx) dengan kolom: Kode Barang, Nama Barang
+                Upload file Excel (.xlsx) dengan kolom baris pertama: Nama Barang
             </div>
             <div style="display:flex;justify-content:center;margin: 24px 0;">
                 <label for="barang-upload-input" style="cursor:pointer;display:inline-block;">
@@ -125,12 +132,23 @@ else
     private bool isLoading = true;
     private bool showUpload = false;
     private bool isImporting = false;
-    private bool showInactive = false;
-    private string search = string.Empty;
     private string importResult = string.Empty;
 
-    private string sortColumn = "Kode Barang";
+    private string sortColumn = "Jenis / Nama Barang";
     private bool sortAscending = true;
+    
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private string _search = string.Empty;
+    private string search 
+    {
+        get => _search;
+        set 
+        {
+            _search = value;
+            currentPage = 1; // reset page saat pencarian berubah
+        }
+    }
 
     private void SortTable(string column)
     {
@@ -143,6 +161,7 @@ else
             sortColumn = column;
             sortAscending = true;
         }
+        currentPage = 1; // reset page saat sort berubah
     }
 
     private string GetSortIcon(string column)
@@ -151,6 +170,11 @@ else
         return sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
     }
 
+    private int TotalFilteredItems => allBarang
+        .Where(b => b.IsAktif)
+        .Count(b => string.IsNullOrEmpty(search) ||
+                    b.NamaBarang.Contains(search, StringComparison.OrdinalIgnoreCase));
+
     private IEnumerable<MasterBarangEntity> FilteredBarang
     {
         get
@@ -158,16 +182,16 @@ else
             var query = allBarang
                 .Where(b => b.IsAktif)
                 .Where(b => string.IsNullOrEmpty(search) ||
-                            b.NamaBarang.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                            b.KodeBarang.Contains(search, StringComparison.OrdinalIgnoreCase));
+                            b.NamaBarang.Contains(search, StringComparison.OrdinalIgnoreCase));
 
-            return sortColumn switch
+            query = sortColumn switch
             {
-                "Kode Barang" => sortAscending ? query.OrderBy(b => b.KodeBarang) : query.OrderByDescending(b => b.KodeBarang),
                 "Jenis / Nama Barang" => sortAscending ? query.OrderBy(b => b.NamaBarang) : query.OrderByDescending(b => b.NamaBarang),
                 "Status" => sortAscending ? query.OrderByDescending(b => b.IsAktif) : query.OrderBy(b => b.IsAktif),
                 _ => query
             };
+            
+            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
         }
     }
 

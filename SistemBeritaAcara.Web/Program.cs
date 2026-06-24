@@ -99,17 +99,11 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     // Admin IT — Romi Aprilian (no pekerja 1)
     await CreateUserIfMissing("romiaprilian7406@gmail.com", "Romi Aprilian Mustafa", "AdminIT", getPegawaiId("1"));
 
-    // Admin Gudang & Barang — Muhammad Widad Alfalah (no pekerja 4)
-    await CreateUserIfMissing("widadalfalah03@gmail.com", "Muhammad Widad Alfalah", "AdminGudangBarang", getPegawaiId("4"));
-
-    // Approver 1 — Bruce Wayne (no pekerja 2)
-    await CreateUserIfMissing("ggyur21887@gmail.com", "Bruce Wayne", "Approver", getPegawaiId("2"));
-
-    // Approver 2 — Tony Stark (no pekerja 3)
-    await CreateUserIfMissing("guidotorvalds1985@gmail.com", "Tony Stark", "Approver", getPegawaiId("3"));
-
-    // Approver 3 — Steve Rogers (no pekerja 5)
-    await CreateUserIfMissing("wddalfalah01@gmail.com", "Steve Rogers", "Approver", getPegawaiId("5"));
+    // Dummy users are commented out to keep the database clean
+    // await CreateUserIfMissing("widadalfalah03@gmail.com", "Muhammad Widad Alfalah", "AdminGudangBarang", getPegawaiId("4"));
+    // await CreateUserIfMissing("ggyur21887@gmail.com", "Bruce Wayne", "Approver", getPegawaiId("2"));
+    // await CreateUserIfMissing("guidotorvalds1985@gmail.com", "Tony Stark", "Approver", getPegawaiId("3"));
+    // await CreateUserIfMissing("wddalfalah01@gmail.com", "Steve Rogers", "Approver", getPegawaiId("5"));
 
     // Sync Jabatan dari Pegawai ke ApplicationUser (untuk user yang Jabatan-nya masih null)
     var usersNeedJabatan = db.Users.Include(u => u.Pegawai).Where(u => u.Jabatan == null && u.PegawaiId != null).ToList();
@@ -129,6 +123,8 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     }
 
     // ── 4. Seed MasterBarang (54 item dari data Excel dummy, kode brg-1 s/d brg-54) ──
+    // Dummy items commented out to keep database clean
+    /*
     if (!db.MasterBarang.Any())
     {
         var barangList = new[]
@@ -157,6 +153,7 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
         }
         await db.SaveChangesAsync();
     }
+    */
 }
 
 builder.Services.ConfigureApplicationCookie(opt =>

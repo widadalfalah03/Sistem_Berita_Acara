@@ -98,20 +98,52 @@ else
             </div>
         }
     </div>
+    
+    @if (TotalFilteredItems > 0)
+    {
+        <SistemBeritaAcara.Web.Components.Shared.Pagination
+            CurrentPage="@currentPage"
+            TotalItems="@TotalFilteredItems"
+            PageSize="@pageSize"
+            CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+    }
 }
 
 @code {
     private List<Notification> notifications = new();
     private bool isLoading = true;
     private int currentUserId;
-    private string activeTab = "unread";
+    private string _activeTab = "unread";
+    private string activeTab 
+    {
+        get => _activeTab;
+        set 
+        {
+            _activeTab = value;
+            currentPage = 1;
+        }
+    }
     private bool deleteAllConfirm = false;
+    private int currentPage = 1;
+    private int pageSize = 10;
 
     private int UnreadCount => notifications.Count(n => !n.IsRead);
 
-    private IEnumerable<Notification> DisplayedNotifications => activeTab == "unread"
-        ? notifications.Where(n => !n.IsRead)
-        : notifications;
+    private int TotalFilteredItems => activeTab == "unread"
+        ? notifications.Count(n => !n.IsRead)
+        : notifications.Count;
+
+    private IEnumerable<Notification> DisplayedNotifications
+    {
+        get
+        {
+            var query = activeTab == "unread"
+                ? notifications.Where(n => !n.IsRead)
+                : notifications;
+            
+            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

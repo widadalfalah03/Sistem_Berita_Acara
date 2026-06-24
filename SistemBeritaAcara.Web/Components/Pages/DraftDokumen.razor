@@ -34,11 +34,16 @@ else
             @deleteMsg
         </div>
     }
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-        <button class="btn btn-outline-danger btn-sm" @onclick="() => deleteAllConfirm = true"
-                style="display:flex;align-items:center;gap:6px;">
-            <i class="bi bi-trash3"></i> Hapus Semua
-        </button>
+    <div style="display:flex;align-items:center;margin-bottom:12px;">
+        <div style="font-size:13px; color:var(--text-secondary);">
+            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, drafts.Count) dari @drafts.Count dokumen
+        </div>
+        <div style="margin-left:auto;">
+            <button class="btn btn-outline-danger btn-sm" @onclick="() => deleteAllConfirm = true"
+                    style="display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-trash3"></i> Hapus Semua
+            </button>
+        </div>
     </div>
     <div class="card">
         <table class="data-table">
@@ -103,6 +108,15 @@ else
                 }
             </tbody>
         </table>
+        
+        @if (drafts.Count > 0)
+        {
+            <SistemBeritaAcara.Web.Components.Shared.Pagination
+                CurrentPage="@currentPage"
+                TotalItems="@drafts.Count"
+                PageSize="@pageSize"
+                CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+        }
     </div>
 }
 
@@ -168,6 +182,9 @@ else
 
     private string sortColumn = "Tanggal";
     private bool sortAscending = false;
+    
+    private int currentPage = 1;
+    private int pageSize = 10;
 
     private void SortTable(string column)
     {
@@ -180,6 +197,7 @@ else
             sortColumn = column;
             sortAscending = true;
         }
+        currentPage = 1;
     }
 
     private void EditDraft(int id)
@@ -189,14 +207,21 @@ else
 
     private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
 
-    private IEnumerable<BeritaAcaraEntity> SortedDrafts => sortColumn switch
+    private IEnumerable<BeritaAcaraEntity> SortedDrafts
     {
-        "Tanggal" => sortAscending ? drafts.OrderBy(b => b.CreatedAt) : drafts.OrderByDescending(b => b.CreatedAt),
-        "Jenis Berita Acara" => sortAscending ? drafts.OrderBy(b => b.Jenis) : drafts.OrderByDescending(b => b.Jenis),
-        "Penanggung Jawab" => sortAscending ? drafts.OrderBy(b => b.Pj?.Nama) : drafts.OrderByDescending(b => b.Pj?.Nama),
-        "Status / Keterangan" => sortAscending ? drafts.OrderBy(b => b.Status).ThenBy(b => b.CreatedAt) : drafts.OrderByDescending(b => b.Status).ThenByDescending(b => b.CreatedAt),
-        _ => drafts
-    };
+        get
+        {
+            var query = sortColumn switch
+            {
+                "Tanggal" => sortAscending ? drafts.OrderBy(b => b.CreatedAt) : drafts.OrderByDescending(b => b.CreatedAt),
+                "Jenis Berita Acara" => sortAscending ? drafts.OrderBy(b => b.Jenis) : drafts.OrderByDescending(b => b.Jenis),
+                "Penanggung Jawab" => sortAscending ? drafts.OrderBy(b => b.Pj?.Nama) : drafts.OrderByDescending(b => b.Pj?.Nama),
+                "Status / Keterangan" => sortAscending ? drafts.OrderBy(b => b.Status).ThenBy(b => b.CreatedAt) : drafts.OrderByDescending(b => b.Status).ThenByDescending(b => b.CreatedAt),
+                _ => drafts.AsEnumerable()
+            };
+            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

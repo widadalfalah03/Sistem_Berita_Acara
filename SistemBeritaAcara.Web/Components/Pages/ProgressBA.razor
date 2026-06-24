@@ -27,6 +27,9 @@ else if (currentRole == "AdminGudangBarang")
     }
     else
     {
+        <div style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">
+            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, baList.Count) dari @baList.Count dokumen
+        </div>
         <div class="card">
             <table class="data-table">
                 <thead>
@@ -70,6 +73,15 @@ else if (currentRole == "AdminGudangBarang")
                     }
                 </tbody>
             </table>
+            
+            @if (baList.Count > 0)
+            {
+                <SistemBeritaAcara.Web.Components.Shared.Pagination
+                    CurrentPage="@currentPage"
+                    TotalItems="@baList.Count"
+                    PageSize="@pageSize"
+                    CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+            }
         </div>
     }
 }
@@ -85,8 +97,11 @@ else if (currentRole == "Approver")
     }
     else
     {
+        <div style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">
+            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, baList.Count) dari @baList.Count dokumen
+        </div>
         <div class="card">
-            @foreach (var ba in baList)
+            @foreach (var ba in SortedBaList)
             {
                 <NavLink class="queue-item" href="@($"/berita-acara/{ba.Id}?from=progress")">
                     <div style="display:flex;align-items:flex-start;justify-content:space-between;">
@@ -109,6 +124,15 @@ else if (currentRole == "Approver")
                     </div>
                 </NavLink>
             }
+            
+            @if (baList.Count > 0)
+            {
+                <SistemBeritaAcara.Web.Components.Shared.Pagination
+                    CurrentPage="@currentPage"
+                    TotalItems="@baList.Count"
+                    PageSize="@pageSize"
+                    CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+            }
         </div>
     }
 }
@@ -121,6 +145,9 @@ else if (currentRole == "Approver")
 
     private string sortColumn = "Tanggal Submit";
     private bool sortAscending = false;
+    
+    private int currentPage = 1;
+    private int pageSize = 10;
 
     private void SortTable(string column)
     {
@@ -133,6 +160,7 @@ else if (currentRole == "Approver")
             sortColumn = column;
             sortAscending = true;
         }
+        currentPage = 1;
     }
 
     private void ViewBA(int id)
@@ -142,14 +170,21 @@ else if (currentRole == "Approver")
 
     private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
 
-    private IEnumerable<BeritaAcaraEntity> SortedBaList => sortColumn switch
+    private IEnumerable<BeritaAcaraEntity> SortedBaList
     {
-        "Jenis BA" => sortAscending ? baList.OrderBy(b => b.Jenis) : baList.OrderByDescending(b => b.Jenis),
-        "Tanggal Submit" => sortAscending ? baList.OrderBy(b => b.SubmittedAt) : baList.OrderByDescending(b => b.SubmittedAt),
-        "Approver" => sortAscending ? baList.OrderBy(b => b.Mengetahui?.Nama) : baList.OrderByDescending(b => b.Mengetahui?.Nama),
-        "Status" => sortAscending ? baList.OrderBy(b => b.Status) : baList.OrderByDescending(b => b.Status),
-        _ => baList
-    };
+        get
+        {
+            var query = sortColumn switch
+            {
+                "Jenis BA" => sortAscending ? baList.OrderBy(b => b.Jenis) : baList.OrderByDescending(b => b.Jenis),
+                "Tanggal Submit" => sortAscending ? baList.OrderBy(b => b.SubmittedAt) : baList.OrderByDescending(b => b.SubmittedAt),
+                "Approver" => sortAscending ? baList.OrderBy(b => b.Mengetahui?.Nama) : baList.OrderByDescending(b => b.Mengetahui?.Nama),
+                "Status" => sortAscending ? baList.OrderBy(b => b.Status) : baList.OrderByDescending(b => b.Status),
+                _ => baList.AsEnumerable()
+            };
+            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
