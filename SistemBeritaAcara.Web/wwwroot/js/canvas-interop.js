@@ -81,8 +81,14 @@ window.ttdCanvas = {
         this.ctx.lineJoin = 'round';
         this.isEmpty = true;
 
+        const hidePlaceholder = () => {
+            const ph = document.getElementById('ttd-placeholder');
+            if (ph) ph.style.opacity = '0';
+        };
+
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            hidePlaceholder();
             const t = e.touches[0];
             const r = canvas.getBoundingClientRect();
             const scaleX = canvas.width / r.width;
@@ -90,7 +96,7 @@ window.ttdCanvas = {
             this.isDrawing = true;
             this.ctx.beginPath();
             this.ctx.moveTo((t.clientX - r.left) * scaleX, (t.clientY - r.top) * scaleY);
-        });
+        }, { passive: false });
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
             if (!this.isDrawing) return;
@@ -101,8 +107,30 @@ window.ttdCanvas = {
             this.ctx.lineTo((t.clientX - r.left) * scaleX, (t.clientY - r.top) * scaleY);
             this.ctx.stroke();
             this.isEmpty = false;
+        }, { passive: false });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); this.isDrawing = false; }, { passive: false });
+
+        // Add mouse events for desktop
+        canvas.addEventListener('mousedown', (e) => {
+            hidePlaceholder();
+            const r = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / r.width;
+            const scaleY = canvas.height / r.height;
+            this.isDrawing = true;
+            this.ctx.beginPath();
+            this.ctx.moveTo((e.clientX - r.left) * scaleX, (e.clientY - r.top) * scaleY);
         });
-        canvas.addEventListener('touchend', (e) => { e.preventDefault(); this.isDrawing = false; });
+        canvas.addEventListener('mousemove', (e) => {
+            if (!this.isDrawing) return;
+            const r = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / r.width;
+            const scaleY = canvas.height / r.height;
+            this.ctx.lineTo((e.clientX - r.left) * scaleX, (e.clientY - r.top) * scaleY);
+            this.ctx.stroke();
+            this.isEmpty = false;
+        });
+        canvas.addEventListener('mouseup', () => { this.isDrawing = false; });
+        canvas.addEventListener('mouseleave', () => { this.isDrawing = false; });
     },
 
     startDraw: function (x, y) {
@@ -137,6 +165,8 @@ window.ttdCanvas = {
         if (!canvas) return;
         this.ctx.clearRect(0, 0, canvas.width, canvas.height);
         this.isEmpty = true;
+        const ph = document.getElementById('ttd-placeholder');
+        if (ph) ph.style.opacity = '1';
     },
 
     isEmpty_check: function () { return this.isEmpty; },
