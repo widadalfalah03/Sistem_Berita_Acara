@@ -41,6 +41,20 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             ALTER TABLE [BeritaAcara] ADD [IsReturned] bit NOT NULL DEFAULT 0;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'ReturnedAt')
             ALTER TABLE [BeritaAcara] ADD [ReturnedAt] datetime2 NULL;
+
+        -- MustChangePw dihapus dari entity C# — hapus kolom dari DB agar INSERT tidak gagal (NOT NULL tanpa DEFAULT)
+        IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'MustChangePw')
+        BEGIN
+            -- Drop default constraint dulu jika ada, baru drop kolom
+            DECLARE @dfName nvarchar(200)
+            SELECT @dfName = dc.name
+            FROM sys.default_constraints dc
+            JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+            WHERE c.object_id = OBJECT_ID('Users') AND c.name = 'MustChangePw'
+            IF @dfName IS NOT NULL
+                EXEC('ALTER TABLE [Users] DROP CONSTRAINT [' + @dfName + ']')
+            ALTER TABLE [Users] DROP COLUMN [MustChangePw]
+        END
     ");
 
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
