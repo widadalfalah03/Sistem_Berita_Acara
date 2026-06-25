@@ -32,33 +32,34 @@
     </div>
 </div>
 
-<!-- Search + Toggle -->
-<div class="search-bar">
-    <div class="search-input" style="max-width:320px;">
-        <i class="bi bi-search"></i>
-        <input type="text" placeholder="Cari nama barang..."
-               @bind="search" @bind:event="oninput" />
-    </div>
-    <div style="font-size:13px; color:var(--text-secondary); margin-left:12px;">
-        Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, TotalFilteredItems) dari @TotalFilteredItems barang
-    </div>
-</div>
-
-@if (isLoading)
-{
-    <div class="loading-spinner"><div class="spinner"></div><span>Memuat data barang...</span></div>
-}
-else
-{
-    @if (!string.IsNullOrEmpty(importResult))
-    {
-        var isErr = importResult.StartsWith("Gagal");
-        <div style="background:@(isErr ? "var(--danger-light)" : "#F0FDF4");border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;color:@(isErr ? "var(--danger)" : "#16A34A");font-size:14px;">
-            @importResult
+<div style="width: max-content; max-width: 100%;">
+    <!-- Search + Toggle -->
+    <div class="search-bar">
+        <div class="search-input" style="max-width:320px;">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Cari nama barang..."
+                   @bind="search" @bind:event="oninput" />
         </div>
-    }
+        <div style="font-size:13px; color:var(--text-secondary); margin-left:12px;">
+            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, TotalFilteredItems) dari @TotalFilteredItems barang
+        </div>
+    </div>
 
-    <div class="card">
+    @if (isLoading)
+    {
+        <div class="loading-spinner"><div class="spinner"></div><span>Memuat data barang...</span></div>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(importResult))
+        {
+            var isErr = importResult.StartsWith("Gagal");
+            <div style="background:@(isErr ? "var(--danger-light)" : "#F0FDF4");border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;color:@(isErr ? "var(--danger)" : "#16A34A");font-size:14px;">
+                @importResult
+            </div>
+        }
+
+        <div class="card" style="width: 100%;">
         <table class="data-table">
             <thead>
                 <tr>
@@ -94,6 +95,7 @@ else
         }
     </div>
 }
+</div>
 
 <!-- Upload Modal -->
 @if (showUpload)
