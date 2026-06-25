@@ -1838,6 +1838,11 @@ a:hover { color: var(--primary-hover); }
     padding-right: 50px;
 }
 
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
 .login-pw-toggle {
     position: absolute;
     right: 18px;
