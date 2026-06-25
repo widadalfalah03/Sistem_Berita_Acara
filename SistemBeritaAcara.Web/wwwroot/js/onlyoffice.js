@@ -28,6 +28,9 @@ window.onlyoffice = {
                 this.editor.destroyEditor();
                 this.editor = null;
             }
+            if (window.innerWidth <= 768) {
+                config.type = 'mobile';
+            }
             this.editor = new DocsAPI.DocEditor("onlyoffice-placeholder", config);
         }).catch(err => {
             console.error("ONLYOFFICE: Failed to load API script from " + apiScriptUrl, err);

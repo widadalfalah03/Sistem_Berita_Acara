@@ -23,6 +23,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Register revalidating authentication state provider
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, SistemBeritaAcara.Web.Security.IdentityRevalidatingAuthenticationStateProvider>();
+
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Ensure database and initial roles are created before the app (and Hangfire) starts

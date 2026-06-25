@@ -12,34 +12,34 @@
 <PageTitle>Inbox — Sistem Berita Acara</PageTitle>
 
 <!-- Tab bar -->
-<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-    <button @onclick="SetTabUnread"
+<div class="notif-toolbar-container" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+    <button class="notif-tab-btn" @onclick="SetTabUnread"
             style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:500;font-family:inherit;transition:all 0.15s;
                    @(activeTab == "unread" ? "background:var(--primary);color:white;" : "background:transparent;color:var(--text-secondary);")">
         Belum Dibaca @(UnreadCount > 0 ? $"({UnreadCount})" : "")
     </button>
-    <button @onclick="SetTabAll"
+    <button class="notif-tab-btn" @onclick="SetTabAll"
             style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;transition:all 0.15s;
                    @(activeTab == "all" ? "background:var(--primary);color:white;" : "background:transparent;color:var(--text-secondary);")">
         Semua
     </button>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:16px;">
+    <div class="notif-actions-container" style="margin-left:auto;display:flex;align-items:center;gap:16px;">
         @if (activeTab == "unread" && UnreadCount > 0)
         {
-            <button @onclick="MarkAllReadAsync"
+            <button class="notif-action-btn" @onclick="MarkAllReadAsync"
                     style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--primary);font-family:inherit;display:flex;align-items:center;gap:6px;padding:4px 0;">
-                <i class="bi bi-check2-all"></i> Tandai sudah dibaca
+                <i class="bi bi-check2-all"></i> <span class="notif-action-text">Tandai sudah dibaca</span>
             </button>
         }
         @if (activeTab == "all")
         {
-            <button @onclick="MarkAllReadAsync"
+            <button class="notif-action-btn" @onclick="MarkAllReadAsync"
                     style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--primary);font-family:inherit;display:flex;align-items:center;gap:6px;padding:4px 0;">
-                <i class="bi bi-check2-all"></i> Tandai sudah dibaca
+                <i class="bi bi-check2-all"></i> <span class="notif-action-text">Tandai sudah dibaca</span>
             </button>
-            <button class="btn btn-outline-danger btn-sm" @onclick="() => deleteAllConfirm = true"
+            <button class="btn btn-outline-danger btn-sm notif-action-btn" @onclick="() => deleteAllConfirm = true"
                     style="display:flex;align-items:center;gap:6px;">
-                <i class="bi bi-trash3"></i> Hapus Semua
+                <i class="bi bi-trash3"></i> <span class="notif-action-text">Hapus Semua</span>
             </button>
         }
     </div>
@@ -76,7 +76,7 @@
 }
 else if (!DisplayedNotifications.Any())
 {
-    <div class="card" style="text-align:center;padding:60px;">
+    <div style="text-align:center;padding:60px;background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);">
         <i class="bi bi-bell-slash" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
         <div style="font-size:18px;font-weight:700;margin-bottom:8px;">
             @(activeTab == "unread" ? "Tidak ada notifikasi yang belum dibaca" : "Tidak ada notifikasi")
@@ -86,7 +86,7 @@ else if (!DisplayedNotifications.Any())
 }
 else
 {
-    <div class="card" style="overflow:hidden;padding:0;">
+    <div class="notif-container-card" style="background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:8px 0;margin-bottom:24px;">
         @foreach (var n in DisplayedNotifications)
         {
             <div class="notif-item @(n.IsRead ? "" : "unread")"

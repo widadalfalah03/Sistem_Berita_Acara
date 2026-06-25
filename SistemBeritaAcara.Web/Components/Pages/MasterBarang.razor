@@ -14,7 +14,6 @@
 
 <div class="page-header d-flex align-center justify-between">
     <div>
-        <h1 class="page-title">Daftar Barang</h1>
     </div>
     <button class="btn btn-primary" @onclick="() => showUpload = true">
         <i class="bi bi-arrow-up-circle"></i> Update Data Barang
@@ -59,6 +58,7 @@ else
     }
 
     <div class="card">
+        <div class="table-responsive">
         <table class="data-table">
             <thead>
                 <tr>
@@ -83,6 +83,7 @@ else
                 }
             </tbody>
         </table>
+        </div>
         
         @if (TotalFilteredItems > 0)
         {

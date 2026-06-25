@@ -1,4 +1,3 @@
-@page "/invitation"
 @layout EmptyLayout
 @using Microsoft.AspNetCore.Identity
 @using SistemBeritaAcara.Core.Entities
@@ -90,14 +89,7 @@
 
                     <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg-card);margin-bottom:12px;overflow:hidden;">
                         <canvas id="setup-ttd-canvas" width="400" height="200" 
-                                style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"
-                                @onmousedown="OnCanvasMouseDown"
-                                @onmousemove="OnCanvasMouseMove"
-                                @onmouseup="OnCanvasMouseUp"
-                                @onmouseout="OnCanvasMouseUp"
-                                @ontouchstart="OnTouchStart"
-                                @ontouchmove="OnTouchMove"
-                                @ontouchend="OnTouchEnd"></canvas>
+                                style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"></canvas>
                     </div>
 
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
@@ -211,41 +203,7 @@
         step = 2;
     }
 
-    private async Task OnCanvasMouseDown(MouseEventArgs e) 
-    {
-        isDrawingActive = true;
-        await JS.InvokeVoidAsync("setupCanvas.start", e);
-    }
-    
-    private async Task OnCanvasMouseMove(MouseEventArgs e) 
-    {
-        if (!isDrawingActive) return;
-        await JS.InvokeVoidAsync("setupCanvas.move", e);
-    }
-    
-    private async Task OnCanvasMouseUp(MouseEventArgs e) 
-    {
-        isDrawingActive = false;
-        await JS.InvokeVoidAsync("setupCanvas.stop");
-    }
-    
-    private async Task OnTouchStart(TouchEventArgs e) 
-    {
-        isDrawingActive = true;
-        await JS.InvokeVoidAsync("setupCanvas.start", e.Touches[0]);
-    }
-    
-    private async Task OnTouchMove(TouchEventArgs e) 
-    {
-        if (!isDrawingActive) return;
-        await JS.InvokeVoidAsync("setupCanvas.move", e.Touches[0]);
-    }
-    
-    private async Task OnTouchEnd(TouchEventArgs e) 
-    {
-        isDrawingActive = false;
-        await JS.InvokeVoidAsync("setupCanvas.stop");
-    }
+    // Removed Blazor Canvas Event Handlers
     
     private async Task ClearCanvasAsync() => await JS.InvokeVoidAsync("setupCanvas.clear");
 
