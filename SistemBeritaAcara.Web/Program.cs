@@ -83,7 +83,6 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             EmailConfirmed = true,
             Nama = name,
             Role = role,
-            MustChangePw = true,
             PegawaiId = pegawaiId
         };
 
@@ -223,10 +222,6 @@ app.MapPost("/account/login", async (
     var result = await signInManager.PasswordSignInAsync(user, password, isPersistent: false, lockoutOnFailure: true);
     if (result.Succeeded)
     {
-        if (user.MustChangePw)
-        {
-            return Results.Redirect("/setup-akun");
-        }
         return Results.Redirect(returnUrl);
     }
     if (result.IsLockedOut)

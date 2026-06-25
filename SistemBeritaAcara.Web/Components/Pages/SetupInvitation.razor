@@ -286,7 +286,6 @@
             await File.WriteAllBytesAsync(filePath, bytes);
 
             user.TtdPath = $"files/signatures/{fileName}";
-            user.MustChangePw = false;
             
             var updateResult = await UserManager.UpdateAsync(user);
 

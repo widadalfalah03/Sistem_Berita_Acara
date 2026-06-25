@@ -7,7 +7,6 @@ public class ApplicationUser : IdentityUser<int>
     public string Nama { get; set; } = string.Empty;
     public string? Jabatan { get; set; }
     public string Role { get; set; } = string.Empty;
-    public bool MustChangePw { get; set; } = true;
     public string? TtdPath { get; set; }
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }

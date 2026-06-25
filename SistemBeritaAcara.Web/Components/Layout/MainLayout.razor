@@ -236,7 +236,6 @@ else
     private int draftCount;
     private int progressCount;
     private bool isLoginPage;
-    private bool mustChangePw;
     private int _currentUserId;
 
     [Inject] private AppDbContext DbContext { get; set; } = null!;
@@ -268,7 +267,6 @@ else
                 if (appUser is not null)
                 {
                     profilePicPath = appUser.ProfilePicPath;
-                    mustChangePw = appUser.MustChangePw;
                 }
             }
 
