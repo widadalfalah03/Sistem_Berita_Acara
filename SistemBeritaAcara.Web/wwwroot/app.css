@@ -3077,7 +3077,7 @@ a:hover { color: var(--primary-hover); }
 }
 
 /* Profile Card */
-.profile-card { display: flex; gap: 20px; align-items: flex-start; padding: 8px 0; }
+.profile-card { display: flex; gap: 20px; align-items: flex-start; padding: 24px; }
 
 .profile-avatar {
     width: 72px;
