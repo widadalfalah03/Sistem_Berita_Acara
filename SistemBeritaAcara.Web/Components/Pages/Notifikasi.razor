@@ -24,14 +24,24 @@
         Semua
     </button>
     <div style="margin-left:auto;display:flex;align-items:center;gap:16px;">
-        <button @onclick="MarkAllReadAsync"
-                style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--primary);font-family:inherit;display:flex;align-items:center;gap:6px;padding:4px 0;">
-            <i class="bi bi-check2-all"></i> Tandai sudah dibaca
-        </button>
-        <button class="btn btn-outline-danger btn-sm" @onclick="() => deleteAllConfirm = true"
-                style="display:flex;align-items:center;gap:6px;">
-            <i class="bi bi-trash3"></i> Hapus Semua
-        </button>
+        @if (activeTab == "unread" && UnreadCount > 0)
+        {
+            <button @onclick="MarkAllReadAsync"
+                    style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--primary);font-family:inherit;display:flex;align-items:center;gap:6px;padding:4px 0;">
+                <i class="bi bi-check2-all"></i> Tandai sudah dibaca
+            </button>
+        }
+        @if (activeTab == "all")
+        {
+            <button @onclick="MarkAllReadAsync"
+                    style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--primary);font-family:inherit;display:flex;align-items:center;gap:6px;padding:4px 0;">
+                <i class="bi bi-check2-all"></i> Tandai sudah dibaca
+            </button>
+            <button class="btn btn-outline-danger btn-sm" @onclick="() => deleteAllConfirm = true"
+                    style="display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-trash3"></i> Hapus Semua
+            </button>
+        }
     </div>
 </div>
 
