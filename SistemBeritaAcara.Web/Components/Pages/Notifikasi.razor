@@ -113,6 +113,9 @@ else
     private List<Notification> notifications = new();
     private bool isLoading = true;
     private int currentUserId;
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? TabQuery { get; set; }
+
     private string _activeTab = "unread";
     private string activeTab 
     {
@@ -151,6 +154,12 @@ else
         var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
         if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
         currentUserId = appUser.Id;
+        
+        if (!string.IsNullOrEmpty(TabQuery))
+        {
+            _activeTab = TabQuery;
+        }
+
         await LoadAsync();
     }
 
@@ -198,7 +207,7 @@ else
             n.IsRead = true; // update in-memory agar UI langsung berubah
         }
         if (n.BaId.HasValue)
-            Navigation.NavigateTo($"/berita-acara/{n.BaId.Value}?from=notifikasi");
+            Navigation.NavigateTo($"/berita-acara/{n.BaId.Value}?from=notifikasi_{activeTab}");
     }
 
     private static string GetNotifIconClass(string tipe) => tipe switch
