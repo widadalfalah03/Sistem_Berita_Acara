@@ -666,7 +666,6 @@ a:hover { color: var(--primary-hover); }
     background: var(--primary);
     color: white;
     border-color: var(--primary);
-    border-radius: var(--radius-full);
 }
 .btn-primary:hover {
     background: var(--primary-hover);
