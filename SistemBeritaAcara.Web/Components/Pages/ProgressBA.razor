@@ -31,6 +31,7 @@ else if (currentRole == "AdminGudangBarang")
             Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, baList.Count) dari @baList.Count dokumen
         </div>
         <div class="card">
+            <div class="table-responsive">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -73,6 +74,7 @@ else if (currentRole == "AdminGudangBarang")
                     }
                 </tbody>
             </table>
+            </div>
             
             @if (baList.Count > 0)
             {

@@ -19,7 +19,6 @@ else
 {
     <div class="page-header d-flex align-center justify-between">
         <div>
-            <h1 class="page-title">Daftar Pengguna</h1>
         </div>
         <NavLink class="btn btn-primary" href="/tambah-pengguna">
             <i class="bi bi-plus-lg"></i>
@@ -107,6 +106,7 @@ else
         }
         else
         {
+            <div class="table-responsive">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -151,6 +151,7 @@ else
                     }
                 </tbody>
             </table>
+            </div>
             
             @if (TotalFilteredItems > 0)
             {

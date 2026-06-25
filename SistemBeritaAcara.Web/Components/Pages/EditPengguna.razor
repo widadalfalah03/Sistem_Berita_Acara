@@ -38,42 +38,63 @@ else
     <div class="edit-layout">
         <!-- Left column -->
         <div>
-            <!-- Profile card -->
-            <div class="card" style="margin-bottom:24px;">
-                <div class="profile-card">
-                    <div class="profile-avatar">
-                        @if (!string.IsNullOrEmpty(appUser.ProfilePicPath))
-                        {
-                            <img src="/@appUser.ProfilePicPath" alt="Foto Profil" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
-                        }
-                        else
-                        {
-                            @GetInitials(appUser.Nama)
-                        }
+            <!-- Profile Info Matching Profil.razor -->
+            <div class="form-section" style="margin-bottom:24px;">
+                <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;padding:20px;background:var(--bg);border-radius:var(--radius);flex-wrap:wrap;">
+                    <div style="position:relative;">
+                        <div style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:3px solid var(--primary-light);">
+                            @if (!string.IsNullOrEmpty(appUser.ProfilePicPath))
+                            {
+                                <img src="/@appUser.ProfilePicPath" alt="Foto Profil" style="width:100%;height:100%;object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <span style="font-size:28px;font-weight:800;color:white;">@GetInitials(appUser.Nama)</span>
+                            }
+                        </div>
                     </div>
-                    <div class="profile-info">
-                        <div style="font-size:12px;color:var(--text-muted);">Nama Lengkap</div>
-                        <div class="profile-name">@appUser.Nama</div>
-                        <div class="profile-details">
-                            <div>
-                                <div class="profile-detail-label">Jabatan</div>
-                                <div class="profile-detail-value">@(pegawai?.Jabatan ?? "—")</div>
-                            </div>
-                            <div>
-                                <div class="profile-detail-label">Fungsi/Direktorat</div>
-                                <div class="profile-detail-value">@(pegawai?.FungsiDirektorat ?? "—")</div>
-                            </div>
-                            <div>
-                                <div class="profile-detail-label">Email</div>
-                                <div class="profile-detail-value">@appUser.Email</div>
-                            </div>
-                            <div>
-                                <div class="profile-detail-label">NIP</div>
-                                <div class="profile-detail-value">@(pegawai?.NoPekerja ?? "—")</div>
-                            </div>
+                    <div>
+                        <div style="font-size:20px;font-weight:800;color:var(--text-primary);">@appUser.Nama</div>
+                        <div style="margin-top:4px;">
+                            <span class="pill @GetRolePill(appUser.Role)" style="font-size:12px;">@GetRoleLabel(appUser.Role)</span>
                         </div>
                     </div>
                 </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nama Lengkap</label>
+                        <input class="form-control readonly" readonly value="@appUser.Nama" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input class="form-control readonly" readonly value="@(appUser.Email ?? "-")" />
+                    </div>
+                </div>
+
+                @if (pegawai is not null)
+                {
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">No. Pekerja / NIP</label>
+                            <input class="form-control readonly" readonly value="@pegawai.NoPekerja" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Jabatan</label>
+                            <input class="form-control readonly" readonly value="@(pegawai.Jabatan ?? "-")" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Fungsi / Direktorat</label>
+                            <input class="form-control readonly" readonly value="@(pegawai.FungsiDirektorat ?? "-")" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cost Center</label>
+                            <input class="form-control readonly" readonly value="@(pegawai.CostCenter ?? "-")" />
+                        </div>
+                    </div>
+                }
             </div>
 
             <!-- Account settings -->
@@ -183,6 +204,7 @@ else
             await UserManager.SetLockoutEndDateAsync(appUser, null);
         }
         await UserManager.UpdateAsync(appUser);
+        await UserManager.UpdateSecurityStampAsync(appUser);
         successMsg = appUser.IsDeleted ? "Akun dinonaktifkan." : "Akun diaktifkan kembali.";
     }
 
@@ -193,4 +215,20 @@ else
         return parts.Length == 1 ? parts[0][0].ToString().ToUpper()
             : (parts[0][0].ToString() + parts[^1][0].ToString()).ToUpper();
     }
+
+    private static string GetRoleLabel(string role) => role switch
+    {
+        "AdminIT" => "Admin IT",
+        "AdminGudangBarang" => "Admin Gudang & Barang",
+        "Approver" => "Approver",
+        _ => role
+    };
+
+    private static string GetRolePill(string role) => role switch
+    {
+        "AdminIT" => "pill-admin-it",
+        "AdminGudangBarang" => "pill-admin-gudang",
+        "Approver" => "pill-approver",
+        _ => "pill-draft"
+    };
 }

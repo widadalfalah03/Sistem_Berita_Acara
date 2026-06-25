@@ -163,19 +163,17 @@ else if (currentRole == "AdminGudangBarang")
         <div class="loan-modal" @onclick:stopPropagation="true">
             <!-- Modal Header -->
             <div class="loan-modal-header">
-                <div>
+                <div style="flex:1;">
                     <div class="loan-modal-label">Detail Peminjaman</div>
-                    <div class="loan-modal-title">@modalBA.NomorSurat</div>
+                    <div class="loan-modal-title" style="margin-bottom:8px;">@modalBA.NomorSurat</div>
+                    @{
+                        var mDaysLeft = (modalBA.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
+                        var mBadgeClass = mDaysLeft < 0 ? "due-badge overdue" : mDaysLeft == 0 ? "due-badge today" : mDaysLeft <= 2 ? "due-badge h1" : "due-badge h2";
+                        var mBadgeText = mDaysLeft < 0 ? $"Lewat {Math.Abs(mDaysLeft)} Hari" : mDaysLeft == 0 ? "Jatuh Tempo Hari Ini" : $"H-{mDaysLeft}";
+                    }
+                    <span class="@mBadgeClass" style="font-size:13px;padding:6px 14px;display:inline-block;">@mBadgeText</span>
                 </div>
-                @{
-                    var mDaysLeft = (modalBA.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
-                    var mBadgeClass = mDaysLeft < 0 ? "due-badge overdue" : mDaysLeft == 0 ? "due-badge today" : mDaysLeft <= 2 ? "due-badge h1" : "due-badge h2";
-                    var mBadgeText = mDaysLeft < 0 ? $"Lewat {Math.Abs(mDaysLeft)} Hari" : mDaysLeft == 0 ? "Jatuh Tempo Hari Ini" : $"H-{mDaysLeft}";
-                }
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <span class="@mBadgeClass" style="font-size:13px;padding:6px 14px;">@mBadgeText</span>
-                    <button class="loan-modal-close" @onclick="CloseModal"><i class="bi bi-x-lg"></i></button>
-                </div>
+                <button class="loan-modal-close" style="align-self:flex-start;" @onclick="CloseModal"><i class="bi bi-x-lg"></i></button>
             </div>
 
             <!-- Modal Body -->
@@ -231,29 +229,54 @@ else if (currentRole == "AdminGudangBarang")
                 <div class="loan-section-title"><i class="bi bi-cpu"></i> Daftar Perangkat</div>
                 @if (modalBA.Perangkat.Any())
                 {
-                    <table class="data-table" style="margin-top:0;">
-                        <thead>
-                            <tr>
-                                <th>Nama Perangkat</th>
-                                <th>Jumlah</th>
-                                <th>Satuan</th>
-                                <th>No. Serial</th>
-                                <th>Keterangan</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var p in modalBA.Perangkat)
-                            {
+                    <div class="table-responsive perangkat-table">
+                        <table class="data-table" style="margin-top:0;">
+                            <thead>
                                 <tr>
-                                    <td><span style="font-weight:600;">@p.Barang?.NamaBarang</span></td>
-                                    <td>@p.Jumlah</td>
-                                    <td style="color:var(--text-secondary);">@p.Satuan</td>
-                                    <td style="font-family:monospace;font-size:12px;">@(p.NoSerial ?? "—")</td>
-                                    <td style="color:var(--text-secondary);">@(p.Keterangan ?? "—")</td>
+                                    <th>Nama Perangkat</th>
+                                    <th>Jumlah</th>
+                                    <th>Satuan</th>
+                                    <th>No. Serial</th>
+                                    <th>Keterangan</th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in modalBA.Perangkat)
+                                {
+                                    <tr>
+                                        <td><span style="font-weight:600;">@p.Barang?.NamaBarang</span></td>
+                                        <td>@p.Jumlah</td>
+                                        <td style="color:var(--text-secondary);">@p.Satuan</td>
+                                        <td style="font-family:monospace;font-size:12px;">@(p.NoSerial ?? "—")</td>
+                                        <td style="color:var(--text-secondary);">@(p.Keterangan ?? "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="perangkat-mobile-list" style="padding:16px;">
+                        @foreach (var p in modalBA.Perangkat)
+                        {
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
+                                <div>
+                                    <div style="font-weight:700;color:var(--text-primary);margin-bottom:4px;font-size:14px;">@p.Barang?.NamaBarang</div>
+                                    @if (!string.IsNullOrEmpty(p.NoSerial))
+                                    {
+                                        <div style="color:var(--text-secondary);margin-bottom:2px;">SN: @p.NoSerial</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(p.Keterangan))
+                                    {
+                                        <div style="color:var(--text-muted);">@p.Keterangan</div>
+                                    }
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-size:18px;font-weight:800;color:var(--primary);">@p.Jumlah</div>
+                                    <div style="font-size:12px;color:var(--text-secondary);text-transform:uppercase;">@p.Satuan</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
                 }
                 else
                 {

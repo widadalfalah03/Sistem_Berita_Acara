@@ -39,6 +39,11 @@ public static class DependencyInjection
         .AddDefaultTokenProviders()
         .AddClaimsPrincipalFactory<AppClaimsPrincipalFactory>();
 
+        services.Configure<SecurityStampValidatorOptions>(options =>
+        {
+            options.ValidationInterval = TimeSpan.Zero;
+        });
+
         services.AddHangfire(hf => hf
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
             .UseSimpleAssemblyNameTypeSerializer()

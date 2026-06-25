@@ -2,9 +2,13 @@ window.setupCanvas = {
     isDrawing: false,
     ctx: null,
     init: function () {
-        var c = document.getElementById('setup-ttd-canvas');
-        if (!c) return;
-        // set resolution explicitly
+        var oldC = document.getElementById('setup-ttd-canvas');
+        if (!oldC) return;
+        
+        // Mencegah duplicate listeners
+        var c = oldC.cloneNode(true);
+        oldC.parentNode.replaceChild(c, oldC);
+
         var rect = c.getBoundingClientRect();
         c.width = rect.width * 2;
         c.height = rect.height * 2;
@@ -15,6 +19,14 @@ window.setupCanvas = {
         this.ctx.lineWidth = 3;
         this.ctx.strokeStyle = '#000000';
         this.clear();
+
+        c.addEventListener('mousedown', (e) => this.start(e));
+        c.addEventListener('mousemove', (e) => this.move(e));
+        c.addEventListener('mouseup', (e) => this.stop(e));
+        c.addEventListener('mouseout', (e) => this.stop(e));
+        c.addEventListener('touchstart', (e) => { e.preventDefault(); this.start(e); }, { passive: false });
+        c.addEventListener('touchmove', (e) => { e.preventDefault(); this.move(e); }, { passive: false });
+        c.addEventListener('touchend', (e) => { e.preventDefault(); this.stop(e); }, { passive: false });
     },
     start: function (e) {
         var c = document.getElementById('setup-ttd-canvas'); if (!c) return;

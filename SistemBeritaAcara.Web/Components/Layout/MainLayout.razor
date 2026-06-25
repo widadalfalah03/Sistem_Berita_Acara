@@ -20,7 +20,10 @@ else
     <div class="app-layout">
         <header class="topbar">
             <!-- Brand Logo -->
-            <div class="brand-logo-container">
+            <div class="brand-logo-container" style="display:flex;align-items:center;gap:12px;">
+                <button type="button" class="hamburger-menu" onclick="toggleSidebar()" title="Menu" style="background:none;border:none;color:var(--text-primary);font-size:24px;cursor:pointer;">
+                    <i class="bi bi-list"></i>
+                </button>
                 <NavLink href="/dashboard" style="display:block;line-height:0;">
                     <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height: 54px; width: auto;" alt="Pertamina Patra Niaga" />
                 </NavLink>
@@ -30,7 +33,7 @@ else
                 <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode" style="margin-right: 8px;">
                     <i class="bi bi-moon" style="font-size:18px;"></i>
                 </button>
-                <div class="topbar-profile-container">
+                <div class="topbar-profile-container" onclick="toggleProfileDropdown(event)">
                     <div class="topbar-user" style="cursor:pointer;display:flex;align-items:center;gap:12px;">
                         <div class="topbar-avatar">
                             @if (!string.IsNullOrEmpty(profilePicPath))
@@ -48,7 +51,7 @@ else
                         <i class="bi bi-chevron-down" style="font-size:12px;color:var(--text-muted);margin-left:4px;"></i>
                     </div>
 
-                    <div class="profile-dropdown-menu">
+                    <div id="profile-dropdown" class="profile-dropdown-menu">
                         <NavLink href="/profil" style="display:flex;align-items:center;gap:10px;padding:12px 16px;color:var(--text-primary);text-decoration:none;border-bottom:1px solid var(--border-light);">
                             <i class="bi bi-person" style="font-size:16px;"></i> Profile
                         </NavLink>
@@ -63,7 +66,9 @@ else
             </div>
         </header>
 
-        <aside class="sidebar">
+        <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <aside id="main-sidebar" class="sidebar">
 
             <!-- CTA Buat BA (hanya AdminGudangBarang) -->
             @if (currentRole == "AdminGudangBarang")
@@ -203,7 +208,7 @@ else
                     border-bottom-left-radius: var(--radius, 8px);
                     border-bottom-right-radius: var(--radius, 8px);
                 }
-                .topbar-profile-container:hover .profile-dropdown-menu {
+                .profile-dropdown-menu.show {
                     display: block;
                 }
                 .profile-dropdown-menu a:hover,
@@ -218,6 +223,37 @@ else
             </div>
         </div>
     </div>
+
+    <script>
+        function toggleSidebar() {
+            var sidebar = document.getElementById('main-sidebar');
+            var overlay = document.getElementById('sidebar-overlay');
+            if (sidebar) sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('open');
+        }
+
+        function toggleProfileDropdown(e) {
+            e.stopPropagation();
+            var dropdown = document.getElementById('profile-dropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            var dropdown = document.getElementById('profile-dropdown');
+            if (dropdown && dropdown.classList.contains('show')) {
+                var container = document.querySelector('.topbar-profile-container');
+                
+                // Close if clicked outside, OR if clicked on a link inside the dropdown
+                var isClickInsideDropdownLink = dropdown.contains(e.target) && (e.target.tagName === 'A' || e.target.closest('a'));
+                
+                if (!container || !container.contains(e.target) || isClickInsideDropdownLink) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        });
+    </script>
 }
 
 <div id="blazor-error-ui" data-nosnippet>

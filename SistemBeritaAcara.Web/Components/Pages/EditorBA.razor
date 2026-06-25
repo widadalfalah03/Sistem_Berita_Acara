@@ -47,45 +47,46 @@
     }
     else
     {
-    <!-- ── Topbar Editor ── -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-bottom:16px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:16px;">
-            <button class="btn btn-outline btn-sm" @onclick="GoBack" style="display:flex;align-items:center;gap:6px;">
-                <i class="bi bi-arrow-left"></i> Kembali
+    <!-- ── Topbar Editor (Premium Layout) ── -->
+    <div style="background:var(--card-bg); padding:16px; border-radius:var(--radius); border:1px solid var(--border); box-shadow:var(--shadow-sm); margin-bottom:24px; display:flex; flex-direction:column; gap:16px;">
+        
+        <!-- Header Row -->
+        <div style="display:flex; align-items:center; gap:16px;">
+            <button class="btn btn-outline" @onclick="GoBack" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%; flex-shrink:0;">
+                <i class="bi bi-arrow-left" style="font-size:18px;"></i>
             </button>
-            <div>
-                @if (!string.IsNullOrEmpty(ba.NomorSurat))
-                {
-                    <div style="font-weight:700;font-size:16px;">@ba.NomorSurat</div>
-                }
-                <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">PRATINJAU DOKUMEN</div>
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:11px; color:var(--text-muted); font-weight:700; letter-spacing:0.05em; text-transform:uppercase;">Pratinjau Dokumen</div>
+                <div style="font-weight:700; font-size:15px; color:var(--text-primary); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    @(string.IsNullOrEmpty(ba.NomorSurat) ? "Draft Berita Acara" : ba.NomorSurat)
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#16A34A; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:20px; padding:4px 10px; flex-shrink:0;">
+                <i class="bi bi-check-circle-fill"></i>
+                <span class="hide-on-mobile">Draft tersimpan</span>
+                <span class="show-on-mobile">Tersimpan</span>
             </div>
         </div>
 
-        <div style="display:flex;align-items:center;gap:12px;">
-            <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#16A34A;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:20px;padding:5px 12px;">
-                <i class="bi bi-check-circle-fill"></i>
-                <span>Draft tersimpan</span>
-            </div>
+        <!-- Action Buttons Row -->
+        <div style="display:flex; gap:12px; width:100%;">
             @if (!string.IsNullOrEmpty(ba.DocxPath))
             {
-                <NavLink href="@($"/onlyoffice-editor/{ba.Id}")" class="btn btn-outline" style="display:flex;align-items:center;gap:8px;background:#fff;border-width:2px;border-radius:var(--radius-full);">
+                <NavLink href="@($"/onlyoffice-editor/{ba.Id}")" class="btn btn-outline" style="flex:1; display:flex; justify-content:center; align-items:center; gap:8px; border-radius:var(--radius-full); font-weight:600;">
                     <i class="bi bi-pencil"></i>
                     <span>Edit Manual</span>
                 </NavLink>
             }
-            <button class="btn btn-primary" @onclick="SubmitForApprovalAsync" disabled="@isSubmitting"
-                    style="display:flex;align-items:center;gap:8px;">
+            <button class="btn btn-primary" @onclick="SubmitForApprovalAsync" disabled="@isSubmitting" style="flex:1; display:flex; justify-content:center; align-items:center; gap:8px; border-radius:var(--radius-full); font-weight:600;">
                 @if (isSubmitting)
                 {
                     <span class="spinner" style="width:16px;height:16px;border-width:2px;border-color:white;border-top-color:transparent;"></span>
-                    <span>Mengirim...</span>
                 }
                 else
                 {
                     <i class="bi bi-send-fill"></i>
-                    <span>Kirim untuk Persetujuan</span>
                 }
+                <span>Kirim Dokumen</span>
             </button>
         </div>
     </div>
@@ -99,13 +100,16 @@
     }
 
     <!-- ── Layout: Area Editor kiri + Panel Ringkasan kanan ── -->
-    <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+    <div class="review-layout" style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
 
         <!-- ── Area Dokumen / Editor ── -->
-        <div style="background:#E8EAF0;border-radius:var(--radius);height:842px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.05);">
+        <div class="pdf-preview-container" style="background:#E8EAF0;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.05);">
             @if (!string.IsNullOrEmpty(ba.DocxPath))
             {
-                <iframe @key="pdfVersion" src="/api/preview/pdf/@ba.Id?v=@pdfVersion#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
+                <iframe class="hide-on-mobile" @key="pdfVersion" src="/api/preview/pdf/@ba.Id?v=@pdfVersion#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
+                <div id="pdf-render-container-editor" class="show-on-mobile" style="width:100%;height:100%;overflow-y:auto;">
+                    <!-- canvas di-inject ke sini oleh JS -->
+                </div>
             }
             else
             {
@@ -321,11 +325,30 @@
         Navigation.LocationChanged -= OnLocationChanged;
     }
 
+    private string _lastRenderedPdfUrl = string.Empty;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // JSRuntime hanya tersedia setelah render pertama — tidak boleh dipanggil saat prerender.
         if (firstRender)
             await JSRuntime.InvokeVoidAsync("appLoading.hide");
+
+        if (ba != null && !string.IsNullOrEmpty(ba.DocxPath))
+        {
+            var pdfUrl = $"/api/preview/pdf/{ba.Id}?v={pdfVersion}";
+            if (pdfUrl != _lastRenderedPdfUrl)
+            {
+                _lastRenderedPdfUrl = pdfUrl;
+                try 
+                {
+                    await JSRuntime.InvokeVoidAsync("pdfViewer.renderPdf", "pdf-render-container-editor", pdfUrl);
+                } 
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine("Error invoking pdfViewer: " + ex.Message);
+                }
+            }
+        }
     }
 
     private async Task SubmitForApprovalAsync()

@@ -249,9 +249,10 @@ public class EmailService(IConfiguration config) : IEmailService
 <html>
 <head>
     <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #334155; background-color: #f8fafc; padding: 20px; }}
-        .container {{ max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }}
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #334155; background-color: #f8fafc; padding: 15px; margin: 0; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: #ffffff; padding: 20px 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }}
         .footer {{ margin-top: 40px; font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 20px; }}
     </style>
 </head>
