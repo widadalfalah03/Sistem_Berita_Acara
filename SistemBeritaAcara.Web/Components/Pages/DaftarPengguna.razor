@@ -110,7 +110,7 @@ else
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama"))">Nama / NIP <i class="bi @GetSortIcon("Nama")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama"))">Nama / No. Pekerja <i class="bi @GetSortIcon("Nama")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Email"))">Email <i class="bi @GetSortIcon("Email")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Role"))">Role <i class="bi @GetSortIcon("Role")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
 
@@ -124,7 +124,7 @@ else
                         <tr>
                             <td>
                                 <div class="cell-main">@u.Nama</div>
-                                <div class="cell-sub">NIP: @(u.Pegawai?.NoPekerja ?? "-")</div>
+                                <div class="cell-sub">No. Pekerja: @(u.Pegawai?.NoPekerja ?? "-")</div>
                             </td>
                             <td>@u.Email</td>
                             <td>
