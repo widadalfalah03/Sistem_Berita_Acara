@@ -357,7 +357,6 @@ else
             await File.WriteAllBytesAsync(fpath, bytes);
 
             currentUser.TtdPath = $"files/signatures/{fname}";
-            currentUser.MustChangePw = false;
             await UserManager.UpdateAsync(currentUser);
             globalMessage = "Tanda tangan berhasil disimpan!";
             ttdCacheBuster = Guid.NewGuid().ToString();
