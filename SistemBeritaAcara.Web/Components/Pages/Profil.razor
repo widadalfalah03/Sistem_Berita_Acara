@@ -203,16 +203,9 @@ else
 
             <div style="border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white;margin-bottom:12px;position:relative;">
                 <canvas id="ttd-canvas" width="600" height="200"
-                        style="width:100%;height:200px;cursor:crosshair;touch-action:none;display:block;"
-                        @onmousedown="OnCanvasMouseDown"
-                        @onmouseup="OnCanvasMouseUp"
-                        @onmousemove="OnCanvasMouseMove"
-                        @onmouseleave="OnCanvasMouseUp"
-                        @ontouchstart="OnCanvasTouchStart"
-                        @ontouchmove="OnCanvasTouchMove"
-                        @ontouchend="OnCanvasTouchEnd">
+                        style="width:100%;height:200px;cursor:crosshair;touch-action:none;display:block;">
                 </canvas>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:@(isCanvasEmpty?"0.3":"0");">
+                <div id="ttd-placeholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
                     <span style="font-size:14px;color:var(--text-muted);">Gambar tanda tangan Anda di sini</span>
                 </div>
             </div>
@@ -222,7 +215,7 @@ else
                     <i class="bi bi-eraser"></i> Hapus TTD
                 </button>
                 <div style="display:flex;gap:8px;">
-                    <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@(isCanvasEmpty || isSavingTtd)">
+                    <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@isSavingTtd">
                         @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
                         else { <i class="bi bi-save"></i> <span>Simpan</span> }
                     </button>
@@ -283,51 +276,7 @@ else
     }
 
     // ── Canvas drawing events ──
-
-    private async Task OnCanvasMouseDown(MouseEventArgs e)
-    {
-        isDrawingActive = true;
-        await JS.InvokeVoidAsync("ttdCanvas.startDraw", e.ClientX, e.ClientY);
-    }
-
-    private async Task OnCanvasMouseMove(MouseEventArgs e)
-    {
-        if (!isDrawingActive) return;
-        await JS.InvokeVoidAsync("ttdCanvas.draw", e.ClientX, e.ClientY);
-        if (isCanvasEmpty) { isCanvasEmpty = false; StateHasChanged(); }
-    }
-
-    private async Task OnCanvasMouseUp(MouseEventArgs e)
-    {
-        if (!isDrawingActive) return;
-        isDrawingActive = false;
-        await JS.InvokeVoidAsync("ttdCanvas.stopDraw");
-        isCanvasEmpty = await JS.InvokeAsync<bool>("ttdCanvas.isEmpty_check");
-        StateHasChanged();
-    }
-    
-    // For touch devices (prevent default) is handled inside JS, but we need Blazor mapping to keep state updated
-    private async Task OnCanvasTouchStart(TouchEventArgs e)
-    {
-        isDrawingActive = true;
-        await JS.InvokeVoidAsync("ttdCanvas.startDraw", e.Touches[0].ClientX, e.Touches[0].ClientY);
-    }
-
-    private async Task OnCanvasTouchMove(TouchEventArgs e)
-    {
-        if (!isDrawingActive) return;
-        await JS.InvokeVoidAsync("ttdCanvas.draw", e.Touches[0].ClientX, e.Touches[0].ClientY);
-        if (isCanvasEmpty) { isCanvasEmpty = false; StateHasChanged(); }
-    }
-
-    private async Task OnCanvasTouchEnd(TouchEventArgs e)
-    {
-        if (!isDrawingActive) return;
-        isDrawingActive = false;
-        await JS.InvokeVoidAsync("ttdCanvas.stopDraw");
-        isCanvasEmpty = await JS.InvokeAsync<bool>("ttdCanvas.isEmpty_check");
-        StateHasChanged();
-    }
+    // Event listener sekarang ditangani sepenuhnya oleh JavaScript (ttdCanvas) untuk mencegah lag di HP.
 
     private async Task ClearCanvasAsync()
     {
@@ -343,6 +292,13 @@ else
         globalMessage = string.Empty;
         try
         {
+            bool isEmpty = await JS.InvokeAsync<bool>("ttdCanvas.isEmpty_check");
+            if (isEmpty)
+            {
+                globalMessage = "Gagal: Silakan gambar tanda tangan Anda terlebih dahulu.";
+                return;
+            }
+
             var dataUrl = await JS.InvokeAsync<string>("ttdCanvas.getDataUrl");
             if (string.IsNullOrEmpty(dataUrl)) { globalMessage = "Gagal membaca canvas TTD."; return; }
 
