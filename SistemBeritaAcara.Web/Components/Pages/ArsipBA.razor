@@ -13,7 +13,7 @@
 
 <PageTitle>Archive — Sistem Berita Acara</PageTitle>
 
-@if (currentRole == "AdminGudangBarang" && !isLoading && allBA.Count > 0)
+@if ((currentRole == "AdminGudangBarang" || currentRole == "Approver") && !isLoading && allBA.Count > 0)
 {
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button class="btn btn-primary btn-sm @(isExporting ? "btn-loading" : "")"
@@ -237,7 +237,9 @@ else
             .Include(b => b.Pj)
             .Include(b => b.Menyerahkan)
             .Include(b => b.Mengetahui)
+            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
             .Where(b => b.Status == "Approved");
+
 
         allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();
         isLoading = false;

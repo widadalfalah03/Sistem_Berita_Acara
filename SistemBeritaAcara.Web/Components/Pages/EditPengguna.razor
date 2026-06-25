@@ -123,7 +123,6 @@ else
     private string editRole = string.Empty;
     private string successMsg = string.Empty;
     private string errorMsg = string.Empty;
-    private string resetMsg = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -155,22 +154,6 @@ else
 
             await UserManager.UpdateAsync(appUser);
             successMsg = "Role berhasil diperbarui.";
-        }
-        catch (Exception ex) { errorMsg = ex.Message; }
-        finally { isSaving = false; }
-    }
-
-    private async Task ResetPasswordAsync()
-    {
-        if (appUser is null) return;
-        isSaving = true;
-        try
-        {
-            var token = await UserManager.GeneratePasswordResetTokenAsync(appUser);
-            await UserManager.ResetPasswordAsync(appUser, token, "Admin1234!");
-            appUser.MustChangePw = true;
-            await UserManager.UpdateAsync(appUser);
-            resetMsg = "Password berhasil direset ke Admin1234!";
         }
         catch (Exception ex) { errorMsg = ex.Message; }
         finally { isSaving = false; }
