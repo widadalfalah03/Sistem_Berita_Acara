@@ -14,13 +14,13 @@
 
 <div class="add-user-card">
     <h2>Tambah Pengguna</h2>
-    <p>Cari pegawai berdasarkan nama atau NIP untuk ditambahkan sebagai pengguna sistem.</p>
+    <p>Cari pegawai berdasarkan nama atau No. Pekerja untuk ditambahkan sebagai pengguna sistem.</p>
 
     <div class="form-group">
         <label class="form-label">Cari Pegawai</label>
         <div class="search-input">
             <i class="bi bi-search"></i>
-            <input type="text" placeholder="Masukkan Nama atau NIP..."
+            <input type="text" placeholder="Masukkan Nama atau No. Pekerja..."
                    value="@searchQuery"
                    @oninput="OnSearch" />
         </div>
@@ -42,7 +42,7 @@
                     <div class="user-result-avatar">@p.Nama[0]</div>
                     <div style="flex:1;">
                         <div class="user-result-name">@p.Nama</div>
-                        <div class="user-result-nip">NIP: @p.NoPekerja · @p.FungsiDirektorat</div>
+                        <div class="user-result-nip">No. Pekerja: @p.NoPekerja · @p.FungsiDirektorat</div>
                     </div>
                     @if (existingUserIds.Contains(p.Id))
                     {
@@ -70,10 +70,6 @@
     @if (selectedPegawai is not null && !formSaved)
     {
         <div style="border-top:1px solid var(--border);margin-top:24px;padding-top:24px;">
-            <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Konfigurasi Akun</div>
-            <div style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;">
-                Untuk: <strong>@selectedPegawai.Nama</strong>
-            </div>
 
             <div class="form-group" style="position:relative;">
                 <label class="form-label">Role <span style="color:var(--danger)">*</span></label>

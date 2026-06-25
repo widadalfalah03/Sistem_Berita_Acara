@@ -4805,4 +4805,22 @@ select option { background: var(--surface); color: var(--text-primary); }
     .onlyoffice-container {
         height: calc(100vh - 120px) !important;
     }
+
+/* Item yang sedang dipilih (selected) → biru penuh */
+.custom-dropdown-item.selected {
+    background: var(--primary) !important;
+    color: white !important;
+    font-weight: 600;
+}
+/* Hover pada item yang BELUM dipilih → biru muda/pudar */
+.custom-dropdown-item:not(.selected):hover {
+    background: var(--primary-light) !important;
+    color: var(--primary) !important;
+    font-weight: 500;
+
+}
+/* Hover pada item yang sudah terpilih → tetap biru penuh */
+.custom-dropdown-item.selected:hover {
+    background: var(--primary) !important;
+    color: white !important;
 }

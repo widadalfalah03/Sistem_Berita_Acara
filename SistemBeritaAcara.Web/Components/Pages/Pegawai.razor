@@ -35,7 +35,7 @@
 <div class="search-bar">
     <div class="search-input" style="max-width:320px;">
         <i class="bi bi-search"></i>
-        <input type="text" placeholder="Cari nama, NIP, atau jabatan..."
+        <input type="text" placeholder="Cari nama, No. Pekerja, atau jabatan..."
                @bind="search" @bind:event="oninput" />
     </div>
     <div style="font-size:13px; color:var(--text-secondary); margin-left:12px;">
@@ -62,7 +62,7 @@ else
         <table class="data-table">
             <thead>
                 <tr>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama / NIP"))">Nama / NIP <i class="bi @GetSortIcon("Nama / NIP")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama / No. Pekerja"))">Nama / No. Pekerja <i class="bi @GetSortIcon("Nama / No. Pekerja")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     <th style="cursor:pointer;" @onclick="@(() => SortTable("Jabatan"))">Jabatan <i class="bi @GetSortIcon("Jabatan")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     <th style="cursor:pointer;" @onclick="@(() => SortTable("Fungsi/Direktorat"))">Fungsi/Direktorat <i class="bi @GetSortIcon("Fungsi/Direktorat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     <th style="cursor:pointer;" @onclick="@(() => SortTable("Email"))">Email <i class="bi @GetSortIcon("Email")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
@@ -75,7 +75,7 @@ else
                     <tr>
                         <td>
                             <div class="cell-main">@p.Nama</div>
-                            <div class="cell-sub">NIP: @p.NoPekerja</div>
+                            <div class="cell-sub">No. Pekerja: @p.NoPekerja</div>
                         </td>
                         <td>@p.Jabatan</td>
                         <td>@p.FungsiDirektorat</td>
@@ -145,7 +145,7 @@ else
     private bool isImporting = false;
     private bool showInactive = false;
     private string importResult = string.Empty;
-    private string sortColumn = "Nama / NIP";
+    private string sortColumn = "Nama / No. Pekerja";
     private bool sortAscending = true;
 
     private int currentPage = 1;
@@ -201,7 +201,7 @@ else
 
             query = sortColumn switch
             {
-                "Nama / NIP" => sortAscending ? query.OrderBy(p => p.Nama) : query.OrderByDescending(p => p.Nama),
+                "Nama / No. Pekerja" => sortAscending ? query.OrderBy(p => p.Nama) : query.OrderByDescending(p => p.Nama),
                 "Jabatan" => sortAscending ? query.OrderBy(p => p.Jabatan) : query.OrderByDescending(p => p.Jabatan),
                 "Fungsi/Direktorat" => sortAscending ? query.OrderBy(p => p.FungsiDirektorat) : query.OrderByDescending(p => p.FungsiDirektorat),
                 "Email" => sortAscending ? query.OrderBy(p => p.Email) : query.OrderByDescending(p => p.Email),
