@@ -63,7 +63,7 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis / Nama Barang"))">Jenis / Nama Barang <i class="bi @GetSortIcon("Jenis / Nama Barang")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama Barang"))">Nama Barang <i class="bi @GetSortIcon("Nama Barang")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                 </tr>
             </thead>
             <tbody>
@@ -137,7 +137,7 @@
     private bool isImporting = false;
     private string importResult = string.Empty;
 
-    private string sortColumn = "Jenis / Nama Barang";
+    private string sortColumn = "Nama Barang";
     private bool sortAscending = true;
     
     private int currentPage = 1;
@@ -189,7 +189,7 @@
 
             query = sortColumn switch
             {
-                "Jenis / Nama Barang" => sortAscending ? query.OrderBy(b => b.NamaBarang) : query.OrderByDescending(b => b.NamaBarang),
+                "Nama Barang" => sortAscending ? query.OrderBy(b => b.NamaBarang) : query.OrderByDescending(b => b.NamaBarang),
                 "Status" => sortAscending ? query.OrderByDescending(b => b.IsAktif) : query.OrderBy(b => b.IsAktif),
                 _ => query
             };
