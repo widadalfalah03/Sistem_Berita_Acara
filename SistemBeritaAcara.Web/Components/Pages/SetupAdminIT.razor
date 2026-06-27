@@ -1,0 +1,212 @@
+@page "/setup"
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+@layout EmptyLayout
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Identity
+@using CoreEntities = SistemBeritaAcara.Core.Entities
+@using SistemBeritaAcara.Infrastructure.Data
+@using SistemBeritaAcara.Web.Security
+
+@inject UserManager<CoreEntities.ApplicationUser> UserManager
+@inject RoleManager<IdentityRole<int>> RoleManager
+@inject AppDbContext Db
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Setup Awal — Sistem Berita Acara</PageTitle>
+
+<div class="login-page">
+    <div class="login-card" style="max-width:420px;width:100%;">
+        <div class="login-card-body" style="padding:24px 32px;">
+
+            <div class="login-logo" style="margin-bottom:12px;">
+                <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height:56px;width:auto;" alt="Pertamina Patra Niaga" />
+            </div>
+
+            <div style="margin-bottom:16px;text-align:center;">
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Setup Awal Sistem</h3>
+                    <p style="font-size:12px;color:var(--text-secondary);line-height:1.4;margin:0;">
+                        Buat akun <strong>Admin IT</strong> untuk memulai menggunakan aplikasi.
+                    </p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="login-error" style="margin-bottom:12px;font-size:13px;">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                        @errorMessage
+                    </div>
+                }
+
+                <div style="display:flex;flex-direction:column;gap:12px;">
+
+                    <div>
+                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                            NAMA LENGKAP <span style="color:var(--danger);">*</span>
+                        </label>
+                        <input class="login-input" type="text" @bind="namaLengkap"
+                               style="font-size:13px;" placeholder="Nama lengkap" />
+                    </div>
+                    
+                    <div>
+                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                            NO. PEKERJA <span style="color:var(--danger);">*</span>
+                        </label>
+                        <input class="login-input" type="text" @bind="noPekerja"
+                               style="font-size:13px;" placeholder="Contoh: 12345" />
+                    </div>
+
+                    <div>
+                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                            EMAIL <span style="color:var(--danger);">*</span>
+                        </label>
+                        <input class="login-input" type="email" @bind="email"
+                               style="font-size:13px;" placeholder="Email aktif untuk login" />
+                    </div>
+
+                    <div>
+                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                            PASSWORD <span style="color:var(--danger);">*</span>
+                        </label>
+                        <div class="login-pw-wrap">
+                            <input class="login-input" type="@pwType" @bind="password"
+                                   style="font-size:13px;" placeholder="Min. 8 karakter" />
+                            <button type="button" class="login-pw-toggle" @onclick="TogglePw" tabindex="-1">
+                                <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                            KONFIRMASI PASSWORD <span style="color:var(--danger);">*</span>
+                        </label>
+                        <div class="login-pw-wrap">
+                            <input class="login-input" type="@pwType" @bind="confirmPassword"
+                                   style="font-size:13px;" placeholder="Ketik ulang password" />
+                            <button type="button" class="login-pw-toggle" @onclick="TogglePw" tabindex="-1">
+                                <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div style="margin-top:10px;padding:8px 12px;background:color-mix(in srgb,var(--info) 10%,transparent);border:1px solid color-mix(in srgb,var(--info) 30%,transparent);border-radius:var(--radius);font-size:11px;color:var(--text-secondary);">
+                    <i class="bi bi-info-circle" style="color:var(--info);margin-right:5px;"></i>
+                    Halaman ini hanya muncul <strong>sekali</strong>. Setelah akun Admin IT dibuat, halaman ini tidak dapat diakses kembali.
+                </div>
+
+                <button class="login-btn" style="margin-top:14px;" @onclick="HandleSubmit">
+                    <span><i class="bi bi-person-plus-fill"></i> Buat Akun Admin IT</span>
+                </button>
+
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Form tersembunyi untuk auto-login setelah akun dibuat -->
+<form id="autoLoginForm" method="post" action="/account/login" style="display:none;">
+    <input type="hidden" name="email" value="@email" />
+    <input type="hidden" name="password" value="@password" />
+    <input type="hidden" name="returnUrl" value="/dashboard" />
+</form>
+
+@code {
+    private string namaLengkap = string.Empty;
+    private string noPekerja   = string.Empty;
+    private string email       = string.Empty;
+    private string password    = string.Empty;
+    private string confirmPassword = string.Empty;
+    private string pwType      = "password";
+    private string errorMessage = string.Empty;
+
+    private void TogglePw() => pwType = pwType == "password" ? "text" : "password";
+
+    private async Task HandleSubmit()
+    {
+        errorMessage = string.Empty;
+
+        // ── Validasi client-side ─────────────────────────────────────────
+        if (string.IsNullOrWhiteSpace(namaLengkap))
+        { errorMessage = "Nama lengkap wajib diisi."; return; }
+
+        if (string.IsNullOrWhiteSpace(noPekerja))
+        { errorMessage = "No. Pekerja wajib diisi."; return; }
+
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+        { errorMessage = "Email tidak valid."; return; }
+
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+        { errorMessage = "Password minimal 8 karakter."; return; }
+
+        if (password != confirmPassword)
+        { errorMessage = "Konfirmasi password tidak cocok."; return; }
+
+        // ── Cek duplikat ─────────────────────────────────────────────────
+        var existing = await UserManager.FindByEmailAsync(email);
+        if (existing is not null)
+        { errorMessage = "Email sudah terdaftar."; return; }
+
+        if (Db.Pegawai.Any(p => p.NoPekerja == noPekerja.Trim()))
+        { errorMessage = "No. Pekerja sudah terdaftar."; return; }
+
+        try
+        {
+            // ── 1. Pastikan role AdminIT ada ─────────────────────────────
+            foreach (var role in new[] { "AdminIT", "AdminGudangBarang", "Approver" })
+            {
+                if (!await RoleManager.RoleExistsAsync(role))
+                    await RoleManager.CreateAsync(new IdentityRole<int>(role));
+            }
+
+            // ── 2. Buat data Pegawai untuk Admin IT ──────────────────────
+            var pegawai = new CoreEntities.Pegawai
+            {
+                Nama      = namaLengkap.Trim(),
+                NoPekerja = noPekerja.Trim(),
+                Email     = email.Trim().ToLower(),
+                IsAktif   = true
+            };
+            Db.Pegawai.Add(pegawai);
+            await Db.SaveChangesAsync();
+
+            // ── 3. Buat ApplicationUser (Admin IT) ───────────────────────
+            var user = new CoreEntities.ApplicationUser
+            {
+                UserName       = email.Trim().ToLower(),
+                Email          = email.Trim().ToLower(),
+                EmailConfirmed = true,
+                Nama           = namaLengkap.Trim(),
+                Role           = "AdminIT",
+                PegawaiId      = pegawai.Id
+            };
+
+            var result = await UserManager.CreateAsync(user, password);
+            if (!result.Succeeded)
+            {
+                // Rollback pegawai jika user gagal dibuat
+                Db.Pegawai.Remove(pegawai);
+                await Db.SaveChangesAsync();
+
+                errorMessage = "Gagal membuat akun: " + string.Join(", ", result.Errors.Select(e => e.Description));
+                return;
+            }
+
+            await UserManager.AddToRoleAsync(user, "AdminIT");
+
+            // ── 4. Beritahu middleware bahwa sudah ada user ───────────────
+            FirstRunMiddleware.MarkHasUsers();
+
+            // Langsung submit form tersembunyi untuk auto-login ke dashboard
+            await JS.InvokeVoidAsync("eval", "document.getElementById('autoLoginForm').submit();");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Terjadi kesalahan: {ex.Message}";
+        }
+    }
+}

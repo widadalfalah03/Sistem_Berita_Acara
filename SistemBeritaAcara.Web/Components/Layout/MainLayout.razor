@@ -153,8 +153,8 @@ else
                 else if (currentRole == "AdminIT")
                 {
                     <NavLink class="nav-link" href="/pengguna">
-                        <i class="bi bi-people"></i>
-                        <span>Daftar Pengguna</span>
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Dashboard</span>
                     </NavLink>
                     <NavLink class="nav-link" href="/data-pegawai">
                         <i class="bi bi-person-badge"></i>
@@ -364,7 +364,7 @@ else
             var u when u.Contains("/profil") => "Profil",
             var u when u.Contains("/buat-ba") => "Buat Berita Acara",
             var u when u.Contains("/editor") => "Editor Dokumen",
-            var u when u.Contains("/pengguna") => "Daftar Pengguna",
+            var u when u.Contains("/pengguna") => "Dashboard",
             var u when u.Contains("/data-pegawai") => "Data Pegawai",
             var u when u.Contains("/data-barang") => "Data Barang",
             _ => "Sistem Berita Acara"

@@ -70,107 +70,21 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             await roleManager.CreateAsync(new IdentityRole<int>(role));
     }
 
-    // ── 2. Seed Pegawai (9 orang dari data Excel dummy) ───────────────────
-    if (!db.Pegawai.Any())
-    {
-        db.Pegawai.AddRange(
-            new Pegawai { Nama = "Romi Aprilian Mustafa",   NoPekerja = "1", Jabatan = "Jr Officer I Operation Delivery",          FungsiDirektorat = "IT Sumbagsel",                          Email = "romiaprilian7406@gmail.com",        CostCenter = "123456", IsAktif = true },
-            new Pegawai { Nama = "Bruce Wayne",              NoPekerja = "2", Jabatan = "SBM Industry I",                           FungsiDirektorat = "Corporate Sales Sumbagsel",             Email = "ggyur21887@gmail.com",              CostCenter = "223456", IsAktif = true },
-            new Pegawai { Nama = "Tony Stark",               NoPekerja = "3", Jabatan = "Jr Officer I Fuel Channel Adm",             FungsiDirektorat = "Retail Sales Sumbagsel",                Email = "guidotorvalds1985@gmail.com",       CostCenter = "323456", IsAktif = true },
-            new Pegawai { Nama = "Muhammad Widad Alfalah",   NoPekerja = "4", Jabatan = "Aviation FT Manager Sultan Thaha",          FungsiDirektorat = "Corp. Operation & Serv. Sumbagsel",     Email = "widadalfalah03@gmail.com",          CostCenter = "423456", IsAktif = true },
-            new Pegawai { Nama = "Steve Rogers",             NoPekerja = "5", Jabatan = "Junior Auditor I IA Sumbagsel",             FungsiDirektorat = "IA Region I I",                         Email = "wddalfalah01@gmail.com",            CostCenter = "523456", IsAktif = true },
-            new Pegawai { Nama = "Matt Murdock",             NoPekerja = "6", Jabatan = "Jr Analyst II Environment",                 FungsiDirektorat = "HSSE Sumbagsel",                        Email = "kuruel03@gmail.com",                CostCenter = "623456", IsAktif = true },
-            new Pegawai { Nama = "Luthfi Alif Pramudya",    NoPekerja = "7", Jabatan = "Junior Buyer II",                           FungsiDirektorat = "Procurement Sumbagsel",                 Email = "luthfialifp@gmail.com",             CostCenter = "723456", IsAktif = true },
-            new Pegawai { Nama = "Peter Parker",             NoPekerja = "8", Jabatan = "Inspector II Reliability",                  FungsiDirektorat = "Rel. & Project Dev. Sumbagsel",         Email = "modernwar.ghost2@gmail.com",        CostCenter = "823456", IsAktif = true },
-            new Pegawai { Nama = "Frank Castle",             NoPekerja = "9", Jabatan = "Officer I Maintenance Planning Area III",   FungsiDirektorat = "Rel. & Project Dev. Sumbagsel",         Email = "luthfialifpramudya170@gmail.com",   CostCenter = "923456", IsAktif = true }
-        );
-        await db.SaveChangesAsync();
-    }
-
-    // ── 3. Seed Users (Admin IT, Admin Gudang, 3 Approver) ───────────────
-    async Task CreateUserIfMissing(string email, string name, string role, int? pegawaiId = null)
-    {
-        var existing = await userManager.FindByEmailAsync(email);
-        if (existing is not null) return;
-
-        var user = new ApplicationUser
-        {
-            UserName = email,
-            Email = email,
-            EmailConfirmed = true,
-            Nama = name,
-            Role = role,
-            PegawaiId = pegawaiId
-        };
-
-        var result = await userManager.CreateAsync(user, "Admin@1234");
-        if (result.Succeeded)
-            await userManager.AddToRoleAsync(user, role);
-    }
-
-    // Cari pegawai berdasarkan NoPekerja untuk dikaitkan ke Users
-    var pegawaiList = db.Pegawai.ToList();
-    int? getPegawaiId(string noPekerja) =>
-        pegawaiList.FirstOrDefault(p => p.NoPekerja == noPekerja)?.Id;
-
-    // Admin IT — Romi Aprilian (no pekerja 1)
-    await CreateUserIfMissing("romiaprilian7406@gmail.com", "Romi Aprilian Mustafa", "AdminIT", getPegawaiId("1"));
-
-    // Dummy users are commented out to keep the database clean
-    // await CreateUserIfMissing("widadalfalah03@gmail.com", "Muhammad Widad Alfalah", "AdminGudangBarang", getPegawaiId("4"));
-    // await CreateUserIfMissing("ggyur21887@gmail.com", "Bruce Wayne", "Approver", getPegawaiId("2"));
-    // await CreateUserIfMissing("guidotorvalds1985@gmail.com", "Tony Stark", "Approver", getPegawaiId("3"));
-    // await CreateUserIfMissing("wddalfalah01@gmail.com", "Steve Rogers", "Approver", getPegawaiId("5"));
-
-    // Sync Jabatan dari Pegawai ke ApplicationUser (untuk user yang Jabatan-nya masih null)
+    // ── 2. Seed Users: Sync Jabatan & fix Identity Roles untuk user yang sudah ada ──
+    // (Akun Admin IT dibuat via halaman /setup saat pertama kali aplikasi dijalankan)
     var usersNeedJabatan = db.Users.Include(u => u.Pegawai).Where(u => u.Jabatan == null && u.PegawaiId != null).ToList();
     foreach (var u in usersNeedJabatan)
         u.Jabatan = u.Pegawai?.Jabatan;
     if (usersNeedJabatan.Any())
         await db.SaveChangesAsync();
 
-    // ── Fix: Sync Identity Roles for users missing it in AspNetUserRoles ──
+    // Fix: Sync Identity Roles untuk user yang mungkin hilang dari AspNetUserRoles
     var allUsers = await db.Users.ToListAsync();
     foreach (var u in allUsers)
     {
         if (!string.IsNullOrEmpty(u.Role) && !await userManager.IsInRoleAsync(u, u.Role))
-        {
             await userManager.AddToRoleAsync(u, u.Role);
-        }
     }
-
-    // ── 4. Seed MasterBarang (54 item dari data Excel dummy, kode brg-1 s/d brg-54) ──
-    // Dummy items commented out to keep database clean
-    /*
-    if (!db.MasterBarang.Any())
-    {
-        var barangList = new[]
-        {
-            "Anti Static Wrist Strap", "Bridge",         "Cable Tester",   "CCTV",            "Coaxial",
-            "Crimping Tool",           "DisplayPort",     "DVI",            "External HDD",    "External SSD",
-            "Fiber Cleaver",           "Fiber Optic",     "Flashdisk",      "Fusion Splicer",  "Handphone",
-            "HDMI",                    "HDMI Adapter",    "Headset",        "Hot Air Station", "Hub",
-            "Keyboard",                "Label Printer",   "LAN Tester",     "Laptop",          "Lightning",
-            "Modem",                   "Monitor",         "Mouse",          "Multimeter",      "Obeng Presisi",
-            "OTDR",                    "Perangkat Keras", "Power Cable",    "Printer",         "Projector",
-            "Punch Down Tool",         "Repeater",        "RFID Reader",    "Router",          "SATA Cable",
-            "Scanner",                 "Smart Card Reader","Solder",        "Speaker",         "Switch",
-            "Tablet",                  "Thermal Camera",  "Thunderbolt",    "Tone Generator",  "USB Hub",
-            "USB-A",                   "USB-C",           "VGA",            "Webcam"
-        };
-
-        for (int i = 0; i < barangList.Length; i++)
-        {
-            db.MasterBarang.Add(new MasterBarang
-            {
-                KodeBarang = $"brg-{i + 1}",
-                NamaBarang = barangList[i],
-                IsAktif = true
-            });
-        }
-        await db.SaveChangesAsync();
-    }
-    */
 }
 
 builder.Services.ConfigureApplicationCookie(opt =>
@@ -208,6 +122,9 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// ── First-Run Middleware: redirect ke /setup jika belum ada user di DB ──
+app.UseMiddleware<SistemBeritaAcara.Web.Security.FirstRunMiddleware>();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
