@@ -66,7 +66,7 @@ else
         <div style="position:relative;">
             <div @onclick="() => showRoleDropdown = !showRoleDropdown"
                  style="padding:8px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:180px;">
-                <span style="font-weight:500;">@(roleFilter == "All" ? "Semua Role" : GetRoleLabel(roleFilter))</span>
+                <span style="font-weight:500;">@(string.IsNullOrEmpty(roleFilter) ? "Semua Role" : GetRoleLabel(roleFilter))</span>
                 <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showRoleDropdown ? "transform:rotate(180deg);" : "")"></i>
             </div>
             @if (showRoleDropdown)
@@ -168,7 +168,7 @@ else
 @code {
     private bool isLoading = true;
     private List<ApplicationUser> allUsers = new();
-    private string roleFilter = "All";
+    private string roleFilter = "";
     private bool showInactive = false;
     private bool showRoleDropdown = false;
     private string errorMsg = string.Empty;
@@ -211,8 +211,9 @@ else
     }
 
     private int TotalFilteredItems => allUsers
+        .Where(u => u.EmailConfirmed)
         .Where(u => showInactive || !u.IsDeleted)
-        .Where(u => roleFilter == "All" || u.Role == roleFilter)
+        .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
         .Count(u => string.IsNullOrEmpty(search) ||
                     (u.Nama != null && u.Nama.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
                     (u.Email != null && u.Email.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
@@ -223,8 +224,9 @@ else
         get
         {
             var query = allUsers
+                .Where(u => u.EmailConfirmed)
                 .Where(u => showInactive || !u.IsDeleted)
-                .Where(u => roleFilter == "All" || u.Role == roleFilter)
+                .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
                 .Where(u => string.IsNullOrEmpty(search) ||
                             (u.Nama != null && u.Nama.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
                             (u.Email != null && u.Email.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
@@ -250,10 +252,10 @@ else
             .OrderBy(u => u.Nama)
             .ToListAsync();
 
-        stats.Total = allUsers.Count(u => !u.IsDeleted);
-        stats.AdminIT = allUsers.Count(u => u.Role == "AdminIT" && !u.IsDeleted);
-        stats.AdminGudang = allUsers.Count(u => u.Role == "AdminGudangBarang" && !u.IsDeleted);
-        stats.Approver = allUsers.Count(u => u.Role == "Approver" && !u.IsDeleted);
+        stats.Total = allUsers.Count(u => u.EmailConfirmed && !u.IsDeleted);
+        stats.AdminIT = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminIT" && !u.IsDeleted);
+        stats.AdminGudang = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminGudangBarang" && !u.IsDeleted);
+        stats.Approver = allUsers.Count(u => u.EmailConfirmed && u.Role == "Approver" && !u.IsDeleted);
 
         isLoading = false;
     }

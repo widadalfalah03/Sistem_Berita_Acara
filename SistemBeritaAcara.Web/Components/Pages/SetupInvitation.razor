@@ -1,3 +1,4 @@
+@page "/invitation"
 @layout EmptyLayout
 @using Microsoft.AspNetCore.Identity
 @using SistemBeritaAcara.Core.Entities
@@ -66,7 +67,10 @@
 
                     <div class="form-group" style="margin-bottom:24px;">
                         <div class="login-pw-wrap">
-                            <input class="login-input" type="@pwType" @bind="confirmPassword" placeholder="Konfirmasi Password" />
+                            <input class="login-input" type="@pwType2" @bind="confirmPassword" placeholder="Konfirmasi Password" />
+                            <button type="button" class="login-pw-toggle" @onclick="TogglePwType2" tabindex="-1">
+                                <i class="bi @(pwType2 == "password" ? "bi-eye" : "bi-eye-slash")"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -135,6 +139,7 @@
     private ApplicationUser? user;
 
     private string pwType = "password";
+    private string pwType2 = "password";
     private string newPassword = string.Empty;
     private string confirmPassword = string.Empty;
     private bool _canvasInitialized = false;
@@ -179,6 +184,11 @@
     private void TogglePwType()
     {
         pwType = pwType == "password" ? "text" : "password";
+    }
+
+    private void TogglePwType2()
+    {
+        pwType2 = pwType2 == "password" ? "text" : "password";
     }
 
     private void ProcessStep1()
@@ -244,6 +254,7 @@
             await File.WriteAllBytesAsync(filePath, bytes);
 
             user.TtdPath = $"files/signatures/{fileName}";
+            user.EmailConfirmed = true;  // Aktifkan akun setelah setup selesai
             
             var updateResult = await UserManager.UpdateAsync(user);
 

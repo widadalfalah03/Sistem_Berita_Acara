@@ -71,34 +71,36 @@
     {
         <div style="border-top:1px solid var(--border);margin-top:24px;padding-top:24px;">
 
-            <div class="form-group" style="position:relative;">
+            <div class="form-group">
                 <label class="form-label">Role <span style="color:var(--danger)">*</span></label>
-                <div @onclick="() => showRoleDropdown = !showRoleDropdown"
-                     style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                    <span style="font-weight:500;">
-                        @(selectedRole == "AdminGudangBarang" ? "Admin Gudang & Barang" : selectedRole == "Approver" ? "Approver" : "-- Pilih Role --")
-                    </span>
-                    <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showRoleDropdown ? "transform:rotate(180deg);" : "")"></i>
-                </div>
-                @if (showRoleDropdown)
-                {
-                    <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
-                    <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);margin-top:4px;overflow:hidden;">
-                        @{
-                            var roles = new[] {
-                                new { Value = "AdminGudangBarang", Text = "Admin Gudang & Barang" },
-                                new { Value = "Approver", Text = "Approver" }
-                            };
-                            foreach (var r in roles)
-                            {
-                                <div class="custom-dropdown-item @(selectedRole == r.Value ? "selected" : "")"
-                                     @onclick="() => { selectedRole = r.Value; showRoleDropdown = false; }">
-                                    @r.Text
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+                    @{
+                        var roles = new[] {
+                            new { Value = "AdminGudangBarang", Text = "Admin Gudang & Barang", Icon = "bi-box-seam", Desc = "Kelola & buat Berita Acara" },
+                            new { Value = "Approver", Text = "Approver", Icon = "bi-person-check", Desc = "Menyetujui Berita Acara" }
+                        };
+                        foreach (var r in roles)
+                        {
+                            var isSelected = selectedRole == r.Value;
+                            <div @onclick="() => { selectedRole = r.Value; }"
+                                 style="padding:14px 16px;cursor:pointer;border:2px solid @(isSelected ? "var(--primary)" : "var(--border)");border-radius:var(--radius);background:@(isSelected ? "color-mix(in srgb,var(--primary) 8%,transparent)" : "var(--surface)");transition:all 0.15s;">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <div style="width:36px;height:36px;border-radius:50%;background:@(isSelected ? "var(--primary)" : "var(--bg)");display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.15s;">
+                                        <i class="bi @r.Icon" style="font-size:16px;color:@(isSelected ? "white" : "var(--text-secondary)")"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:13px;font-weight:600;color:@(isSelected ? "var(--primary)" : "var(--text-primary)")">@r.Text</div>
+                                        <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">@r.Desc</div>
+                                    </div>
+                                    @if (isSelected)
+                                    {
+                                        <i class="bi bi-check-circle-fill" style="margin-left:auto;color:var(--primary);font-size:16px;"></i>
+                                    }
                                 </div>
-                            }
+                            </div>
                         }
-                    </div>
-                }
+                    }
+                </div>
             </div>
 
             <div class="form-group" style="margin-top:16px; background:#eff6ff; padding:12px; border-radius:6px; border:1px solid #bfdbfe;">
@@ -227,7 +229,7 @@
                 Nama = selectedPegawai.Nama,
                 Role = selectedRole,
                 PegawaiId = selectedPegawai.Id,
-                EmailConfirmed = true,
+                EmailConfirmed = false,  // Belum aktif sampai user setup via link undangan
                 IsDeleted = false
             };
             
