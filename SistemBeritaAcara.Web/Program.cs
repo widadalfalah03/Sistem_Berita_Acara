@@ -283,6 +283,27 @@ app.MapGet("/api/preview/pdf/{baId:int}", async (
     return Results.File(bytes, "application/pdf", enableRangeProcessing: true);
 }).RequireAuthorization().DisableAntiforgery();
 
+// Endpoint download PDF
+app.MapGet("/api/ba/{baId:int}/download", async (
+    int baId,
+    SistemBeritaAcara.Infrastructure.Data.AppDbContext db) =>
+{
+    var ba = await db.BeritaAcara.FindAsync(baId);
+    if (ba?.DocxPath == null) return Results.NotFound();
+
+    var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+        ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+
+    if (!File.Exists(pdfPath)) return Results.NotFound();
+
+    string filename = !string.IsNullOrEmpty(ba.NomorSurat) 
+        ? $"Berita_Acara_{ba.NomorSurat.Replace("/", "_")}.pdf" 
+        : $"Berita_Acara_{ba.Id}.pdf";
+
+    var bytes = await File.ReadAllBytesAsync(pdfPath);
+    return Results.File(bytes, "application/pdf", filename);
+}).DisableAntiforgery();
+
 // Database and roles are ensured earlier before app start
 
 RecurringJob.AddOrUpdate<DueDateCheckerJob>(

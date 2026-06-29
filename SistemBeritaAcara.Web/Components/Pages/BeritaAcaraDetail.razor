@@ -402,7 +402,15 @@ else
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
             var baseUrl = Navigation.BaseUri.TrimEnd('/');
-            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl);
+            var barangListMagic = ba.Perangkat
+                .Select(p => {
+                    string nama = p.Barang?.NamaBarang ?? "Perangkat";
+                    string detail = $"{p.Jumlah} {p.Satuan}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                    return $"{nama} — {detail}";
+                }).ToList();
+            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis, barangListMagic);
             await NotificationService.SendToRoleAsync("AdminGudangBarang", "WAITING_PJ_SIGN", $"BA {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
             actionIsError = false; actionMessage = "Magic link berhasil dikirim ke email PJ.";
             await LoadAsync();
@@ -507,12 +515,21 @@ else
 
             // Email ke Admin Gudang & Barang (creator)
             var creatorUser = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
+            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+            var barangList = ba.Perangkat
+                .Select(p => {
+                    string nama = p.Barang?.NamaBarang ?? "Perangkat";
+                    string detail = $"{p.Jumlah} {p.Satuan}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                    return $"{nama} — {detail}";
+                }).ToList();
             if (!string.IsNullOrEmpty(creatorUser?.Email))
-                await EmailService.SendApprovalResultAsync(creatorUser.Email, creatorUser.Nama ?? creatorUser.Email, ba.NomorSurat!, true);
+                await EmailService.SendApprovalResultAsync(creatorUser.Email, creatorUser.Nama ?? creatorUser.Email, ba.Jenis, true, ba.Id, baseUrl, isForPj: false, nomorSurat: ba.NomorSurat, barangList: barangList);
 
             // Email ke PJ
             if (!string.IsNullOrEmpty(ba.Pj?.Email))
-                await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.NomorSurat!, true);
+                await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, true, ba.Id, baseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
 
             actionIsError = false; actionMessage = "Berita Acara berhasil disetujui!";
             await LoadAsync();
@@ -545,14 +562,24 @@ else
             var label = ba.NomorSurat ?? "Draft";
             await NotificationService.SendAsync(ba.CreatedBy, "BA_REJECTED", $"BA {label} ditolak: {rejectReason}", ba.Id);
 
+            var baseUrlReject = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+            var barangListReject = ba.Perangkat
+                .Select(p => {
+                    string nama = p.Barang?.NamaBarang ?? "Perangkat";
+                    string detail = $"{p.Jumlah} {p.Satuan}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                    return $"{nama} — {detail}";
+                }).ToList();
+
             // Email ke Admin Gudang & Barang (creator)
-            var creatorUser = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
-            if (!string.IsNullOrEmpty(creatorUser?.Email))
-                await EmailService.SendApprovalResultAsync(creatorUser.Email, creatorUser.Nama ?? creatorUser.Email, label, false, rejectReason);
+            var creatorUserReject = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
+            if (!string.IsNullOrEmpty(creatorUserReject?.Email))
+                await EmailService.SendApprovalResultAsync(creatorUserReject.Email, creatorUserReject.Nama ?? creatorUserReject.Email, ba.Jenis, false, ba.Id, baseUrlReject, isForPj: false, nomorSurat: ba.NomorSurat, alasan: rejectReason, barangList: barangListReject);
 
             // Email ke PJ
             if (!string.IsNullOrEmpty(ba.Pj?.Email))
-                await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, label, false, rejectReason);
+                await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, false, ba.Id, baseUrlReject, isForPj: true, nomorSurat: ba.NomorSurat, alasan: rejectReason, barangList: barangListReject);
 
             showRejectModal = false;
             rejectReason = string.Empty;

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Core.Interfaces;
 using SistemBeritaAcara.Infrastructure.Data;
@@ -8,8 +9,26 @@ namespace SistemBeritaAcara.Infrastructure.Jobs;
 public class DueDateCheckerJob(
     AppDbContext db,
     INotificationService notificationService,
-    IEmailService emailService)
+    IEmailService emailService,
+    IConfiguration configuration)
 {
+    private string BaseUrl => (configuration["App:PublicUrl"] ?? configuration["App:BaseUrl"] ?? "http://localhost:5000").TrimEnd('/');
+
+    // Helper: ambil daftar nama barang dari BA
+    private static List<string> GetBarangList(BeritaAcara ba)
+    {
+        return ba.Perangkat
+            .Select(p =>
+            {
+                string namaBarang = p.Barang?.NamaBarang ?? "Perangkat";
+                string detail = $"{p.Jumlah} {p.Satuan}";
+                if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                return $"{namaBarang} — {detail}";
+            })
+            .ToList();
+    }
+
     public async Task CheckDueDatesAsync()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -22,6 +41,7 @@ public class DueDateCheckerJob(
                 && !ba.IsReturned)
             .Include(ba => ba.Creator)
             .Include(ba => ba.Pj)
+            .Include(ba => ba.Perangkat).ThenInclude(p => p.Barang)
             .ToListAsync();
 
         foreach (var ba in dueToday)
@@ -29,6 +49,7 @@ public class DueDateCheckerJob(
             string tglStr = today.ToString("dd/MM/yyyy");
             string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
             string pjNama = ba.Pj?.Nama ?? "–";
+            var barangList = GetBarangList(ba);
 
             // Notifikasi Inbox ke Admin Gudang yang buat BA
             string msgInbox = $"⏰ Peminjaman {nomorSurat} (PJ: {pjNama}) jatuh tempo hari ini ({tglStr}). Harap segera koordinasikan pengembalian perangkat.";
@@ -44,7 +65,10 @@ public class DueDateCheckerJob(
                     pjNama,
                     tglStr,
                     daysUntilDue: 0,
-                    isForPj: false);
+                    isForPj: false,
+                    baId: ba.Id,
+                    baseUrl: BaseUrl,
+                    barangList: barangList);
             }
 
             // Email ke PJ
@@ -57,7 +81,10 @@ public class DueDateCheckerJob(
                     pjNama,
                     tglStr,
                     daysUntilDue: 0,
-                    isForPj: true);
+                    isForPj: true,
+                    baId: ba.Id,
+                    baseUrl: BaseUrl,
+                    barangList: barangList);
             }
         }
 
@@ -70,6 +97,7 @@ public class DueDateCheckerJob(
                 && !ba.IsReturned)
             .Include(ba => ba.Creator)
             .Include(ba => ba.Pj)
+            .Include(ba => ba.Perangkat).ThenInclude(p => p.Barang)
             .ToListAsync();
 
         foreach (var ba in overdue)
@@ -77,6 +105,7 @@ public class DueDateCheckerJob(
             string tglStr = ba.TanggalKembali!.Value.ToString("dd/MM/yyyy");
             string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
             string pjNama = ba.Pj?.Nama ?? "–";
+            var barangList = GetBarangList(ba);
 
             // Notifikasi Inbox ke Admin Gudang
             string msgInbox = $"🚨 Peminjaman {nomorSurat} (PJ: {pjNama}) telah melewati batas pengembalian ({tglStr}). Segera tindak lanjuti!";
@@ -92,7 +121,10 @@ public class DueDateCheckerJob(
                     pjNama,
                     tglStr,
                     daysUntilDue: -1,
-                    isForPj: false);
+                    isForPj: false,
+                    baId: ba.Id,
+                    baseUrl: BaseUrl,
+                    barangList: barangList);
             }
 
             // Email ke PJ
@@ -105,7 +137,10 @@ public class DueDateCheckerJob(
                     pjNama,
                     tglStr,
                     daysUntilDue: -1,
-                    isForPj: true);
+                    isForPj: true,
+                    baId: ba.Id,
+                    baseUrl: BaseUrl,
+                    barangList: barangList);
             }
         }
 
@@ -118,6 +153,7 @@ public class DueDateCheckerJob(
                 && !ba.IsReturned)
             .Include(ba => ba.Creator)
             .Include(ba => ba.Pj)
+            .Include(ba => ba.Perangkat).ThenInclude(p => p.Barang)
             .ToListAsync();
 
         foreach (var ba in dueTomorrow)
@@ -125,6 +161,7 @@ public class DueDateCheckerJob(
             string tglStr = tomorrow.ToString("dd/MM/yyyy");
             string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
             string pjNama = ba.Pj?.Nama ?? "–";
+            var barangList = GetBarangList(ba);
 
             // Notifikasi Inbox ke Admin Gudang
             string msgInbox = $"ℹ️ Peminjaman {nomorSurat} (PJ: {pjNama}) akan jatuh tempo besok ({tglStr}). Harap persiapkan pengembalian.";
@@ -140,7 +177,10 @@ public class DueDateCheckerJob(
                     pjNama,
                     tglStr,
                     daysUntilDue: 1,
-                    isForPj: false);
+                    isForPj: false,
+                    baId: ba.Id,
+                    baseUrl: BaseUrl,
+                    barangList: barangList);
             }
 
             // Email ke PJ
@@ -153,7 +193,10 @@ public class DueDateCheckerJob(
                     pjNama,
                     tglStr,
                     daysUntilDue: 1,
-                    isForPj: true);
+                    isForPj: true,
+                    baId: ba.Id,
+                    baseUrl: BaseUrl,
+                    barangList: barangList);
             }
         }
     }
