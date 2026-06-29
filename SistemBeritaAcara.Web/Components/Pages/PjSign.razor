@@ -250,6 +250,7 @@ else
         approvalToken = await DbContext.ApprovalToken
             .Include(t => t.BeritaAcara).ThenInclude(b => b.Pj)
             .Include(t => t.BeritaAcara).ThenInclude(b => b.Mengetahui)
+            .Include(t => t.BeritaAcara).ThenInclude(b => b.Perangkat).ThenInclude(p => p.Barang)
             .FirstOrDefaultAsync(t => t.Token == Token && t.UsedAt == null && t.ExpiresAt > DateTime.Now);
 
         if (approvalToken is null) { isValidToken = false; isLoading = false; return; }
@@ -377,7 +378,15 @@ else
             if (approverUser != null && !string.IsNullOrEmpty(approverUser.Email))
             {
                 var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
-                await EmailService.SendApprovalRequestAsync(approverUser.Email, approverUser.Nama ?? approverUser.Email, baseUrl, ba.Id);
+                var barangList = ba.Perangkat
+                    .Select(p => {
+                        string nama = p.Barang?.NamaBarang ?? "Perangkat";
+                        string detail = $"{p.Jumlah} {p.Satuan}";
+                        if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                        if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                        return $"{nama} — {detail}";
+                    }).ToList();
+                await EmailService.SendApprovalRequestAsync(approverUser.Email, approverUser.Nama ?? approverUser.Email, baseUrl, ba.Id, ba.Jenis, barangList);
             }
 
             alreadySigned = true;

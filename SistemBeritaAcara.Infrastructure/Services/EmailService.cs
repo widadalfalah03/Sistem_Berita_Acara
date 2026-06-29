@@ -16,16 +16,48 @@ public class EmailService(IConfiguration config) : IEmailService
     // PublicUrl digunakan untuk link di email agar bisa diakses browser (bukan Docker-internal)
     private readonly string _baseUrl = config["App:PublicUrl"] ?? config["App:BaseUrl"] ?? "http://localhost:5000";
 
-    public async Task SendMagicLinkAsync(string toEmail, string toPjName, int baId, string token, string baseUrl)
+    // Helper: render daftar barang sebagai tabel HTML
+    private static string RenderBarangTable(List<string> barangList)
+    {
+        if (barangList == null || barangList.Count == 0)
+            return "<p style=\"color:#64748b;\"><em>Data barang tidak tersedia.</em></p>";
+
+        var rows = string.Join("", barangList.Select((item, i) =>
+            $"<tr style=\"background:{((i % 2 == 0) ? "#f8fafc" : "#ffffff")}\">" +
+            $"<td style=\"padding:8px 12px;border:1px solid #e2e8f0;color:#64748b;text-align:center;width:40px;\">{i + 1}</td>" +
+            $"<td style=\"padding:8px 12px;border:1px solid #e2e8f0;color:#1e293b;\">{item}</td>" +
+            $"</tr>"));
+
+        return $"""
+            <div style="margin:20px 0;">
+                <div style="font-weight:700;font-size:14px;color:#0f172a;margin-bottom:8px;">Daftar Barang / Perangkat:</div>
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <thead>
+                        <tr style="background:#0284c7;">
+                            <th style="padding:8px 12px;border:1px solid #0369a1;color:white;text-align:center;width:40px;">No</th>
+                            <th style="padding:8px 12px;border:1px solid #0369a1;color:white;text-align:left;">Nama Barang / Perangkat</th>
+                        </tr>
+                    </thead>
+                    <tbody>{rows}</tbody>
+                </table>
+            </div>
+            """;
+    }
+
+    public async Task SendMagicLinkAsync(string toEmail, string toPjName, int baId, string token, string baseUrl, string jenisBA, List<string> barangList)
     {
         string link = $"{baseUrl.TrimEnd('/')}/pj/sign/{token}";
+        string barangTable = RenderBarangTable(barangList);
+
         string body = $"""
             <h2 style="color: #0f172a;">Pemberitahuan Sistem: Persetujuan Dokumen</h2>
             <p>Yth. <strong>{toPjName}</strong>,</p>
-            <p>Terdapat satu dokumen Berita Acara baru yang membutuhkan otorisasi dan tanda tangan digital Anda untuk dapat diproses lebih lanjut.</p>
+            <p>Terdapat satu dokumen <strong>Berita Acara {jenisBA}</strong> yang membutuhkan otorisasi dan tanda tangan digital Anda untuk dapat diproses lebih lanjut.</p>
+
+            {barangTable}
             
             <div style="text-align: center; margin: 40px 0;">
-                <a href="{link}" style="background-color: #0284c7; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #0369a1;">Akses Dokumen Sekarang</a>
+                <a href="{link}" style="background-color: #0284c7; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #0369a1;">Akses Dokumen &amp; Tanda Tangan</a>
             </div>
             
             <p style="font-size: 13px; color: #64748b;"><em>Catatan: Akses ini bersifat privat dan token akan otomatis kedaluwarsa dalam waktu 7 hari demi keamanan data.</em></p>
@@ -33,7 +65,7 @@ public class EmailService(IConfiguration config) : IEmailService
             <p>Salam hangat,<br><strong>Administrator IT Pertamina Patra Niaga</strong></p>
             """;
 
-        await SendEmailAsync(toEmail, "Penting: Otorisasi Dokumen Berita Acara Terbaru", body);
+        await SendEmailAsync(toEmail, $"Penting: Otorisasi Dokumen Berita Acara {jenisBA}", body);
     }
 
     public async Task SendNotificationAsync(string toEmail, string subject, string htmlBody)
@@ -99,20 +131,22 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, $"Notifikasi Keamanan: Tanda Tangan Digunakan ({nomorSurat})", body);
     }
 
-    public async Task SendApprovalRequestAsync(string toEmail, string approverName, string baseUrl, int baId)
+    // ── Email #5: Permintaan Approval ke Approver ─────────────────────────────
+    public async Task SendApprovalRequestAsync(string toEmail, string approverName, string baseUrl, int baId, string jenisBA, List<string> barangList)
     {
-        // Link mengarah ke halaman login dengan returnUrl ke detail BA spesifik
-        // Setelah login sebagai Approver, langsung diarahkan ke BA yang perlu di-review
         var returnUrl = Uri.EscapeDataString($"/berita-acara/{baId}");
         var loginLink = $"{baseUrl}/login?returnUrl={returnUrl}";
+        string barangTable = RenderBarangTable(barangList);
 
         string body = $"""
             <h2 style="color: #0f172a;">Dokumen Berita Acara Menunggu Persetujuan Anda</h2>
             <p>Yth. <strong>{approverName}</strong>,</p>
-            <p>Penanggung Jawab telah menandatangani Berita Acara dan dokumen tersebut kini menunggu persetujuan Anda.</p>
+            <p>Penanggung Jawab telah menandatangani Berita Acara <strong>{jenisBA}</strong> dan dokumen tersebut kini menunggu persetujuan Anda.</p>
 
-            <div style="text-align: center; margin: 40px 0;">
-                <a href="{loginLink}" style="background-color: #0284c7; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #0369a1;">Login & Review Dokumen</a>
+            {barangTable}
+
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="{loginLink}" style="background-color: #0284c7; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #0369a1;">Login &amp; Review Dokumen</a>
             </div>
 
             <p style="font-size: 13px; color: #64748b;"><em>Anda akan diarahkan ke halaman login. Setelah berhasil login sebagai Approver, sistem akan otomatis membuka dokumen yang perlu ditinjau.</em></p>
@@ -120,13 +154,20 @@ public class EmailService(IConfiguration config) : IEmailService
             <p>Salam hangat,<br><strong>Sistem Informasi Berita Acara</strong></p>
             """;
 
-        await SendEmailAsync(toEmail, "Tindakan Diperlukan: Review & Persetujuan Berita Acara", body);
+        await SendEmailAsync(toEmail, $"Tindakan Diperlukan: Review & Persetujuan Berita Acara {jenisBA}", body);
     }
 
-    public async Task SendApprovalResultAsync(string toEmail, string recipientName, string nomorSurat, bool approved, string? alasan = null)
+    // ── Email #6: Hasil Approval (Disetujui / Ditolak) ───────────────────────
+    public async Task SendApprovalResultAsync(string toEmail, string recipientName, string jenisBA, bool approved, int baId, string baseUrl, bool isForPj, string? nomorSurat = null, string? alasan = null, List<string>? barangList = null)
     {
         string statusColor = approved ? "#16a34a" : "#dc2626";
         string statusText = approved ? "DISETUJUI" : "DITOLAK";
+        string baLabel = string.IsNullOrEmpty(nomorSurat) ? $"Berita Acara {jenisBA}" : $"Berita Acara {jenisBA} (No. {nomorSurat})";
+
+        string barangTable = (barangList != null && barangList.Count > 0)
+            ? RenderBarangTable(barangList)
+            : string.Empty;
+
         string alasanSection = (!approved && !string.IsNullOrEmpty(alasan))
             ? $"""
               <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;margin:20px 0;border-radius:4px;">
@@ -136,23 +177,75 @@ public class EmailService(IConfiguration config) : IEmailService
               """
             : string.Empty;
 
+        string actionButtons;
+        if (approved)
+        {
+            // Tombol download PDF (langsung ke file PDF final)
+            string pdfLink = $"{baseUrl}/api/ba/{baId}/download";
+            string detailLink = $"{baseUrl}/login?returnUrl={Uri.EscapeDataString($"/berita-acara/{baId}")}";
+            
+            if (isForPj)
+            {
+                actionButtons = $"""
+                    <div style="text-align:center;margin:32px 0;">
+                        <a href="{pdfLink}" style="background-color:#16a34a;color:#ffffff;padding:13px 26px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;border:1px solid #15803d;display:inline-block;">⬇ Download PDF</a>
+                    </div>
+                    """;
+            }
+            else
+            {
+                actionButtons = $"""
+                    <div style="text-align:center;margin:32px 0;">
+                        <a href="{pdfLink}" style="background-color:#16a34a;color:#ffffff;padding:13px 26px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;border:1px solid #15803d;display:inline-block;margin:8px;">⬇ Download PDF</a>
+                        <a href="{detailLink}" style="background-color:#0284c7;color:#ffffff;padding:13px 26px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;border:1px solid #0369a1;display:inline-block;margin:8px;">Lihat Detail BA</a>
+                    </div>
+                    """;
+            }
+        }
+        else
+        {
+            if (isForPj)
+            {
+                // PJ yang ditolak: tidak perlu tombol khusus, hanya informasi
+                actionButtons = string.Empty;
+            }
+            else
+            {
+                // Admin Gudang yang ditolak: tombol ke menu Rejected
+                string rejectedLink = $"{baseUrl}/login?returnUrl={Uri.EscapeDataString("/rejected")}";
+                actionButtons = $"""
+                    <div style="text-align:center;margin:32px 0;">
+                        <a href="{rejectedLink}" style="background-color:#dc2626;color:#ffffff;padding:13px 26px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;border:1px solid #b91c1c;display:inline-block;">Lihat BA yang Ditolak</a>
+                    </div>
+                    """;
+            }
+        }
+
+        string recipientNote = isForPj
+            ? "<p>Anda menerima email ini sebagai Penanggung Jawab yang terdaftar pada dokumen tersebut.</p>"
+            : "<p>Anda menerima email ini sebagai pembuat Berita Acara tersebut.</p>";
+
         string body = $"""
-            <h2 style="color: {statusColor};">Berita Acara {statusText}</h2>
+            <h2 style="color: {statusColor};">{baLabel} {statusText}</h2>
             <p>Yth. <strong>{recipientName}</strong>,</p>
-            <p>Berita Acara dengan nomor surat <strong>{nomorSurat}</strong> telah <strong style="color:{statusColor};">{statusText}</strong> oleh Approver.</p>
+            <p>{baLabel} telah <strong style="color:{statusColor};">{statusText}</strong> oleh Approver.</p>
             {alasanSection}
+            {barangTable}
+            {actionButtons}
+            {recipientNote}
             <br>
             <p>Salam hangat,<br><strong>Sistem Informasi Berita Acara</strong></p>
             """;
 
         string subject = approved
-            ? $"Berita Acara {nomorSurat} Telah Disetujui"
-            : $"Berita Acara {nomorSurat} Ditolak";
+            ? $"Berita Acara {jenisBA} Telah Disetujui"
+            : $"Berita Acara {jenisBA} Ditolak";
 
         await SendEmailAsync(toEmail, subject, body);
     }
 
-    public async Task SendDueDateReminderAsync(string toEmail, string recipientName, string nomorSurat, string pjNama, string tanggalKembali, int daysUntilDue, bool isForPj)
+    // ── Email #7: Pengingat Jatuh Tempo ──────────────────────────────────────
+    public async Task SendDueDateReminderAsync(string toEmail, string recipientName, string nomorSurat, string pjNama, string tanggalKembali, int daysUntilDue, bool isForPj, int baId, string baseUrl, List<string>? barangList = null)
     {
         bool isOverdue = daysUntilDue < 0;
         bool isH1 = daysUntilDue == 1;
@@ -164,39 +257,45 @@ public class EmailService(IConfiguration config) : IEmailService
         
         string actionText;
         string callToAction;
+        string actionButtons;
 
         if (isForPj)
         {
             if (isOverdue)
-            {
                 actionText = $"Perangkat yang Anda pinjam <strong>telah melewati</strong> batas pengembalian ({tanggalKembali}). Segera kembalikan perangkat tersebut ke bagian IT / Gudang.";
-            }
             else if (isH1)
-            {
                 actionText = $"Perangkat yang Anda pinjam <strong>akan jatuh tempo besok</strong> ({tanggalKembali}). Harap persiapkan perangkat untuk dikembalikan ke bagian IT / Gudang.";
-            }
             else
-            {
                 actionText = $"Perangkat yang Anda pinjam <strong>jatuh tempo hari ini</strong> ({tanggalKembali}). Harap kembalikan perangkat tersebut ke bagian IT / Gudang sebelum akhir hari kerja.";
-            }
+            
             callToAction = "Abaikan email ini jika Anda sudah mengembalikan perangkat.";
+            actionButtons = string.Empty; // PJ tidak perlu tombol sistem
         }
         else
         {
             if (isOverdue)
-            {
                 actionText = $"Peminjaman ini <strong>telah melewati</strong> batas pengembalian ({tanggalKembali}). Harap segera hubungi Penanggung Jawab untuk menindaklanjuti pengembalian perangkat.";
-            }
             else if (isH1)
-            {
                 actionText = $"Peminjaman ini <strong>akan jatuh tempo besok</strong> ({tanggalKembali}). Harap informasikan ke Penanggung Jawab agar mempersiapkan pengembalian.";
-            }
             else
-            {
                 actionText = $"Peminjaman ini <strong>jatuh tempo hari ini</strong> ({tanggalKembali}). Harap pantau pengembalian perangkat dari Penanggung Jawab hari ini.";
-            }
+            
             callToAction = "Login ke sistem untuk menandai perangkat sebagai sudah dikembalikan setelah menerima fisik perangkat.";
+
+            // Tombol untuk Admin Gudang: dashboard + detail BA
+            string dashboardLink = $"{baseUrl}/login?returnUrl={Uri.EscapeDataString("/dashboard")}";
+            string detailLink = $"{baseUrl}/login?returnUrl={Uri.EscapeDataString($"/berita-acara/{baId}")}";
+            actionButtons = $"""
+                <div style="text-align:center;margin:28px 0;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+                    <a href="{detailLink}" style="background-color:{statusColor};color:#ffffff;padding:13px 26px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;">Lihat Detail Peminjaman</a>
+                    <a href="{dashboardLink}" style="background-color:#64748b;color:#ffffff;padding:13px 26px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;">Buka Dashboard</a>
+                </div>
+                """;
         }
+
+        string barangTable = (barangList != null && barangList.Count > 0)
+            ? RenderBarangTable(barangList)
+            : string.Empty;
 
         string body = $"""
             <h2 style="color: {statusColor};">Peminjaman Perangkat {statusText}</h2>
@@ -210,9 +309,12 @@ public class EmailService(IConfiguration config) : IEmailService
                     <tr><td style="padding:4px 0;color:#64748b;">Batas Pengembalian</td><td style="font-weight:bold;color:{statusColor};">{tanggalKembali}</td></tr>
                 </table>
             </div>
+
+            {barangTable}
             
             <p>{actionText}</p>
             <p>{callToAction}</p>
+            {actionButtons}
             <br>
             <p>Salam,<br><strong>Sistem Informasi Berita Acara</strong><br>PT Pertamina Patra Niaga</p>
             """;
