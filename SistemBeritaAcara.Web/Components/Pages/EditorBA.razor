@@ -364,6 +364,7 @@
             DbContext.ChangeTracker.Clear();
             var trackedBa = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Pj)
+                .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
                 .FirstOrDefaultAsync(b => b.Id == ba.Id);
 
             if (trackedBa is null)
@@ -405,12 +406,22 @@
 
             // Kirim email magic link ke PJ
             var baseUrl = Navigation.BaseUri.TrimEnd('/');
+            var barangListEditor = trackedBa.Perangkat
+                .Select(p => {
+                    string nama = p.Barang?.NamaBarang ?? "Perangkat";
+                    string detail = $"{p.Jumlah} {p.Satuan}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                    return $"{nama} — {detail}";
+                }).ToList();
             await EmailService.SendMagicLinkAsync(
                 trackedBa.Pj!.Email ?? string.Empty,
                 trackedBa.Pj.Nama,
                 trackedBa.Id,
                 tokenValue,
-                baseUrl
+                baseUrl,
+                trackedBa.Jenis,
+                barangListEditor
             );
 
             // Kirim notifikasi in-app ke AdminGudangBarang
