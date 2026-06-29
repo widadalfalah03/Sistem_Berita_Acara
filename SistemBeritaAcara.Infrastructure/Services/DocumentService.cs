@@ -142,6 +142,21 @@ public class DocumentService : IDocumentService
                 }
             }
 
+            // Kunci lebar kolom semua tabel agar Word tidak auto-resize saat file dibuka
+            // (mencegah teks nomor surat turun ke baris bawah akibat kolom menyempit)
+            foreach (var table in mainPart.Document.Body!.Descendants<Table>())
+            {
+                var tblPr = table.Elements<TableProperties>().FirstOrDefault();
+                if (tblPr != null)
+                {
+                    var layout = tblPr.Elements<TableLayout>().FirstOrDefault();
+                    if (layout == null)
+                        tblPr.Append(new TableLayout { Type = TableLayoutValues.Fixed });
+                    else
+                        layout.Type = TableLayoutValues.Fixed;
+                }
+            }
+
             // 2. Replace Table Rows for Perangkat
             // Template row identified by {{PerangkatJumlah}} placeholder
             var templateRow = mainPart.Document.Body.Descendants<TableRow>()
