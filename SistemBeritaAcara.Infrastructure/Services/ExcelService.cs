@@ -215,13 +215,12 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
         workbook.SaveAs(archivePath);
     }
 
-    public Task<byte[]> ExportArsipAsync(IEnumerable<BeritaAcara> data)
+    public Task<byte[]> ExportArsipAsync(IEnumerable<BeritaAcara> data, string baseUrl)
     {
         using var workbook = new XLWorkbook();
         var sheet = workbook.AddWorksheet("Arsip BA");
 
-        string[] headers = ["Tanggal", "Nomor Surat", "Jenis Berita Acara", "No. Tiket SSC",
-                             "Jenis Perangkat Keras", "Penanggung Jawab", "Yang Menyerahkan", "Yang Mengetahui"];
+        string[] headers = ["Tanggal", "Nomor Surat", "Jenis Berita Acara", "Dokumen"];
 
         for (int i = 0; i < headers.Length; i++)
         {
@@ -236,18 +235,29 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
         int row = 2;
         foreach (var ba in data)
         {
-            var perangkatNames = ba.Perangkat?
-                .Select(p => p.Barang?.NamaBarang)
-                .Where(n => !string.IsNullOrEmpty(n)) ?? [];
-
             sheet.Cell(row, 1).Value = ba.Tanggal.ToString("dd/MM/yyyy");
             sheet.Cell(row, 2).Value = ba.NomorSurat ?? string.Empty;
             sheet.Cell(row, 3).Value = ba.Jenis;
-            sheet.Cell(row, 4).Value = ba.TiketSscNo ?? string.Empty;
-            sheet.Cell(row, 5).Value = string.Join(", ", perangkatNames);
-            sheet.Cell(row, 6).Value = ba.Pj?.Nama ?? string.Empty;
-            sheet.Cell(row, 7).Value = ba.Menyerahkan?.Nama ?? string.Empty;
-            sheet.Cell(row, 8).Value = ba.Mengetahui?.Nama ?? string.Empty;
+            
+            string docPath = !string.IsNullOrEmpty(ba.DocxFinalPath) ? ba.DocxFinalPath : (!string.IsNullOrEmpty(ba.DocxPath) ? ba.DocxPath : "");
+            
+            var docCell = sheet.Cell(row, 4);
+            if (!string.IsNullOrEmpty(docPath))
+            {
+                // PDF path is usually the docx path with .pdf extension, assuming they are converted
+                string pdfPath = docPath.Replace(".docx", ".pdf");
+                string pdfName = Path.GetFileName(pdfPath);
+                string fileUrl = $"{baseUrl.TrimEnd('/')}/{pdfPath.TrimStart('/')}";
+                
+                docCell.Value = pdfName;
+                docCell.SetHyperlink(new XLHyperlink(fileUrl));
+                docCell.Style.Font.FontColor = XLColor.Blue;
+                docCell.Style.Font.Underline = XLFontUnderlineValues.Single;
+            }
+            else
+            {
+                docCell.Value = "-";
+            }
 
             if (row % 2 == 0)
                 sheet.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");

@@ -260,7 +260,7 @@ else
         try
         {
             var dataToExport = FilteredBA.ToList();
-            var bytes = await ExcelService.ExportArsipAsync(dataToExport);
+            var bytes = await ExcelService.ExportArsipAsync(dataToExport, Navigation.BaseUri);
             var fileName = $"ArsipBA_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
             await JS.InvokeVoidAsync("downloadFileFromBytes", fileName,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
