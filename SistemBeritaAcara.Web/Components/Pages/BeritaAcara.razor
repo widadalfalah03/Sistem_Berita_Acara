@@ -859,10 +859,7 @@
     private void AddPerangkat()
     {
         model.Perangkat.Add(new());
-        activeSearchRow = model.Perangkat.Last();
-        barangSearchQuery = string.Empty;
-        barangSearchResults = barangOptions.ToList();
-        showBarangSearch = true;
+        // Tidak langsung membuka dropdown pencarian — user klik sendiri saat siap
     }
 
     private void RemovePerangkat(PerangkatRow row)
