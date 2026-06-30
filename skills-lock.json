@@ -1,11 +1,23 @@
 {
   "version": 1,
   "skills": {
+    "brainstorming": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/brainstorming/SKILL.md",
+      "computedHash": "0c877c8521ec97a5d55fa682d33122b811aebddd4788b92ac008efe85cd305cd"
+    },
     "design-taste-frontend": {
       "source": "leonxlnx/taste-skill",
       "sourceType": "github",
       "skillPath": "skills/taste-skill/SKILL.md",
       "computedHash": "899b84384f74f540ea5284d9b2e9234e050998b42eacc805410b518d4226c0b3"
+    },
+    "everything-claude-code": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/everything-claude-code/SKILL.md",
+      "computedHash": "59891637565c983eb16b976d8f76ca7e1662765e9573e321d2c8af8e9bdb222b"
     },
     "huashu-design": {
       "source": "alchaincyf/huashu-design",
@@ -18,6 +30,12 @@
       "sourceType": "github",
       "skillPath": ".agents/skills/impeccable/SKILL.md",
       "computedHash": "87d128e3980037fa8e203062cd8fcf2f4d35c340fd8eb93b6c02ab050315bea8"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "20c0ed05adb01fde3db5bb1aeefd61d33db2471bdadfd9c9ce19d30dd54a12fd"
     }
   }
 }
