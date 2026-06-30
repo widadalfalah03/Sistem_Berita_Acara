@@ -29,6 +29,7 @@ public class AutoApproveJob(
             .Include(b => b.Menyerahkan)
             .Include(b => b.Mengetahui)
             .Include(b => b.Creator)
+            .Include(b => b.BuktiFotos)
             .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
             .Where(b => b.Status == "WaitingPJSign" && b.SubmittedAt <= cutoffTime)
             .ToListAsync();
