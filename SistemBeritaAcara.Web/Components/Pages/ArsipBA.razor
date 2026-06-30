@@ -26,9 +26,10 @@
 }
 
 <!-- Filter Panel -->
-<div class="card" style="margin-bottom:16px;overflow:hidden;padding:0;">
-    <!-- 1 baris: No. Surat | PJ | Menyerahkan | Mengetahui | Tanggal -->
-    <div class="arsip-filter-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;">
+<div class="card" style="margin-bottom:16px;overflow:visible;padding:0;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;">
+
+        <!-- No. Surat -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">No. Surat</div>
             <div style="display:flex;align-items:center;gap:6px;">
@@ -38,34 +39,61 @@
                 <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
             </div>
         </div>
-        <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Penanggung Jawab</div>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <input type="text" placeholder="Nama PJ..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
-                       @bind="pjSearch" @bind:event="oninput" />
-                <i class="bi bi-person" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
-            </div>
+
+        <!-- Nama Pihak (popover) -->
+        <div style="border-right:1px solid var(--border-light);padding:10px 14px;position:relative;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Nama Pihak</div>
+            <button @onclick="ToggleNamePopover"
+                    style="display:flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;width:100%;text-align:left;">
+                <span style="font-size:13px;color:@(HasNameFilter ? "var(--text-primary)" : "var(--text-muted)");flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    @(HasNameFilter ? GetNameFilterSummary() : "Cari nama...")
+                </span>
+                <i class="bi bi-chevron-@(showNamePopover ? "up" : "down")" style="color:var(--text-muted);font-size:11px;flex-shrink:0;transition:transform .2s;"></i>
+            </button>
+
+            @if (showNamePopover)
+            {
+                <div style="position:fixed;inset:0;z-index:99;" @onclick="() => showNamePopover = false"></div>
+                <div style="position:absolute;top:calc(100% + 4px);left:0;min-width:280px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:100;padding:16px;">
+                    <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Filter Nama</div>
+
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
+                            <i class="bi bi-person-badge" style="margin-right:4px;"></i> Yang Menyerahkan
+                        </label>
+                        <input type="text" placeholder="Nama..." @bind="menyerahkanSearch" @bind:event="oninput"
+                               style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
+                    </div>
+
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
+                            <i class="bi bi-person" style="margin-right:4px;"></i> Penanggung Jawab
+                        </label>
+                        <input type="text" placeholder="Nama PJ..." @bind="pjSearch" @bind:event="oninput"
+                               style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
+                    </div>
+
+                    <div>
+                        <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
+                            <i class="bi bi-person-check" style="margin-right:4px;"></i> Yang Mengetahui
+                        </label>
+                        <input type="text" placeholder="Nama approver..." @bind="mengetahuiSearch" @bind:event="oninput"
+                               style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
+                    </div>
+
+                    @if (HasNameFilter)
+                    {
+                        <button @onclick="ClearNameFilters"
+                                style="margin-top:12px;width:100%;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;font-size:12px;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;">
+                            <i class="bi bi-x-circle"></i> Hapus Filter Nama
+                        </button>
+                    }
+                </div>
+            }
         </div>
+
+        <!-- Tanggal -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Yang Menyerahkan</div>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <input type="text" placeholder="Nama..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
-                       @bind="menyerahkanSearch" @bind:event="oninput" />
-                <i class="bi bi-person-badge" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
-            </div>
-        </div>
-        <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Yang Mengetahui</div>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <input type="text" placeholder="Nama approver..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
-                       @bind="mengetahuiSearch" @bind:event="oninput" />
-                <i class="bi bi-person-check" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
-            </div>
-        </div>
-        <div style="padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Tanggal</div>
             <div style="display:flex;align-items:center;gap:6px;">
                 <input type="date"
@@ -73,15 +101,42 @@
                        @bind="dateFilter" />
             </div>
         </div>
+
+        <!-- Jenis BA (styled dropdown seperti filter Role) -->
+        <div style="padding:10px 14px;position:relative;display:flex;flex-direction:column;justify-content:center;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Jenis BA</div>
+            <div @onclick="() => showJenisDropdown = !showJenisDropdown"
+                 style="padding:6px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:150px;white-space:nowrap;">
+                <span style="font-weight:500;color:var(--text-primary);">@(string.IsNullOrEmpty(jenisFilter) ? "Semua Jenis" : jenisFilter)</span>
+                <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showJenisDropdown ? "transform:rotate(180deg);" : "")"></i>
+            </div>
+            @if (showJenisDropdown)
+            {
+                <div @onclick="() => showJenisDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
+                <div style="position:absolute;top:100%;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:150px;margin-top:4px;overflow:hidden;">
+                    @foreach (var jenis in new[] { "", "Alokasi", "Peminjaman" })
+                    {
+                        var label = string.IsNullOrEmpty(jenis) ? "Semua Jenis" : jenis;
+                        <div @onclick="@(() => { jenisFilter = jenis; showJenisDropdown = false; currentPage = 1; })"
+                             style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(jenisFilter == jenis ? "600" : "400");background:@(jenisFilter == jenis ? "var(--primary)" : "transparent");color:@(jenisFilter == jenis ? "white" : "var(--text-primary)");"
+                             onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
+                             onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
+                            @label
+                        </div>
+                    }
+                </div>
+            }
+        </div>
     </div>
+
     @if (HasActiveFilter)
     {
         <div style="padding:8px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-top:1px solid var(--border-light);">
             <span style="font-size:13px;color:var(--text-secondary);">
-                <strong>@FilteredBA.Count()</strong> dari <strong>@allBA.Count</strong> dokumen
+                <strong>@TotalFilteredItems</strong> dari <strong>@allBA.Count</strong> dokumen
             </span>
             <button @onclick="ClearFilters" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--primary);font-weight:500;padding:0;display:flex;align-items:center;gap:4px;">
-                <i class="bi bi-x-circle"></i> Bersihkan
+                <i class="bi bi-x-circle"></i> Bersihkan semua
             </button>
         </div>
     }
@@ -143,53 +198,85 @@ else
     private bool isExporting = false;
     private string currentRole = string.Empty;
     private int currentUserId;
+    private bool showNamePopover = false;
+    private bool showJenisDropdown = false;
 
     private string _search = string.Empty;
-    private string search 
+    private string search
     {
         get => _search;
         set { _search = value; currentPage = 1; }
     }
-    
+
     private string _pjSearch = string.Empty;
     private string pjSearch
     {
         get => _pjSearch;
         set { _pjSearch = value; currentPage = 1; }
     }
-    
+
     private string _menyerahkanSearch = string.Empty;
     private string menyerahkanSearch
     {
         get => _menyerahkanSearch;
         set { _menyerahkanSearch = value; currentPage = 1; }
     }
-    
+
     private string _mengetahuiSearch = string.Empty;
     private string mengetahuiSearch
     {
         get => _mengetahuiSearch;
         set { _mengetahuiSearch = value; currentPage = 1; }
     }
-    
+
+    private string _jenisFilter = string.Empty;
+    private string jenisFilter
+    {
+        get => _jenisFilter;
+        set { _jenisFilter = value; currentPage = 1; }
+    }
+
     private DateTime? _dateFilter;
     private DateTime? dateFilter
     {
         get => _dateFilter;
         set { _dateFilter = value; currentPage = 1; }
     }
-    
+
     private int currentPage = 1;
     private int pageSize = 10;
 
-    private bool HasActiveFilter =>
-        !string.IsNullOrEmpty(search) ||
+    private bool HasNameFilter =>
         !string.IsNullOrEmpty(pjSearch) ||
         !string.IsNullOrEmpty(menyerahkanSearch) ||
-        !string.IsNullOrEmpty(mengetahuiSearch) ||
+        !string.IsNullOrEmpty(mengetahuiSearch);
+
+    private bool HasActiveFilter =>
+        !string.IsNullOrEmpty(search) ||
+        HasNameFilter ||
+        !string.IsNullOrEmpty(jenisFilter) ||
         dateFilter.HasValue;
 
-    private int TotalFilteredItems => allBA
+    private string GetNameFilterSummary()
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(menyerahkanSearch)) parts.Add(menyerahkanSearch);
+        if (!string.IsNullOrEmpty(pjSearch)) parts.Add(pjSearch);
+        if (!string.IsNullOrEmpty(mengetahuiSearch)) parts.Add(mengetahuiSearch);
+        return string.Join(", ", parts);
+    }
+
+    private void ToggleNamePopover() => showNamePopover = !showNamePopover;
+
+    private void ClearNameFilters()
+    {
+        pjSearch = string.Empty;
+        menyerahkanSearch = string.Empty;
+        mengetahuiSearch = string.Empty;
+        currentPage = 1;
+    }
+
+    private IEnumerable<BeritaAcaraEntity> ApplyFilters(IEnumerable<BeritaAcaraEntity> src) => src
         .Where(b => string.IsNullOrEmpty(search) ||
                     (b.NomorSurat ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
         .Where(b => string.IsNullOrEmpty(pjSearch) ||
@@ -198,26 +285,14 @@ else
                     (b.Menyerahkan?.Nama ?? "").Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase))
         .Where(b => string.IsNullOrEmpty(mengetahuiSearch) ||
                     (b.Mengetahui?.Nama ?? "").Contains(mengetahuiSearch, StringComparison.OrdinalIgnoreCase))
-        .Count(b => !dateFilter.HasValue || b.Tanggal == DateOnly.FromDateTime(dateFilter.Value));
+        .Where(b => string.IsNullOrEmpty(jenisFilter) ||
+                    b.Jenis.Equals(jenisFilter, StringComparison.OrdinalIgnoreCase))
+        .Where(b => !dateFilter.HasValue || b.Tanggal == DateOnly.FromDateTime(dateFilter.Value));
 
-    private IEnumerable<BeritaAcaraEntity> FilteredBA
-    {
-        get
-        {
-            var query = allBA
-                .Where(b => string.IsNullOrEmpty(search) ||
-                            (b.NomorSurat ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
-                .Where(b => string.IsNullOrEmpty(pjSearch) ||
-                            (b.Pj?.Nama ?? "").Contains(pjSearch, StringComparison.OrdinalIgnoreCase))
-                .Where(b => string.IsNullOrEmpty(menyerahkanSearch) ||
-                            (b.Menyerahkan?.Nama ?? "").Contains(menyerahkanSearch, StringComparison.OrdinalIgnoreCase))
-                .Where(b => string.IsNullOrEmpty(mengetahuiSearch) ||
-                            (b.Mengetahui?.Nama ?? "").Contains(mengetahuiSearch, StringComparison.OrdinalIgnoreCase))
-                .Where(b => !dateFilter.HasValue || b.Tanggal == DateOnly.FromDateTime(dateFilter.Value));
-                
-            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
-        }
-    }
+    private int TotalFilteredItems => ApplyFilters(allBA).Count();
+
+    private IEnumerable<BeritaAcaraEntity> FilteredBA =>
+        ApplyFilters(allBA).Skip((currentPage - 1) * pageSize).Take(pageSize);
 
     private static string GetJenisPill(string jenis) => jenis switch
     {
@@ -251,7 +326,11 @@ else
         pjSearch = string.Empty;
         menyerahkanSearch = string.Empty;
         mengetahuiSearch = string.Empty;
+        jenisFilter = string.Empty;
         dateFilter = null;
+        showNamePopover = false;
+        showJenisDropdown = false;
+        currentPage = 1;
     }
 
     private async Task ExportExcelAsync()
