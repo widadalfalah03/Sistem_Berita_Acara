@@ -27,12 +27,12 @@
 
 <!-- Filter Panel -->
 <div class="card" style="margin-bottom:16px;overflow:visible;padding:0;">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:start;">
 
         <!-- No. Surat -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">No. Surat</div>
-            <div style="display:flex;align-items:center;gap:6px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">No. Surat</div>
+            <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);">
                 <input type="text" placeholder="Cari nomor..."
                        style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
                        @bind="search" @bind:event="oninput" />
@@ -42,9 +42,9 @@
 
         <!-- Nama Pihak (popover) -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;position:relative;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Nama Pihak</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Nama Pihak</div>
             <button @onclick="ToggleNamePopover"
-                    style="display:flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;width:100%;text-align:left;">
+                    style="display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);cursor:pointer;text-align:left;box-sizing:border-box;">
                 <span style="font-size:13px;color:@(HasNameFilter ? "var(--text-primary)" : "var(--text-muted)");flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                     @(HasNameFilter ? GetNameFilterSummary() : "Cari nama...")
                 </span>
@@ -94,31 +94,31 @@
 
         <!-- Tanggal -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Tanggal</div>
-            <div style="display:flex;align-items:center;gap:6px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Tanggal</div>
+            <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);">
                 <input type="date"
                        style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
                        @bind="dateFilter" />
             </div>
         </div>
 
-        <!-- Jenis BA (styled dropdown seperti filter Role) -->
-        <div style="padding:10px 14px;position:relative;display:flex;flex-direction:column;justify-content:center;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Jenis BA</div>
+        <!-- Jenis BA -->
+        <div style="padding:10px 14px;position:relative;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Jenis BA</div>
             <div @onclick="() => showJenisDropdown = !showJenisDropdown"
-                 style="padding:6px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:150px;white-space:nowrap;">
-                <span style="font-weight:500;color:var(--text-primary);">@(string.IsNullOrEmpty(jenisFilter) ? "Semua Jenis" : jenisFilter)</span>
+                 style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);cursor:pointer;min-width:150px;white-space:nowrap;">
+                <span style="font-size:13px;color:var(--text-primary);">@(string.IsNullOrEmpty(jenisFilter) ? "Semua Jenis" : jenisFilter)</span>
                 <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showJenisDropdown ? "transform:rotate(180deg);" : "")"></i>
             </div>
             @if (showJenisDropdown)
             {
                 <div @onclick="() => showJenisDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
-                <div style="position:absolute;top:100%;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:150px;margin-top:4px;overflow:hidden;">
-                    @foreach (var jenis in new[] { "", "Alokasi", "Peminjaman" })
+                <div style="position:absolute;top:calc(100% + 4px);right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:150px;overflow:hidden;">
+                    @foreach (var jenis in new[] { "", "Alokasi", "Peminjaman", "Penarikan", "Lainnya" })
                     {
                         var label = string.IsNullOrEmpty(jenis) ? "Semua Jenis" : jenis;
                         <div @onclick="@(() => { jenisFilter = jenis; showJenisDropdown = false; currentPage = 1; })"
-                             style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(jenisFilter == jenis ? "600" : "400");background:@(jenisFilter == jenis ? "var(--primary)" : "transparent");color:@(jenisFilter == jenis ? "white" : "var(--text-primary)");"
+                             style="padding:10px 14px;cursor:pointer;font-size:13px;font-weight:@(jenisFilter == jenis ? "600" : "400");background:@(jenisFilter == jenis ? "var(--primary)" : "transparent");color:@(jenisFilter == jenis ? "white" : "var(--text-primary)");"
                              onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
                              onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
                             @label
