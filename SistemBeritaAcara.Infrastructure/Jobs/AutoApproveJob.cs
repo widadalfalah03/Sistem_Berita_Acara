@@ -20,11 +20,13 @@ public class AutoApproveJob(
     public async Task ProcessAutoApproveAsync()
     {
         // Gunakan DateTime.Now (waktu lokal) agar konsisten dengan cara SubmittedAt disimpan
-        var cutoffTime = DateTime.Now.AddHours(-24);
+        // TESTING: batas waktu 2 menit (production: 24 jam)
+        var cutoffTime = DateTime.Now.AddMinutes(-2);
 
-        // Cari BA yang statusnya "WaitingPJSign" dan sudah lebih dari 24 jam sejak di-submit
+        // Cari BA yang statusnya "WaitingPJSign" dan sudah lebih dari 2 menit sejak di-submit
         var pendingBas = await db.BeritaAcara
             .Include(b => b.Pj)
+            .Include(b => b.Menyerahkan)
             .Include(b => b.Mengetahui)
             .Include(b => b.Creator)
             .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
@@ -33,11 +35,11 @@ public class AutoApproveJob(
 
         if (!pendingBas.Any())
         {
-            logger.LogInformation("[AutoApproveJob] Tidak ada BA yang melewati batas waktu 24 jam.");
+            logger.LogInformation("[AutoApproveJob] Tidak ada BA yang melewati batas waktu 2 menit.");
             return;
         }
 
-        logger.LogInformation($"[AutoApproveJob] Ditemukan {pendingBas.Count} BA yang melewati 24 jam. Memulai auto-approve.");
+        logger.LogInformation($"[AutoApproveJob] Ditemukan {pendingBas.Count} BA yang melewati 2 menit. Memulai auto-approve.");
 
         foreach (var ba in pendingBas)
         {
@@ -74,8 +76,19 @@ public class AutoApproveJob(
                     logger.LogWarning($"[AutoApproveJob] File stempel tidak ditemukan di {stampPhysicalPath}. Dokumen BA {ba.Id} tidak akan memiliki stempel.");
                 }
 
+                // 4.5 Embed tanda tangan Admin Gudang (Yang Menyerahkan)
+                if (ba.Creator != null && !string.IsNullOrEmpty(ba.Creator.TtdPath))
+                {
+                    var creatorTtdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", ba.Creator.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    if (File.Exists(creatorTtdPhysicalPath))
+                    {
+                        await documentService.EmbedTtdMenyerahkanAsync(ba.Id, creatorTtdPhysicalPath);
+                        logger.LogInformation($"[AutoApproveJob] TTD Admin Gudang berhasil di-embed ke BA {ba.Id}.");
+                    }
+                }
+
                 // 5. Kirim notifikasi ke Approver (inbox)
-                string msgInbox = $"Dokumen {ba.NomorSurat ?? $"BA-{ba.Id}"} telah disetujui otomatis (PJ melewati batas 24 jam) dan membutuhkan otorisasi Anda.";
+                string msgInbox = $"Dokumen {ba.NomorSurat ?? $"BA-{ba.Id}"} telah disetujui otomatis (PJ melewati batas 2 menit / TESTING) dan membutuhkan otorisasi Anda.";
                 await notificationService.SendAsync(ba.MengetahuiId ?? 0, "APPROVAL_REQUIRED", msgInbox, ba.Id);
 
                 // 6. Kirim email ke Approver

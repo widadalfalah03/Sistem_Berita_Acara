@@ -430,7 +430,14 @@ public class DocumentService : IDocumentService
 
         await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_PJ}}");
 
-        ba.TtdPjPath = Path.Combine("files", "signatures", Path.GetFileName(ttdPath)).Replace("\\", "/");
+        if (ttdPath.Contains("auto_approve_stamp.png"))
+        {
+            ba.TtdPjPath = "images/auto_approve_stamp.png";
+        }
+        else
+        {
+            ba.TtdPjPath = Path.Combine("files", "signatures", Path.GetFileName(ttdPath)).Replace("\\", "/");
+        }
         await _db.SaveChangesAsync();
 
         return ba.DocxPath!;
