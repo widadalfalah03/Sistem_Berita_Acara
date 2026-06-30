@@ -80,26 +80,60 @@
                 }
                 else if (step == 2)
                 {
-                    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;text-align:center;">Buat Tanda Tangan</h3>
-                    <p style="font-size:13px;color:var(--text-secondary);text-align:center;margin-bottom:24px;">Gambarkan tanda tangan digital Anda. Ini akan digunakan untuk menandatangani Berita Acara secara otomatis.</p>
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;text-align:center;">Buat Tanda Tangan</h3>
+                    <p style="font-size:13px;color:var(--text-secondary);text-align:center;margin-bottom:16px;">Tanda tangan akan digunakan untuk menandatangani Berita Acara secara otomatis.</p>
 
                     @if (!string.IsNullOrEmpty(errorMessage))
                     {
-                        <div class="login-error" style="margin-bottom:16px;">
+                        <div class="login-error" style="margin-bottom:12px;">
                             <i class="bi bi-exclamation-circle-fill"></i>
                             @errorMessage
                         </div>
                     }
 
-                    <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg-card);margin-bottom:12px;overflow:hidden;">
-                        <canvas id="setup-ttd-canvas" width="400" height="200" 
-                                style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"></canvas>
+                    <!-- Tab bar -->
+                    <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;">
+                        <button @onclick='() => SwitchSetupMode("draw")'
+                                style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:@(setupTtdMode=="draw"?"var(--primary)":"transparent");color:@(setupTtdMode=="draw"?"white":"var(--text-secondary)");">
+                            <i class="bi bi-pen-fill" style="margin-right:5px;"></i>Gambar
+                        </button>
+                        <button @onclick='() => SwitchSetupMode("upload")'
+                                style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(setupTtdMode=="upload"?"var(--primary)":"transparent");color:@(setupTtdMode=="upload"?"white":"var(--text-secondary)");">
+                            <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload Gambar
+                        </button>
                     </div>
 
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-                        <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
-                            <i class="bi bi-eraser"></i> Hapus Tanda Tangan
-                        </button>
+                    <!-- MODE: GAMBAR -->
+                    <div style="display:@(setupTtdMode == "draw" ? "block" : "none")">
+                        <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg-card);margin-bottom:10px;overflow:hidden;">
+                            <canvas id="setup-ttd-canvas" width="400" height="200"
+                                    style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"></canvas>
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+                            <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
+                                <i class="bi bi-eraser"></i> Hapus
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MODE: UPLOAD -->
+                    <div style="display:@(setupTtdMode == "upload" ? "block" : "none")">
+                        <label for="setup-ul-input" style="cursor:pointer;display:block;margin-bottom:10px;">
+                            <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg-card);padding:18px;text-align:center;"
+                                 onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                                <i class="bi bi-image" style="font-size:26px;color:var(--primary);display:block;margin-bottom:6px;"></i>
+                                <div style="font-weight:600;font-size:13px;margin-bottom:2px;">Klik untuk pilih gambar</div>
+                                <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
+                            </div>
+                            <input type="file" id="setup-ul-input" accept="image/*" style="display:none"
+                                   onchange="ttdUpload.onFileChange('setup-ul-input', 'setup-ul-canvas', 'setup-ul-wrap')" />
+                        </label>
+
+                        <div id="setup-ul-wrap" style="display:none;margin-bottom:10px;">
+                            <div style="background:white;border-radius:var(--radius);border:2px solid var(--border);padding:6px;min-height:60px;display:flex;align-items:center;justify-content:center;">
+                                <canvas id="setup-ul-canvas" style="display:block;max-width:100%;height:auto;"></canvas>
+                            </div>
+                        </div>
                     </div>
 
                     <button class="login-btn" @onclick="ProcessStep2" disabled="@isSaving">
@@ -144,6 +178,7 @@
     private string confirmPassword = string.Empty;
     private bool _canvasInitialized = false;
     private bool isDrawingActive = false;
+    private string setupTtdMode = "draw"; // "draw" | "upload"
 
     protected override async Task OnInitializedAsync()
     {
@@ -213,21 +248,43 @@
         step = 2;
     }
 
-    // Removed Blazor Canvas Event Handlers
-    
+    private async Task SwitchSetupMode(string mode)
+    {
+        setupTtdMode = mode;
+        _canvasInitialized = false;
+        await Task.Delay(50);
+        if (mode == "draw")
+        {
+            _canvasInitialized = true;
+            try { await JS.InvokeVoidAsync("setupCanvas.init"); } catch { }
+        }
+        else
+        {
+            try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
+        }
+    }
+
     private async Task ClearCanvasAsync() => await JS.InvokeVoidAsync("setupCanvas.clear");
 
     private async Task ProcessStep2()
     {
         if (user == null) return;
         errorMessage = string.Empty;
-        
-        bool isEmpty = await JS.InvokeAsync<bool>("setupCanvas.isEmpty");
-        if (isEmpty)
+
+        string? dataUrl;
+        if (setupTtdMode == "upload")
         {
-            errorMessage = "Tanda tangan tidak boleh kosong.";
-            return;
+            bool hasImg = await JS.InvokeAsync<bool>("ttdUpload.hasImage");
+            if (!hasImg) { errorMessage = "Silakan upload gambar tanda tangan terlebih dahulu."; return; }
+            dataUrl = await JS.InvokeAsync<string>("ttdUpload.getDataUrl");
         }
+        else
+        {
+            bool isEmpty = await JS.InvokeAsync<bool>("setupCanvas.isEmpty");
+            if (isEmpty) { errorMessage = "Tanda tangan tidak boleh kosong."; return; }
+            dataUrl = await JS.InvokeAsync<string>("setupCanvas.getDataUrl");
+        }
+        if (string.IsNullOrEmpty(dataUrl)) { errorMessage = "Gagal membaca data tanda tangan."; return; }
 
         isSaving = true;
         try
@@ -241,8 +298,7 @@
                 return;
             }
 
-            // Save Signature
-            var dataUrl = await JS.InvokeAsync<string>("setupCanvas.getDataUrl");
+            // Save Signature — dataUrl already obtained above
             var base64 = dataUrl.Split(',')[1];
             var bytes = Convert.FromBase64String(base64);
 

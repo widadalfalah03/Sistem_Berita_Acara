@@ -1,3 +1,145 @@
+// ── TTD Upload: hapus background otomatis via Canvas pixel manipulation ──────
+window.ttdUpload = {
+    _threshold: 200,
+    _dataUrl: null,
+    _origSrc: null,
+    _canvasId: null,
+    _wrapId: null,
+
+    onFileChange: function (inputId, canvasId, wrapId) {
+        this._canvasId = canvasId;
+        this._wrapId = wrapId;
+        var input = document.getElementById(inputId);
+        if (!input || !input.files || !input.files[0]) return;
+        var file = input.files[0];
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Ukuran file terlalu besar. Maksimal 5MB.');
+            input.value = '';
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            alert('File harus berupa gambar (JPG, PNG, dll).');
+            input.value = '';
+            return;
+        }
+        var reader = new FileReader();
+        var self = this;
+        reader.onload = function (e) {
+            self._origSrc = e.target.result;
+            self._reprocess(e.target.result, canvasId, wrapId);
+        };
+        reader.readAsDataURL(file);
+    },
+
+    setThreshold: function (val) {
+        this._threshold = parseInt(val);
+        if (this._origSrc && this._canvasId) {
+            this._reprocess(this._origSrc, this._canvasId, this._wrapId);
+        }
+    },
+
+    _reprocess: function (imgSrc, canvasId, wrapId) {
+        var img = new Image();
+        var self = this;
+        img.onload = function () {
+            var canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            var parent = canvas.parentElement;
+            var maxW = parent ? Math.max(parent.offsetWidth - 18, 180) : 380;
+            var maxH = 160;
+            var scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+            canvas.width = Math.round(img.naturalWidth * scale);
+            canvas.height = Math.round(img.naturalHeight * scale);
+
+            var ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var data = imageData.data;
+            var W = canvas.width, H = canvas.height;
+
+            // Deteksi warna background dengan sampling sudut gambar (corner detection).
+            // Sudut gambar hampir selalu berisi background (bukan tanda tangan).
+            var bgR = 0, bgG = 0, bgB = 0, samples = 0;
+            var r = Math.max(1, Math.min(8, Math.floor(Math.min(W, H) * 0.08)));
+            var corners = [[0, 0], [W - 1, 0], [0, H - 1], [W - 1, H - 1]];
+            for (var c = 0; c < corners.length; c++) {
+                for (var dy = -r; dy <= r; dy++) {
+                    for (var dx = -r; dx <= r; dx++) {
+                        var px = Math.max(0, Math.min(W - 1, corners[c][0] + dx));
+                        var py = Math.max(0, Math.min(H - 1, corners[c][1] + dy));
+                        var idx = (py * W + px) * 4;
+                        bgR += data[idx]; bgG += data[idx + 1]; bgB += data[idx + 2];
+                        samples++;
+                    }
+                }
+            }
+            bgR = Math.round(bgR / samples);
+            bgG = Math.round(bgG / samples);
+            bgB = Math.round(bgB / samples);
+
+            // Hapus pixel yang warnanya mirip dengan background (color distance).
+            // Ini bekerja untuk background putih, abu-abu, kuning kertas, dll.
+            var removeThreshold = 45;  // jarak warna → transparan penuh
+            var edgeThreshold = 70;    // jarak warna → transparan sebagian (anti-alias)
+            for (var i = 0; i < data.length; i += 4) {
+                var dr = data[i] - bgR, dg = data[i + 1] - bgG, db = data[i + 2] - bgB;
+                var dist = Math.sqrt(dr * dr + dg * dg + db * db);
+                if (dist <= removeThreshold) {
+                    data[i + 3] = 0;
+                } else if (dist < edgeThreshold) {
+                    data[i + 3] = Math.round(data[i + 3] * (dist - removeThreshold) / (edgeThreshold - removeThreshold));
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+            self._dataUrl = self._autocrop(canvas);
+
+            if (wrapId) {
+                var wrap = document.getElementById(wrapId);
+                if (wrap) wrap.style.display = 'block';
+            }
+        };
+        img.src = imgSrc;
+    },
+
+    _autocrop: function (canvas) {
+        var ctx = canvas.getContext('2d');
+        var d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        var minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
+        for (var y = 0; y < canvas.height; y++) {
+            for (var x = 0; x < canvas.width; x++) {
+                if (d[(y * canvas.width + x) * 4 + 3] > 10) {
+                    if (x < minX) minX = x; if (x > maxX) maxX = x;
+                    if (y < minY) minY = y; if (y > maxY) maxY = y;
+                }
+            }
+        }
+        if (maxX <= minX || maxY <= minY) return canvas.toDataURL('image/png');
+        var pad = 8;
+        minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+        maxX = Math.min(canvas.width - 1, maxX + pad); maxY = Math.min(canvas.height - 1, maxY + pad);
+        var tmp = document.createElement('canvas');
+        tmp.width = maxX - minX + 1; tmp.height = maxY - minY + 1;
+        tmp.getContext('2d').drawImage(canvas, minX, minY, tmp.width, tmp.height, 0, 0, tmp.width, tmp.height);
+        return tmp.toDataURL('image/png');
+    },
+
+    getDataUrl: function () { return this._dataUrl; },
+    hasImage: function () { return !!this._dataUrl; },
+    reset: function () {
+        this._dataUrl = null; this._origSrc = null; this._threshold = 200;
+        this._canvasId = null; this._wrapId = null;
+        ['ttd-ul-input', 'setup-ul-input', 'pj-ul-input'].forEach(function (id) {
+            var el = document.getElementById(id); if (el) el.value = '';
+        });
+        ['ttd-ul-wrap', 'setup-ul-wrap', 'pj-ul-wrap'].forEach(function (id) {
+            var el = document.getElementById(id); if (el) el.style.display = 'none';
+        });
+    }
+};
+
 window.setupCanvas = {
     isDrawing: false,
     ctx: null,

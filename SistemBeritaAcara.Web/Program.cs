@@ -21,7 +21,8 @@ CultureInfo.DefaultThreadCurrentUICulture = idCulture;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents()
+    .AddHubOptions(o => o.MaximumReceiveMessageSize = 10 * 1024 * 1024); // 10MB untuk base64 gambar TTD
 
 // Register revalidating authentication state provider
 builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, SistemBeritaAcara.Web.Security.IdentityRevalidatingAuthenticationStateProvider>();
