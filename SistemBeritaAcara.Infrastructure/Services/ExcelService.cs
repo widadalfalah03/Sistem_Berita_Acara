@@ -275,5 +275,73 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
         workbook.SaveAs(ms);
         return Task.FromResult(ms.ToArray());
     }
+
+    public Task<byte[]> ExportPegawaiAsync(IEnumerable<Pegawai> data)
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.AddWorksheet("Data Pegawai");
+
+        string[] headers = ["No. Pekerja", "Nama", "Jabatan", "Fungsi/Direktorat", "Email", "Cost Center", "No. Telp"];
+        for (int i = 0; i < headers.Length; i++)
+        {
+            var cell = sheet.Cell(1, i + 1);
+            cell.Value = headers[i];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1E3A5F");
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        }
+
+        int row = 2;
+        foreach (var p in data)
+        {
+            sheet.Cell(row, 1).Value = p.NoPekerja;
+            sheet.Cell(row, 2).Value = p.Nama;
+            sheet.Cell(row, 3).Value = p.Jabatan ?? string.Empty;
+            sheet.Cell(row, 4).Value = p.FungsiDirektorat ?? string.Empty;
+            sheet.Cell(row, 5).Value = p.Email ?? string.Empty;
+            sheet.Cell(row, 6).Value = p.CostCenter ?? string.Empty;
+            sheet.Cell(row, 7).Value = p.NoTelp ?? string.Empty;
+            if (row % 2 == 0)
+                sheet.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
+            row++;
+        }
+
+        sheet.Columns().AdjustToContents();
+        sheet.Range(1, 1, 1, headers.Length).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        sheet.Range(1, 1, 1, headers.Length).Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return Task.FromResult(ms.ToArray());
+    }
+
+    public Task<byte[]> ExportBarangAsync(IEnumerable<MasterBarang> data)
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.AddWorksheet("Data Barang");
+
+        sheet.Cell(1, 1).Value = "Nama Barang";
+        sheet.Cell(1, 1).Style.Font.Bold = true;
+        sheet.Cell(1, 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#1E3A5F");
+        sheet.Cell(1, 1).Style.Font.FontColor = XLColor.White;
+        sheet.Cell(1, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+        int row = 2;
+        foreach (var b in data)
+        {
+            sheet.Cell(row, 1).Value = b.NamaBarang;
+            if (row % 2 == 0)
+                sheet.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
+            row++;
+        }
+
+        sheet.Column(1).AdjustToContents();
+        sheet.Cell(1, 1).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return Task.FromResult(ms.ToArray());
+    }
 }
 
