@@ -557,6 +557,7 @@ else
 
             ba!.Status = "Rejected";
             ba.AlasanReject = rejectReason;
+            ba.WasRejected = true;
             ba.ApprovedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
             var label = ba.NomorSurat ?? "Draft";

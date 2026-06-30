@@ -25,6 +25,7 @@ public class BeritaAcara
     public bool ExcelExported { get; set; } = false;
     public bool IsReturned { get; set; } = false;
     public DateTime? ReturnedAt { get; set; }
+    public bool WasRejected { get; set; } = false;
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 

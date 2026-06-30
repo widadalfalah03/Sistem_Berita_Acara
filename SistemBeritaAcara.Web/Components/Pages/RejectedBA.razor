@@ -11,97 +11,132 @@
 
 <PageTitle>Rejected — Sistem Berita Acara</PageTitle>
 
+<!-- Tab bar — sama seperti Inbox -->
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+    <button @onclick='() => SwitchTab("revisi")'
+            style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:@(activeTab=="revisi" ? "600" : "500");font-family:inherit;transition:all .15s;@(activeTab=="revisi" ? "background:var(--primary);color:white;" : "background:transparent;color:var(--text-secondary);")">
+        Revisi @(revisiBA.Count > 0 ? $"({revisiBA.Count})" : "")
+    </button>
+    <button @onclick='() => SwitchTab("riwayat")'
+            style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:@(activeTab=="riwayat" ? "600" : "500");font-family:inherit;transition:all .15s;@(activeTab=="riwayat" ? "background:var(--primary);color:white;" : "background:transparent;color:var(--text-secondary);")">
+        Riwayat
+    </button>
+</div>
+
 @if (isLoading)
 {
     <div class="loading-spinner"><div class="spinner"></div><span>Memuat data...</span></div>
 }
-else if (!allBA.Any())
-{
-    <div class="card" style="text-align:center;padding:60px;">
-        <i class="bi bi-check-circle" style="font-size:48px;color:var(--success,#22C55E);display:block;margin-bottom:16px;"></i>
-        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Tidak ada dokumen yang ditolak</div>
-        <div style="font-size:14px;color:var(--text-secondary);">Semua Berita Acara berjalan lancar.</div>
-    </div>
-}
 else
 {
-    <div style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">
-        Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, allBA.Count) dari @allBA.Count dokumen
-    </div>
-    <div style="display:flex;flex-direction:column;gap:12px;">
-        @foreach (var ba in PaginatedBA)
-        {
-            <div class="rejected-item">
-                <div class="rejected-item-top">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <span class="pill pill-rejected" style="font-size:11px;letter-spacing:.03em;">Rejected</span>
-                        <span style="font-size:15px;font-weight:600;color:var(--text-primary);">Berita Acara @ba.Jenis</span>
-                    </div>
-                    <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
-                        @(ba.ApprovedAt?.ToString("dd MMM yyyy, HH:mm") ?? ba.CreatedAt.ToString("dd MMM yyyy"))
-                    </span>
-                </div>
+    var currentList = activeTab == "revisi" ? revisiBA : riwayatBA;
 
-                <div class="rejected-item-meta">
-                    <div class="rejected-meta-item">
-                        <i class="bi bi-person"></i>
-                        <div>
-                            <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Penanggung Jawab</div>
-                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Pj?.Nama ?? "—")</div>
-                        </div>
-                    </div>
-                    <div class="rejected-meta-item">
-                        <i class="bi bi-person-check"></i>
-                        <div>
-                            <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Approver</div>
-                            <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Mengetahui?.Nama ?? "—")</div>
-                        </div>
-                    </div>
-                </div>
-
-                @if (!string.IsNullOrEmpty(ba.AlasanReject))
-                {
-                    <div class="rejected-item-reason">
-                        <i class="bi bi-chat-square-text" style="flex-shrink:0;margin-top:1px;color:var(--danger);"></i>
-                        <span>@ba.AlasanReject</span>
-                    </div>
-                }
-
-                <div class="rejected-item-actions">
-                    <NavLink href="@($"/berita-acara/{ba.Id}")" class="btn btn-sm btn-outline">
-                        <i class="bi bi-eye"></i> Lihat Detail
-                    </NavLink>
-                    @if (currentRole == "AdminGudangBarang")
-                    {
-                        <NavLink href="@($"/buat-ba?edit={ba.Id}")" class="btn btn-sm btn-primary">
-                            <i class="bi bi-arrow-counterclockwise"></i> Revisi
-                        </NavLink>
-                    }
-                </div>
-            </div>
-        }
-    </div>
-    
-    @if (allBA.Count > 0)
+    @if (!currentList.Any())
     {
-        <SistemBeritaAcara.Web.Components.Shared.Pagination
-            CurrentPage="@currentPage"
-            TotalItems="@allBA.Count"
-            PageSize="@pageSize"
-            CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+        <div class="card" style="text-align:center;padding:60px;">
+            @if (activeTab == "revisi")
+            {
+                <i class="bi bi-check-circle" style="font-size:48px;color:var(--success,#22C55E);display:block;margin-bottom:16px;"></i>
+                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Tidak ada dokumen yang perlu direvisi</div>
+                <div style="font-size:14px;color:var(--text-secondary);">Semua Berita Acara yang ditolak sudah ditangani.</div>
+            }
+            else
+            {
+                <i class="bi bi-clock-history" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
+                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Belum ada riwayat penolakan</div>
+                <div style="font-size:14px;color:var(--text-secondary);">BA yang pernah ditolak dan sudah direvisi akan muncul di sini.</div>
+            }
+        </div>
+    }
+    else
+    {
+        var paginated = currentList.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
+
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, currentList.Count) dari @currentList.Count dokumen
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+            @foreach (var ba in paginated)
+            {
+                <div class="rejected-item">
+                    <div class="rejected-item-top">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span class="pill pill-rejected" style="font-size:11px;letter-spacing:.03em;">Rejected</span>
+                            <span style="font-size:15px;font-weight:600;color:var(--text-primary);">Berita Acara @ba.Jenis</span>
+                        </div>
+                        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
+                            @(ba.ApprovedAt?.ToString("dd MMM yyyy, HH:mm") ?? ba.CreatedAt.ToString("dd MMM yyyy"))
+                        </span>
+                    </div>
+
+                    <div class="rejected-item-meta">
+                        <div class="rejected-meta-item">
+                            <i class="bi bi-person"></i>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Penanggung Jawab</div>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Pj?.Nama ?? "—")</div>
+                            </div>
+                        </div>
+                        <div class="rejected-meta-item">
+                            <i class="bi bi-person-check"></i>
+                            <div>
+                                <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Approver</div>
+                                <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Mengetahui?.Nama ?? "—")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(ba.AlasanReject))
+                    {
+                        <div class="rejected-item-reason">
+                            <i class="bi bi-chat-square-text" style="flex-shrink:0;margin-top:1px;color:var(--danger);"></i>
+                            <span>@ba.AlasanReject</span>
+                        </div>
+                    }
+
+                    <div class="rejected-item-actions">
+                        <NavLink href="@($"/berita-acara/{ba.Id}")" class="btn btn-sm btn-outline">
+                            <i class="bi bi-eye"></i> Lihat Detail
+                        </NavLink>
+                        @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
+                        {
+                            <NavLink href="@($"/buat-ba?edit={ba.Id}")" class="btn btn-sm btn-primary">
+                                <i class="bi bi-arrow-counterclockwise"></i> Revisi
+                            </NavLink>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (currentList.Count > pageSize)
+        {
+            <SistemBeritaAcara.Web.Components.Shared.Pagination
+                CurrentPage="@currentPage"
+                TotalItems="@currentList.Count"
+                PageSize="@pageSize"
+                CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+        }
     }
 }
 
 @code {
-    private List<BeritaAcaraEntity> allBA = new();
+    private List<BeritaAcaraEntity> revisiBA = new();
+    private List<BeritaAcaraEntity> riwayatBA = new();
     private bool isLoading = true;
     private string currentRole = string.Empty;
     private int currentUserId;
-    
+    private string activeTab = "revisi";
+
     private int currentPage = 1;
     private int pageSize = 10;
-    
-    private IEnumerable<BeritaAcaraEntity> PaginatedBA => allBA.Skip((currentPage - 1) * pageSize).Take(pageSize);
+
+    private void SwitchTab(string tab)
+    {
+        activeTab = tab;
+        currentPage = 1;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -110,18 +145,29 @@ else
         currentRole = appUser!.Role;
         currentUserId = appUser.Id;
 
-        IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
+        var baseQuery = DbContext.Set<BeritaAcaraEntity>()
             .AsNoTracking()
             .Include(b => b.Mengetahui)
-            .Include(b => b.Pj)
-            .Where(b => b.Status == "Rejected");
+            .Include(b => b.Pj);
 
+        // Revisi: BA yang masih Status == "Rejected" (belum direvisi)
+        IQueryable<BeritaAcaraEntity> revisiQuery = baseQuery.Where(b => b.Status == "Rejected");
         if (currentRole == "AdminGudangBarang")
-            query = query.Where(b => b.CreatedBy == currentUserId);
+            revisiQuery = revisiQuery.Where(b => b.CreatedBy == currentUserId);
         else if (currentRole == "Approver")
-            query = query.Where(b => b.MengetahuiId == currentUserId);
+            revisiQuery = revisiQuery.Where(b => b.MengetahuiId == currentUserId);
 
-        allBA = await query.OrderByDescending(b => b.CreatedAt).ToListAsync();
+        revisiBA = await revisiQuery.OrderByDescending(b => b.ApprovedAt).ToListAsync();
+
+        // Riwayat: BA yang pernah ditolak (WasRejected=true) tapi sudah direvisi (Status != "Rejected")
+        IQueryable<BeritaAcaraEntity> riwayatQuery = baseQuery.Where(b => b.WasRejected && b.Status != "Rejected");
+        if (currentRole == "AdminGudangBarang")
+            riwayatQuery = riwayatQuery.Where(b => b.CreatedBy == currentUserId);
+        else if (currentRole == "Approver")
+            riwayatQuery = riwayatQuery.Where(b => b.MengetahuiId == currentUserId);
+
+        riwayatBA = await riwayatQuery.OrderByDescending(b => b.ApprovedAt).ToListAsync();
+
         isLoading = false;
     }
 }
