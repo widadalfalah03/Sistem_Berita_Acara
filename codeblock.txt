@@ -1,0 +1,689 @@
+﻿@code {
+    [SupplyParameterFromQuery(Name = "edit")]
+    public int? EditIdParam { get; set; }
+
+    private int? editId;
+    private CreateBaModel model = new() { Tanggal = DateTime.Today, Perangkat = [new()] };
+    private List<PegawaiEntity> allPegawai = new();
+    private List<PegawaiEntity> pjResults = new();
+    private List<ApplicationUser> approvers = new();
+    private List<ApplicationUser> adminGudangUsers = new();
+    private List<MasterBarangEntity> barangOptions = new();
+
+    private List<IBrowserFile> photoFiles = new();
+    private List<(string Url, string Name)> photoDataUrls = new();
+    private List<(string RelPath, string Name)> existingPhotoUrls = new();
+    private List<string> photosToDelete = new();
+
+    private PegawaiEntity? selectedPj;
+    private string pjSearch = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isSaving = false;
+    private int _currentUserId;
+    private bool photosChanged = false;
+
+    private enum AutoSaveState { Idle, Saving, Saved, Error }
+    private AutoSaveState autoSaveStatus = AutoSaveState.Idle;
+    private System.Threading.CancellationTokenSource? _autoSaveCts;
+
+    private bool showJenisDropdown = false;
+
+    private bool showBarangSearch = false;
+    private string barangSearchQuery = string.Empty;
+    private List<MasterBarangEntity> barangSearchResults = new();
+    private PerangkatRow? activeSearchRow = null;
+    private ElementReference barangSearchRef;
+
+    private bool showMengetahuiSearch;
+    private string mengetahuiSearchQuery = string.Empty;
+    private List<ApplicationUser> mengetahuiSearchResults = new();
+    private ApplicationUser? currentUserObj;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userIdStr = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        int.TryParse(userIdStr, out _currentUserId);
+
+        allPegawai = await DbContext.Pegawai.Where(p => p.IsAktif).OrderBy(p => p.Nama).ToListAsync();
+        approvers = await DbContext.Users.Where(u => u.Role == "Approver" && !u.IsDeleted).OrderBy(u => u.Nama).ToListAsync();
+        adminGudangUsers = await DbContext.Users.Where(u => u.Role == "AdminGudangBarang" && !u.IsDeleted).OrderBy(u => u.Nama).ToListAsync();
+        barangOptions = await DbContext.MasterBarang.Where(b => b.IsAktif).OrderBy(b => b.NamaBarang).ToListAsync();
+
+        currentUserObj = adminGudangUsers.FirstOrDefault(u => u.Id == _currentUserId);
+        if (currentUserObj != null && !editId.HasValue)
+            model.MenyerahkanId = currentUserObj.PegawaiId ?? 0;
+
+        editId = EditIdParam;
+        if (editId.HasValue)
+        {
+            DbContext.ChangeTracker.Clear();
+            var existing = await DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Perangkat)
+                .Include(b => b.BuktiFotos)
+                .FirstOrDefaultAsync(b => b.Id == editId.Value && (b.Status == "Draft" || b.Status == "Rejected") && b.CreatedBy == _currentUserId);
+
+            if (existing is not null)
+            {
+                model.Jenis = existing.Jenis;
+                model.JenisCustom = existing.JenisCustom;
+                model.Tanggal = existing.Tanggal.ToDateTime(TimeOnly.MinValue);
+                model.TiketSscNo = existing.TiketSscNo;
+                model.TanggalKembali = existing.TanggalKembali.HasValue
+                    ? existing.TanggalKembali.Value.ToDateTime(TimeOnly.MinValue)
+                    : null;
+                model.PjId = existing.PjId;
+                model.PjNoTelp = existing.PjNoTelp;
+                model.PengunaAlihDaya = existing.PengunaAlihDaya;
+                model.TipePj = string.IsNullOrEmpty(existing.PengunaAlihDaya) ? "Pekerja" : "TenagaAlihDaya";
+
+                if (adminGudangUsers.Any(u => u.PegawaiId == existing.MenyerahkanId))
+                    model.MenyerahkanId = existing.MenyerahkanId;
+                else if (adminGudangUsers.FirstOrDefault(u => u.Id == existing.MenyerahkanId) is { } oldFormatUser)
+                    model.MenyerahkanId = oldFormatUser.PegawaiId ?? 0;
+                else
+                    model.MenyerahkanId = existing.MenyerahkanId;
+                model.MengetahuiId = existing.MengetahuiId;
+
+                selectedPj = allPegawai.FirstOrDefault(p => p.Id == existing.PjId);
+                if (selectedPj is not null) pjSearch = selectedPj.Nama;
+
+                model.Perangkat = existing.Perangkat.Select(p => new PerangkatRow
+                {
+                    BarangId = p.BarangId,
+                    Jumlah = p.Jumlah,
+                    Satuan = p.Satuan ?? "Pcs",
+                    NoSerial = p.NoSerial,
+                    Keterangan = p.Keterangan
+                }).ToList();
+
+                if (!model.Perangkat.Any()) model.Perangkat.Add(new());
+
+                if (existing.BuktiFotos != null)
+                    existingPhotoUrls = existing.BuktiFotos.Select(f => (f.FilePath, Path.GetFileName(f.FilePath))).ToList();
+            }
+            else
+            {
+                editId = null;
+            }
+        }
+    }
+
+    private async Task CreateInitialDraftAsync()
+    {
+        bool isLainnya = model.Jenis == "Lainnya";
+        if (_currentUserId == 0) return;
+        if (!isLainnya && (model.PjId == 0 || model.MenyerahkanId == 0 || model.MengetahuiId == 0)) return;
+        if (isLainnya && model.MenyerahkanId == 0) return;
+        try
+        {
+            var ba = new BeritaAcaraEntity
+            {
+                Tanggal = DateOnly.FromDateTime(model.Tanggal),
+                Jenis = model.Jenis,
+                JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null,
+                PjId = model.PjId,
+                PjNoTelp = model.PjNoTelp,
+                PengunaAlihDaya = model.PengunaAlihDaya,
+                MenyerahkanId = model.MenyerahkanId,
+                MengetahuiId = model.MengetahuiId,
+                TiketSscNo = model.TiketSscNo,
+                Status = "Draft",
+                CreatedBy = _currentUserId,
+                CreatedAt = DateTime.Now,
+            };
+            DbContext.Set<BeritaAcaraEntity>().Add(ba);
+            await DbContext.SaveChangesAsync();
+            editId = ba.Id;
+        }
+        catch { }
+    }
+
+    private void TriggerAutoSave()
+    {
+        _autoSaveCts?.Cancel();
+        _autoSaveCts = new System.Threading.CancellationTokenSource();
+        var token = _autoSaveCts.Token;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(800, token);
+            if (!token.IsCancellationRequested)
+                await InvokeAsync(AutoSaveAsync);
+        }, token);
+    }
+
+    private async Task AutoSaveAsync()
+    {
+        if (_currentUserId == 0) return;
+        if (!editId.HasValue)
+        {
+            bool isLainnya = model.Jenis == "Lainnya";
+            if (!isLainnya && (model.PjId == 0 || model.MenyerahkanId == 0 || model.MengetahuiId == 0)) return;
+            if (isLainnya && model.MenyerahkanId == 0) return;
+            await CreateInitialDraftAsync();
+            if (!editId.HasValue) return;
+        }
+
+        autoSaveStatus = AutoSaveState.Saving;
+        StateHasChanged();
+        try
+        {
+            if (!editId.HasValue) { autoSaveStatus = AutoSaveState.Error; StateHasChanged(); return; }
+            DbContext.ChangeTracker.Clear();
+            var existing = await DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Perangkat)
+                .FirstOrDefaultAsync(b => b.Id == editId.Value);
+            if (existing is null) { autoSaveStatus = AutoSaveState.Error; StateHasChanged(); return; }
+
+            existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
+            existing.Jenis = model.Jenis;
+            existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
+            existing.PjId = model.PjId;
+            existing.PjNoTelp = model.PjNoTelp;
+            existing.PengunaAlihDaya = model.PengunaAlihDaya;
+            existing.MenyerahkanId = model.MenyerahkanId;
+            existing.MengetahuiId = model.MengetahuiId;
+            existing.TiketSscNo = model.TiketSscNo;
+            existing.TanggalKembali = model.TanggalKembali.HasValue
+                ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
+
+            var validPerangkat = model.Perangkat.Where(p => p.BarangId > 0).ToList();
+            if (validPerangkat.Any())
+            {
+                DbContext.PerangkatBA.RemoveRange(existing.Perangkat.ToList());
+                existing.Perangkat = validPerangkat.Select(p => new PerangkatBA
+                {
+                    BaId = existing.Id,
+                    BarangId = p.BarangId,
+                    Jumlah = p.Jumlah > 0 ? p.Jumlah : 1,
+                    Satuan = string.IsNullOrWhiteSpace(p.Satuan) ? "Pcs" : p.Satuan,
+                    NoSerial = p.NoSerial,
+                    Keterangan = p.Keterangan
+                }).ToList();
+            }
+
+            await DbContext.SaveChangesAsync();
+            autoSaveStatus = AutoSaveState.Saved;
+            StateHasChanged();
+            await Task.Delay(3000);
+            if (autoSaveStatus == AutoSaveState.Saved) { autoSaveStatus = AutoSaveState.Idle; StateHasChanged(); }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[AutoSaveAsync] Error");
+            autoSaveStatus = AutoSaveState.Error;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectJenis(string jenis)
+    {
+        model.Jenis = jenis;
+        showJenisDropdown = false;
+        if (model.Jenis != "Peminjaman") model.TanggalKembali = null;
+        if (model.Jenis != "Lainnya") model.JenisCustom = null;
+        TriggerAutoSave();
+    }
+
+    private void OnSelectPekerja(ChangeEventArgs e) => SelectTipePj("Pekerja");
+    private void OnSelectTenagaAlihDaya(ChangeEventArgs e) => SelectTipePj("TenagaAlihDaya");
+
+    private void SelectTipePj(string tipe)
+    {
+        model.TipePj = tipe;
+        if (tipe == "Pekerja") model.PengunaAlihDaya = null;
+        TriggerAutoSave();
+    }
+
+    private void OnPjSearchInput(ChangeEventArgs e)
+    {
+        pjSearch = e.Value?.ToString() ?? string.Empty;
+        pjResults = string.IsNullOrWhiteSpace(pjSearch) ? new() :
+            allPegawai.Where(p => p.Nama.Contains(pjSearch, StringComparison.OrdinalIgnoreCase) ||
+                                  p.NoPekerja.Contains(pjSearch, StringComparison.OrdinalIgnoreCase))
+                      .OrderByDescending(p => p.Nama.StartsWith(pjSearch, StringComparison.OrdinalIgnoreCase) ||
+                                             p.NoPekerja.StartsWith(pjSearch, StringComparison.OrdinalIgnoreCase))
+                      .ThenBy(p => p.Nama)
+                      .Take(6).ToList();
+    }
+
+    private void OnNoTelpInput(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString() ?? string.Empty;
+        model.PjNoTelp = new string(raw.Where(char.IsDigit).ToArray());
+        TriggerAutoSave();
+    }
+
+    private void SelectPj(PegawaiEntity p)
+    {
+        selectedPj = p;
+        model.PjId = p.Id;
+        model.PjNoTelp = p.NoTelp;
+        pjSearch = p.Nama;
+        pjResults.Clear();
+        TriggerAutoSave();
+    }
+
+    private void OpenBarangSearchForRow(PerangkatRow row)
+    {
+        activeSearchRow = row;
+        barangSearchQuery = string.Empty;
+        barangSearchResults = barangOptions.ToList();
+        showBarangSearch = true;
+    }
+
+    private void ResetForm()
+    {
+        model = new CreateBaModel { Tanggal = DateTime.Today, Perangkat = [new()] };
+        showJenisDropdown = false;
+        selectedPj = null;
+        pjSearch = string.Empty;
+        pjResults = new();
+        barangSearchQuery = string.Empty;
+        barangSearchResults = new();
+        showBarangSearch = false;
+        activeSearchRow = null;
+        showMengetahuiSearch = false;
+        mengetahuiSearchQuery = string.Empty;
+        mengetahuiSearchResults = new();
+        photoFiles = new();
+        photoDataUrls = new();
+        existingPhotoUrls = new();
+        photosToDelete = new();
+        errorMessage = string.Empty;
+        editId = null;
+        autoSaveStatus = AutoSaveState.Idle;
+        photosChanged = false;
+    }
+
+    private void AddPerangkat() => model.Perangkat.Add(new());
+
+    private void RemovePerangkat(PerangkatRow row)
+    {
+        model.Perangkat.Remove(row);
+        TriggerAutoSave();
+    }
+
+    private void OnBarangSearchInput(ChangeEventArgs e)
+    {
+        barangSearchQuery = e.Value?.ToString() ?? string.Empty;
+        barangSearchResults = string.IsNullOrWhiteSpace(barangSearchQuery)
+            ? barangOptions.ToList()
+            : barangOptions.Where(b => b.NamaBarang?.Contains(barangSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false).ToList();
+    }
+
+    private void SelectBarangForRow(MasterBarangEntity b)
+    {
+        if (activeSearchRow is not null)
+        {
+            activeSearchRow.BarangId = b.Id;
+            activeSearchRow.Jumlah = activeSearchRow.Jumlah > 0 ? activeSearchRow.Jumlah : 1;
+            activeSearchRow.Satuan = "Pcs";
+        }
+        showBarangSearch = false;
+        activeSearchRow = null;
+        TriggerAutoSave();
+    }
+
+    private void CloseBarangSearch()
+    {
+        showBarangSearch = false;
+        barangSearchQuery = string.Empty;
+        barangSearchResults.Clear();
+        activeSearchRow = null;
+    }
+
+    private async Task OnPhotosSelected(InputFileChangeEventArgs e)
+    {
+        photosChanged = true;
+        var newFiles = e.GetMultipleFiles(10).ToList();
+
+        if (!editId.HasValue) await CreateInitialDraftAsync();
+        if (editId.HasValue && _currentUserId > 0)
+        {
+            autoSaveStatus = AutoSaveState.Saving;
+            StateHasChanged();
+            try
+            {
+                var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
+                Directory.CreateDirectory(photoFolder);
+                int idx = existingPhotoUrls.Count + 1;
+                foreach (var file in newFiles)
+                {
+                    var ext = Path.GetExtension(file.Name);
+                    var saveName = "ba--photo--1782787019857";
+                    var fullPath = Path.Combine(photoFolder, saveName);
+                    var relPath = "files/photos/";
+
+                    using var stream = file.OpenReadStream(5_000_000);
+                    using var ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+                    var bytes = ms.ToArray();
+                    await File.WriteAllBytesAsync(fullPath, bytes);
+
+                    var existingBa = await DbContext.BeritaAcara.FindAsync(editId.Value);
+                    DbContext.BuktiFoto.Add(new BuktiFoto
+                    {
+                        BaId = editId.Value,
+                        BeritaAcara = existingBa!,
+                        FilePath = relPath
+                    });
+                    existingPhotoUrls.Add((relPath, file.Name));
+                    idx++;
+                }
+                await DbContext.SaveChangesAsync();
+                autoSaveStatus = AutoSaveState.Saved;
+                StateHasChanged();
+                await Task.Delay(3000);
+                if (autoSaveStatus == AutoSaveState.Saved) { autoSaveStatus = AutoSaveState.Idle; StateHasChanged(); }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "[OnPhotosSelected] Error saat upload foto");
+                autoSaveStatus = AutoSaveState.Error;
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            foreach (var file in newFiles)
+            {
+                photoFiles.Add(file);
+                try
+                {
+                    using var stream = file.OpenReadStream(5_000_000);
+                    using var ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+                    var base64 = Convert.ToBase64String(ms.ToArray());
+                    var mime = file.ContentType ?? "image/jpeg";
+                    photoDataUrls.Add(("data:;base64,", file.Name));
+                }
+                catch { }
+            }
+        }
+    }
+
+    private void RemoveNewPhoto(int index)
+    {
+        if (index >= 0 && index < photoDataUrls.Count)
+        {
+            photoDataUrls.RemoveAt(index);
+            if (index < photoFiles.Count) photoFiles.RemoveAt(index);
+        }
+    }
+
+    private async Task RemoveExistingPhoto(int index)
+    {
+        if (index < 0 || index >= existingPhotoUrls.Count) return;
+        var (relPath, _) = existingPhotoUrls[index];
+        existingPhotoUrls.RemoveAt(index);
+        photosChanged = true;
+        if (editId.HasValue)
+        {
+            try
+            {
+                var foto = await DbContext.BuktiFoto.FirstOrDefaultAsync(f => f.BaId == editId.Value && f.FilePath == relPath);
+                if (foto != null)
+                {
+                    DbContext.BuktiFoto.Remove(foto);
+                    await DbContext.SaveChangesAsync();
+                    var physPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (File.Exists(physPath)) File.Delete(physPath);
+                }
+            }
+            catch (Exception ex) { Logger.LogError(ex, "RemoveExistingPhoto error"); }
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        errorMessage = string.Empty;
+
+        if (model.Jenis == "Lainnya")
+        {
+            if (string.IsNullOrWhiteSpace(model.JenisCustom)) { errorMessage = "Nama/Jenis Berita Acara wajib diisi."; return; }
+            await SubmitLainnyaAsync();
+            return;
+        }
+
+        if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
+        if (model.TipePj == "TenagaAlihDaya" && string.IsNullOrWhiteSpace(model.PengunaAlihDaya)) { errorMessage = "Nama Pengguna TAD wajib diisi."; return; }
+        if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid."; return; }
+        if (model.MengetahuiId == 0 || !approvers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Approver (Yang Mengetahui) yang valid."; return; }
+        if (model.Jenis == "Peminjaman" && !model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk Peminjaman."; return; }
+        if (!model.Perangkat.Any(p => p.BarangId > 0)) { errorMessage = "Tambahkan minimal satu perangkat."; return; }
+        if (model.Jenis == "Peminjaman" && model.TanggalKembali.HasValue && model.TanggalKembali.Value.Date < model.Tanggal.Date)
+        { errorMessage = "Tanggal Kembali tidak boleh sebelum Tanggal peminjaman."; return; }
+
+        await JSRuntime.InvokeVoidAsync("appLoading.show", "Menyiapkan dokumen...", "Sedang memproses, harap tunggu");
+        isSaving = true;
+        try
+        {
+            if (_currentUserId == 0)
+            {
+                var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+                var userIdStr = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                int.TryParse(userIdStr, out _currentUserId);
+            }
+            if (_currentUserId == 0) { errorMessage = "Sesi habis, silakan login kembali."; await JSRuntime.InvokeVoidAsync("appLoading.hide"); isSaving = false; return; }
+
+            if (!editId.HasValue) await CreateInitialDraftAsync();
+
+            if (editId.HasValue)
+            {
+                DbContext.ChangeTracker.Clear();
+                var existing = await DbContext.Set<BeritaAcaraEntity>()
+                    .Include(b => b.Perangkat)
+                    .Include(b => b.BuktiFotos)
+                    .FirstOrDefaultAsync(b => b.Id == editId.Value);
+
+                if (existing is null) { errorMessage = "Draft tidak ditemukan."; isSaving = false; return; }
+
+                existing.DocxPath = null; // force regenerate
+                existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
+                existing.Jenis = model.Jenis;
+                existing.JenisCustom = null;
+                existing.PjId = model.PjId;
+                existing.PjNoTelp = model.PjNoTelp;
+                existing.PengunaAlihDaya = model.PengunaAlihDaya;
+                existing.MenyerahkanId = model.MenyerahkanId;
+                existing.MengetahuiId = model.MengetahuiId;
+                existing.TiketSscNo = model.TiketSscNo;
+                existing.TanggalKembali = model.TanggalKembali.HasValue
+                    ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
+
+                if (existing.Status == "Rejected")
+                {
+                    existing.Status = "Draft";
+                    existing.AlasanReject = null;
+                    existing.TtdPjPath = null;
+                    existing.SubmittedAt = null;
+                    existing.PjSignedAt = null;
+                    existing.ApprovedAt = null;
+                }
+
+                DbContext.PerangkatBA.RemoveRange(existing.Perangkat.ToList());
+                existing.Perangkat = model.Perangkat
+                    .Where(p => p.BarangId > 0 && p.Jumlah > 0)
+                    .Select(p => new PerangkatBA
+                    {
+                        BaId = existing.Id,
+                        BarangId = p.BarangId,
+                        Jumlah = p.Jumlah,
+                        Satuan = string.IsNullOrWhiteSpace(p.Satuan) ? "Pcs" : p.Satuan,
+                        NoSerial = p.NoSerial,
+                        Keterangan = p.Keterangan
+                    }).ToList();
+
+                if (photoFiles.Any() && !existingPhotoUrls.Any())
+                {
+                    var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
+                    Directory.CreateDirectory(photoFolder);
+                    int idx2 = 1;
+                    foreach (var file in photoFiles)
+                    {
+                        var ext = Path.GetExtension(file.Name);
+                        var saveName = "ba--photo--1782787019862";
+                        await using var fs = File.Create(Path.Combine(photoFolder, saveName));
+                        await file.OpenReadStream(5_000_000).CopyToAsync(fs);
+                        DbContext.BuktiFoto.Add(new BuktiFoto { BaId = existing.Id, BeritaAcara = existing, FilePath = "files/photos/" });
+                        idx2++;
+                    }
+                }
+
+                await DbContext.SaveChangesAsync();
+                Navigation.NavigateTo("/editor/");
+            }
+            else
+            {
+                var ba = new BeritaAcaraEntity
+                {
+                    Tanggal = DateOnly.FromDateTime(model.Tanggal),
+                    Jenis = model.Jenis,
+                    PjId = model.PjId,
+                    PjNoTelp = model.PjNoTelp,
+                    PengunaAlihDaya = model.PengunaAlihDaya,
+                    MenyerahkanId = model.MenyerahkanId,
+                    MengetahuiId = model.MengetahuiId,
+                    TiketSscNo = model.TiketSscNo,
+                    TanggalKembali = model.TanggalKembali.HasValue ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null,
+                    Status = "Draft",
+                    CreatedBy = _currentUserId,
+                    CreatedAt = DateTime.Now,
+                    Perangkat = model.Perangkat
+                        .Where(p => p.BarangId > 0 && p.Jumlah > 0)
+                        .Select(p => new PerangkatBA
+                        {
+                            BarangId = p.BarangId,
+                            Jumlah = p.Jumlah,
+                            Satuan = string.IsNullOrWhiteSpace(p.Satuan) ? "Pcs" : p.Satuan,
+                            NoSerial = p.NoSerial,
+                            Keterangan = p.Keterangan
+                        }).ToList()
+                };
+                DbContext.Set<BeritaAcaraEntity>().Add(ba);
+                await DbContext.SaveChangesAsync();
+                Navigation.NavigateTo("/editor/");
+            }
+        }
+        catch (Exception ex)
+        {
+            var inner = ex.InnerException != null ? "\nInner: " : "";
+            errorMessage = "Gagal menyimpan Berita Acara: ";
+            await JSRuntime.InvokeVoidAsync("appLoading.hide");
+        }
+        finally { isSaving = false; }
+    }
+
+    private async Task SubmitLainnyaAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("appLoading.show", "Menyimpan ke Arsip...", "Sedang memproses");
+        isSaving = true;
+        try
+        {
+            if (_currentUserId == 0)
+            {
+                var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+                var userIdStr = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                int.TryParse(userIdStr, out _currentUserId);
+            }
+
+            if (currentUserObj == null)
+                currentUserObj = adminGudangUsers.FirstOrDefault(u => u.Id == _currentUserId);
+
+            if (!editId.HasValue) await CreateInitialDraftAsync();
+
+            if (!editId.HasValue)
+            {
+                var baNew = new BeritaAcaraEntity
+                {
+                    Tanggal = DateOnly.FromDateTime(model.Tanggal),
+                    Jenis = "Lainnya",
+                    JenisCustom = model.JenisCustom,
+                    MenyerahkanId = model.MenyerahkanId,
+                    MengetahuiId = 0,
+                    PjId = 0,
+                    Status = "Draft",
+                    CreatedBy = _currentUserId,
+                    CreatedAt = DateTime.Now,
+                };
+                DbContext.Set<BeritaAcaraEntity>().Add(baNew);
+                await DbContext.SaveChangesAsync();
+                editId = baNew.Id;
+            }
+
+            DbContext.ChangeTracker.Clear();
+            var ba = await DbContext.Set<BeritaAcaraEntity>().FindAsync(editId.Value);
+            if (ba is null) { errorMessage = "Gagal menemukan draft."; isSaving = false; await JSRuntime.InvokeVoidAsync("appLoading.hide"); return; }
+
+            var (counterValue, nomorSurat) = await BACounterService.GetNextNomorSuratAsync(DateOnly.FromDateTime(model.Tanggal));
+            ba.NomorSurat = nomorSurat;
+            ba.CounterValue = counterValue;
+            ba.Jenis = "Lainnya";
+            ba.JenisCustom = model.JenisCustom;
+            ba.Status = "Approved";
+            ba.ApprovedAt = DateTime.Now;
+            ba.SubmittedAt = DateTime.Now;
+
+            ba.DocxPath = await DocumentService.GenerateLainnyaDocxAsync(ba);
+            await DbContext.SaveChangesAsync();
+            Navigation.NavigateTo("/archive");
+        }
+        catch (Exception ex)
+        {
+            var inner = ex.InnerException != null ? "\nInner: " : "";
+            errorMessage = "Gagal menyimpan: ";
+            await JSRuntime.InvokeVoidAsync("appLoading.hide");
+        }
+        finally { isSaving = false; }
+    }
+
+    private void OpenMengetahuiSearch()
+    {
+        mengetahuiSearchQuery = string.Empty;
+        mengetahuiSearchResults = approvers.Take(8).ToList();
+        showMengetahuiSearch = true;
+    }
+
+    private void CloseMengetahuiSearch() => showMengetahuiSearch = false;
+
+    private void OnMengetahuiSearchInput(ChangeEventArgs e)
+    {
+        mengetahuiSearchQuery = e.Value?.ToString() ?? string.Empty;
+        mengetahuiSearchResults = string.IsNullOrWhiteSpace(mengetahuiSearchQuery)
+            ? approvers.Take(8).ToList()
+            : approvers.Where(u => u.Nama?.Contains(mengetahuiSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false).Take(8).ToList();
+    }
+
+    private void SelectMengetahui(ApplicationUser u)
+    {
+        model.MengetahuiId = u.Id;
+        showMengetahuiSearch = false;
+        _ = AutoSaveAsync();
+    }
+
+    private class CreateBaModel
+    {
+        public string Jenis { get; set; } = "Alokasi";
+        public string? JenisCustom { get; set; }
+        public string TipePj { get; set; } = "Pekerja";
+        public string? PengunaAlihDaya { get; set; }
+        public int PjId { get; set; }
+        public string? PjNoTelp { get; set; }
+        public int MenyerahkanId { get; set; }
+        public int MengetahuiId { get; set; }
+        public string? TiketSscNo { get; set; }
+        public DateTime Tanggal { get; set; } = DateTime.Today;
+        public DateTime? TanggalKembali { get; set; }
+        public List<PerangkatRow> Perangkat { get; set; } = new();
+    }
+
+    private class PerangkatRow
+    {
+        public int BarangId { get; set; }
+        public int Jumlah { get; set; } = 1;
+        public string Satuan { get; set; } = "Pcs";
+        public string? NoSerial { get; set; }
+        public string? Keterangan { get; set; }
+    }
+}

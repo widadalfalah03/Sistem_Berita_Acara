@@ -45,6 +45,8 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             ALTER TABLE [BeritaAcara] ADD [IsReturned] bit NOT NULL DEFAULT 0;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'ReturnedAt')
             ALTER TABLE [BeritaAcara] ADD [ReturnedAt] datetime2 NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'PengunaAlihDaya')
+            ALTER TABLE [BeritaAcara] ADD [PengunaAlihDaya] nvarchar(200) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'WasRejected')
             ALTER TABLE [BeritaAcara] ADD [WasRejected] bit NOT NULL DEFAULT 0;
 
@@ -292,10 +294,13 @@ app.MapGet("/api/ba/{baId:int}/download", async (
     SistemBeritaAcara.Infrastructure.Data.AppDbContext db) =>
 {
     var ba = await db.BeritaAcara.FindAsync(baId);
-    if (ba?.DocxPath == null) return Results.NotFound();
+    if (ba == null) return Results.NotFound();
+
+    string targetPath = ba.DocxFinalPath ?? ba.DocxPath;
+    if (string.IsNullOrEmpty(targetPath)) return Results.NotFound();
 
     var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-        ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+        targetPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
 
     if (!File.Exists(pdfPath)) return Results.NotFound();
 
@@ -313,5 +318,10 @@ RecurringJob.AddOrUpdate<DueDateCheckerJob>(
     "cek-jatuh-tempo",
     job => job.CheckDueDatesAsync(),
     Cron.Daily(7));
+
+RecurringJob.AddOrUpdate<AutoApproveJob>(
+    "cek-auto-approve-pj",
+    job => job.ProcessAutoApproveAsync(),
+    Cron.Hourly());
 
 app.Run();

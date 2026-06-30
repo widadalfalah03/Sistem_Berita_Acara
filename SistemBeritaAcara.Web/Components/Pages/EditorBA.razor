@@ -5,6 +5,7 @@
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
 @inject AppDbContext DbContext
 @inject IDocumentService DocumentService
+@inject IBACounterService BACounterService
 @inject IEmailService EmailService
 @inject INotificationService NotificationService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -73,6 +74,11 @@
                 {
                     <span class="spinner" style="width:16px;height:16px;border-width:2px;border-color:white;border-top-color:transparent;"></span>
                     <span>Mengirim...</span>
+                }
+                else if (ba.Jenis == "Lainnya")
+                {
+                    <i class="bi bi-archive-fill"></i>
+                    <span>Tambahkan ke Arsip</span>
                 }
                 else
                 {
@@ -288,6 +294,27 @@
                     errorMessage = "Gagal memuat pratinjau dokumen: " + ex.Message;
                 }
             }
+
+            // Jika BA pernah ditandatangani oleh PJ (kasus BA rejected lalu direvisi),
+            // selalu pastikan TTD PJ tertempel di dokumen — baik setelah regenerasi maupun
+            // saat membuka dokumen lama. EmbedTtdPjAsync aman dipanggil berkali-kali:
+            // jika placeholder sudah diganti gambar, tidak ada yang dilakukan selain update PDF.
+            if (ba?.Status == "Rejected" && !string.IsNullOrEmpty(ba.TtdPjPath) && ba.PjSignedAt.HasValue)
+            {
+                try
+                {
+                    var ttdPjPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                        ba.TtdPjPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    if (System.IO.File.Exists(ttdPjPhysicalPath))
+                    {
+                        await DocumentService.EmbedTtdPjAsync(Id, ttdPjPhysicalPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[EditorBA] Gagal re-embed TTD PJ untuk BA {Id}: {ex.Message}");
+                }
+            }
         }
 
         // Naikkan versi agar iframe di-recreate oleh Blazor
@@ -364,6 +391,7 @@
             DbContext.ChangeTracker.Clear();
             var trackedBa = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Pj)
+                .Include(b => b.Mengetahui)
                 .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
                 .FirstOrDefaultAsync(b => b.Id == ba.Id);
 
@@ -374,65 +402,121 @@
                 return;
             }
 
-            // 1. Buat ApprovalToken untuk magic link PJ
-            // Gunakan BeritaAcara = trackedBa agar EF Core bisa memetakan shadow FK BeritaAcaraId
-            // dengan benar. trackedBa adalah entity yang sudah dilacak, sehingga tidak ada konflik.
-            var tokenValue = Guid.NewGuid().ToString("N");
-            DbContext.ApprovalToken.Add(new ApprovalToken
-            {
-                BaId = trackedBa.Id,
-                BeritaAcara = trackedBa,
-                Token = tokenValue,
-                TokenType = "PJ_SIGNATURE",
-                ExpiresAt = DateTime.Now.AddDays(7),
-                CreatedAt = DateTime.Now
-            });
-
-            // Generate dokumen hanya jika belum ada
             if (string.IsNullOrEmpty(trackedBa.DocxPath))
             {
                 trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(trackedBa);
                 await DbContext.SaveChangesAsync();
             }
 
-            // Embed tanda tangan Admin Gudang (Yang Menyerahkan)
             var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
             await DocumentService.EmbedTtdMenyerahkanAsync(trackedBa.Id, ttdPhysicalPath);
 
-            // Update status → WaitingPJSign
-            trackedBa.Status = "WaitingPJSign";
-            trackedBa.SubmittedAt = DateTime.Now;
-            await DbContext.SaveChangesAsync();
+            if (trackedBa.Jenis == "Lainnya")
+            {
+                var (counterValue, nomorSurat) = await BACounterService.GetNextNomorSuratAsync(trackedBa.Tanggal, trackedBa.Jenis);
+                trackedBa.NomorSurat = nomorSurat;
+                trackedBa.CounterValue = counterValue;
+                trackedBa.Status = "Approved";
+                trackedBa.SubmittedAt = DateTime.Now;
+                trackedBa.ApprovedAt = DateTime.Now;
+                trackedBa.PjSignedAt = DateTime.Now;
+                await DbContext.SaveChangesAsync();
+                await DocumentService.PatchNomorSuratAsync(trackedBa.Id, nomorSurat);
+                Navigation.NavigateTo("/archive");
+            }
+            else
+            {
+                bool pjAlreadySigned = !string.IsNullOrEmpty(trackedBa.TtdPjPath) && trackedBa.PjSignedAt.HasValue;
 
-            // Kirim email magic link ke PJ
-            var baseUrl = Navigation.BaseUri.TrimEnd('/');
-            var barangListEditor = trackedBa.Perangkat
-                .Select(p => {
-                    string nama = p.Barang?.NamaBarang ?? "Perangkat";
-                    string detail = $"{p.Jumlah} {p.Satuan}";
-                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
-                    if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                    return $"{nama} — {detail}";
-                }).ToList();
-            await EmailService.SendMagicLinkAsync(
-                trackedBa.Pj!.Email ?? string.Empty,
-                trackedBa.Pj.Nama,
-                trackedBa.Id,
-                tokenValue,
-                baseUrl,
-                trackedBa.Jenis,
-                barangListEditor
-            );
+                if (pjAlreadySigned)
+                {
+                    var ttdPjPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", trackedBa.TtdPjPath!.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    if (System.IO.File.Exists(ttdPjPhysicalPath))
+                    {
+                        await DocumentService.EmbedTtdPjAsync(trackedBa.Id, ttdPjPhysicalPath);
+                    }
 
-            // Kirim notifikasi in-app ke AdminGudangBarang
-            await NotificationService.SendAsync(
-                _currentUserId,
-                "WAITING_PJ_SIGN",
-                $"Draft BA telah diajukan. Menunggu tanda tangan PJ ({trackedBa.Pj.Nama}).",
-                trackedBa.Id
-            );
+                    trackedBa.Status = "WaitingApproval";
+                    trackedBa.SubmittedAt = DateTime.Now;
+                    trackedBa.AlasanReject = null; 
+                    await DbContext.SaveChangesAsync();
 
-            Navigation.NavigateTo("/progress");
+                    await NotificationService.SendAsync(
+                        trackedBa.MengetahuiId.Value,
+                        "WAITING_APPROVAL",
+                        $"BA {trackedBa.NomorSurat ?? "Draft"} telah direvisi dan membutuhkan persetujuan Anda.",
+                        trackedBa.Id
+                    );
+
+                    var baseUrlApprover = Navigation.BaseUri.TrimEnd('/');
+                    var barangListApprover = trackedBa.Perangkat
+                        .Select(p => {
+                            string nama = p.Barang?.NamaBarang ?? "Perangkat";
+                            string detail = $"{p.Jumlah} {p.Satuan}";
+                            if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                            if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                            return $"{nama} — {detail}";
+                        }).ToList();
+                    
+                    if (!string.IsNullOrEmpty(trackedBa.Mengetahui?.Email))
+                    {
+                        await EmailService.SendApprovalRequestAsync(
+                            trackedBa.Mengetahui.Email,
+                            trackedBa.Mengetahui.Nama ?? "Approver",
+                            baseUrlApprover,
+                            trackedBa.Id,
+                            trackedBa.Jenis ?? "Berita Acara",
+                            barangListApprover
+                        );
+                    }
+                    Navigation.NavigateTo("/progress");
+                }
+                else
+                {
+                    var tokenValue = Guid.NewGuid().ToString("N");
+                    DbContext.ApprovalToken.Add(new ApprovalToken
+                    {
+                        BaId = trackedBa.Id,
+                        BeritaAcara = trackedBa,
+                        Token = tokenValue,
+                        TokenType = "PJ_SIGNATURE",
+                        ExpiresAt = DateTime.Now.AddDays(7),
+                        CreatedAt = DateTime.Now
+                    });
+
+                    trackedBa.Status = "WaitingPJSign";
+                    trackedBa.SubmittedAt = DateTime.Now;
+                    trackedBa.AlasanReject = null;
+                    await DbContext.SaveChangesAsync();
+
+                    var baseUrl = Navigation.BaseUri.TrimEnd('/');
+                    var barangListEditor = trackedBa.Perangkat
+                        .Select(p => {
+                            string nama = p.Barang?.NamaBarang ?? "Perangkat";
+                            string detail = $"{p.Jumlah} {p.Satuan}";
+                            if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                            if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                            return $"{nama} — {detail}";
+                        }).ToList();
+                    await EmailService.SendMagicLinkAsync(
+                        trackedBa.Pj!.Email ?? string.Empty,
+                        trackedBa.Pj.Nama,
+                        trackedBa.Id,
+                        tokenValue,
+                        baseUrl,
+                        trackedBa.Jenis,
+                        barangListEditor
+                    );
+
+                    await NotificationService.SendAsync(
+                        _currentUserId,
+                        "WAITING_PJ_SIGN",
+                        $"Draft BA telah diajukan. Menunggu tanda tangan PJ ({trackedBa.Pj.Nama}).",
+                        trackedBa.Id
+                    );
+                    Navigation.NavigateTo("/progress");
+                }
+            }
         }
         catch (Exception ex)
         {

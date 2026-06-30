@@ -149,11 +149,13 @@ else
     {
         <!-- ════ STANDARD DETAIL VIEW ════ -->
         <div class="page-header d-flex align-center justify-between" style="flex-wrap:wrap; gap:12px;">
-            <div style="width:100%;">
-                <h1 class="page-title" style="word-break:break-word;">@(ba.NomorSurat ?? "Draft BA")</h1>
-                <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
-                    <span class="pill @GetStatusPill(ba.Status)">@GetStatusLabel(ba.Status)</span>
-                    <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h1 class="page-title" style="word-break:break-word;">@(ba.NomorSurat ?? "Draft BA")</h1>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
+                        <span class="pill @GetStatusPill(ba.Status)">@GetStatusLabel(ba.Status)</span>
+                        <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -165,6 +167,10 @@ else
                 <div class="card-body">
                     <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">No. Surat</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.NomorSurat ?? "Belum dibuat")</td></tr>
+                        @if (ba.Jenis == "Lainnya")
+                        {
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Jenis Berita Acara</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.JenisCustom</td></tr>
+                        }
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.Tanggal.ToString("dd MMMM yyyy")</td></tr>
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tiket SSC</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ?? "-")</td></tr>
                         @if (ba.Jenis == "Peminjaman")
@@ -177,20 +183,23 @@ else
             </div>
 
             <!-- Pihak Terkait -->
-            <div class="card">
-                <div class="card-header"><h3>Pihak Terkait</h3></div>
-                <div class="card-body">
-                    <table style="width:100%;border-collapse:collapse;">
-                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">PJ (Menerima)</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Pj?.Nama</td></tr>
-                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Menyerahkan</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Menyerahkan?.Nama</td></tr>
-                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Approver</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Mengetahui?.Nama</td></tr>
-                    </table>
+            @if (ba.Jenis != "Lainnya")
+            {
+                <div class="card">
+                    <div class="card-header"><h3>Pihak Terkait</h3></div>
+                    <div class="card-body">
+                        <table style="width:100%;border-collapse:collapse;">
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">PJ (Menerima)</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Pj?.Nama</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Menyerahkan</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Menyerahkan?.Nama</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Approver</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Mengetahui?.Nama</td></tr>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            }
         </div>
 
         <!-- Perangkat -->
-        @if (ba.Perangkat?.Any() == true)
+        @if (ba.Jenis != "Lainnya" && ba.Perangkat?.Any() == true)
         {
             <div class="card" style="margin-bottom:24px;">
                 <div class="card-header"><h3>Daftar Perangkat</h3></div>
@@ -376,16 +385,7 @@ else
 
         isApprover = currentRole == "Approver" && appUser.Id == ba.MengetahuiId;
 
-        // Embed signature of Approver for preview purposes if they are viewing it
-        if (isApprover && ba.Status == "WaitingApproval" && !string.IsNullOrEmpty(appUser.TtdPath))
-        {
-            var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", appUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-            try
-            {
-                await DocumentService.EmbedTtdPreviewApproverAsync(ba.Id, ttdPhysicalPath);
-            }
-            catch { /* Ignore if it's already embedded or fails */ }
-        }
+
 
         pdfVersion = DateTime.UtcNow.Ticks;
         isLoading = false;
@@ -450,7 +450,7 @@ else
             // Generate nomor surat saat approve
             if (string.IsNullOrEmpty(ba!.NomorSurat))
             {
-                var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal);
+                var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal, ba.Jenis);
                 ba.CounterValue = next.counterValue;
                 ba.NomorSurat = next.nomorSurat;
             }
@@ -487,6 +487,8 @@ else
             }
 
             // Re-embed TTD PJ (Yang Menerima) — file masih ada, dihapus setelah ini
+            // PENGECUALIAN: jika TTD PJ adalah stempel sistem auto-approve, JANGAN dihapus
+            // (itu aset bersama di wwwroot/images/, bukan file personal PJ)
             if (!string.IsNullOrWhiteSpace(ba.TtdPjPath))
             {
                 var pjTtdPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
@@ -494,8 +496,13 @@ else
                 if (File.Exists(pjTtdPhysical))
                 {
                     await DocumentService.EmbedTtdPjAsync(ba.Id, pjTtdPhysical);
-                    // Hapus file TTD PJ sekarang — sudah di-embed ke dokumen final
-                    try { File.Delete(pjTtdPhysical); } catch { }
+                    // Hapus file TTD PJ personal setelah di-embed ke dokumen final
+                    // JANGAN hapus jika ini adalah stempel sistem auto-approve
+                    bool isAutoApproveStamp = ba.TtdPjPath.Contains("auto_approve_stamp");
+                    if (!isAutoApproveStamp)
+                    {
+                        try { File.Delete(pjTtdPhysical); } catch { }
+                    }
                 }
             }
 
@@ -597,6 +604,7 @@ else
         "WaitingPJSign" => "pill-waiting-pj",
         "WaitingApproval" => "pill-waiting-approval",
         "Approved" => "pill-approved",
+        "Archived" => "pill-approved",
         "Rejected" => "pill-rejected",
         _ => "pill-draft"
     };
@@ -607,6 +615,7 @@ else
         "WaitingPJSign" => "Menunggu TTD PJ",
         "WaitingApproval" => "Menunggu Approval",
         "Approved" => "Disetujui",
+        "Archived" => "Disetujui",
         "Rejected" => "Ditolak",
         _ => s
     };

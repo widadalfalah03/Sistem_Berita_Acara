@@ -9,6 +9,7 @@
 @using MasterBarangEntity = SistemBeritaAcara.Core.Entities.MasterBarang
 @inject AppDbContext DbContext
 @inject IDocumentService DocumentService
+@inject IBACounterService BACounterService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -16,9 +17,9 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
-<PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") — Sistem Berita Acara</PageTitle>
+<PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") â€” Sistem Berita Acara</PageTitle>
 
-<!-- ── Floating toast: autosave status ── -->
+<!-- â”€â”€ Floating toast: autosave status â”€â”€ -->
 @if (autoSaveStatus != AutoSaveState.Idle)
 {
     <div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,0.18);font-size:13px;font-weight:500;transition:opacity 0.3s;
@@ -43,7 +44,7 @@
     </div>
 }
 
-<!-- ── Floating toast: error submit ── -->
+<!-- â”€â”€ Floating toast: error submit â”€â”€ -->
 @if (!string.IsNullOrEmpty(errorMessage))
 {
     <div style="position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;max-width:520px;width:90%;background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--radius);padding:14px 20px;display:flex;align-items:flex-start;gap:10px;color:var(--danger);box-shadow:0 6px 24px rgba(0,0,0,0.15);">
@@ -59,81 +60,67 @@
 <EditForm Model="model" OnValidSubmit="SubmitAsync">
     <DataAnnotationsValidator />
 
-    <!-- ── 1. Info Dokumen ── -->
+    <!-- â”€â”€ 1. Info Dokumen â”€â”€ -->
     <div class="form-section">
         <div class="form-section-title">1. Informasi Dokumen</div>
         <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">No. Tiket My SSC <span style="color:var(--danger)">*</span></label>
-                <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="Contoh: INC-20240001" />
-            </div>
-            <div class="form-group" style="position:relative;">
-                <label class="form-label">Jenis Berita Acara <span style="color:var(--danger)">*</span></label>
-                <div @onclick="() => showJenisDropdown = !showJenisDropdown"
-                     style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">
-                    <span style="font-weight:500;">@model.Jenis</span>
-                    <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showJenisDropdown ? "transform:rotate(180deg);" : "")"></i>
+            <!-- Kiri: Jenis BA di atas, No. Tiket di bawah -->
+            <div style="display:flex;flex-direction:column;gap:16px;flex:1;">
+                <!-- Jenis Berita Acara -->
+                <div class="form-group" style="position:relative;">
+                    <label class="form-label">Jenis Berita Acara <span style="color:var(--danger)">*</span></label>
+                    <div @onclick="() => showJenisDropdown = !showJenisDropdown"
+                         style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">
+                        <span style="font-weight:500;">@model.Jenis</span>
+                        <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showJenisDropdown ? "transform:rotate(180deg);" : "")"></i>
+                    </div>
+                    @if (showJenisDropdown)
+                    {
+                        <div @onclick="() => showJenisDropdown = false"
+                             style="position:fixed;inset:0;z-index:99;"></div>
+                        <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
+                            @foreach (var jenis in new[] { "Alokasi", "Peminjaman", "Penarikan", "Lainnya" })
+                            {
+                                <div @onclick="() => SelectJenis(jenis)"
+                                     style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(model.Jenis == jenis ? "600" : "400");background:@(model.Jenis == jenis ? "var(--primary)" : "transparent");color:@(model.Jenis == jenis ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
+                                     onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
+                                     onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
+                                    @jenis
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
-                @if (showJenisDropdown)
+
+                <!-- No. Tiket (opsional) â€” sembunyikan jika Lainnya -->
+                @if (model.Jenis != "Lainnya")
                 {
-                    <div @onclick="() => showJenisDropdown = false"
-                         style="position:fixed;inset:0;z-index:99;"></div>
-                    <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
-                        @foreach (var jenis in new[] { "Alokasi", "Peminjaman" })
-                        {
-                            <div @onclick="() => SelectJenis(jenis)"
-                                 style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(model.Jenis == jenis ? "600" : "400");background:@(model.Jenis == jenis ? "var(--primary)" : "transparent");color:@(model.Jenis == jenis ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
-                                 onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
-                                 onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
-                                @jenis
-                            </div>
-                        }
+                    <div class="form-group">
+                        <label class="form-label">No. Tiket My SSC/Nota Dinas <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(opsional)</span></label>
+                        <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="Contoh: INC-20240001" />
                     </div>
                 }
             </div>
+
+            <!-- Kanan: Tanggal Kembali (Peminjaman) atau Input Jenis Custom (Lainnya) -->
             @if (model.Jenis == "Peminjaman")
             {
-                <div class="form-group">
+                <div class="form-group" style="flex:1;">
                     <label class="form-label">Tanggal Kembali <span style="color:var(--danger)">*</span></label>
                     <InputDate class="form-control" @bind-Value="model.TanggalKembali" @bind-Value:after="TriggerAutoSave" />
                 </div>
             }
-        </div>
-    </div>
-
-    <!-- ── 2. Data Penanggung Jawab ── -->
-    <div class="form-section">
-        <div class="form-section-title">2. Data Penanggung Jawab</div>
-        <div class="form-group">
-            <label class="form-label">Penanggung Jawab <span style="color:var(--danger)">*</span></label>
-            <div class="search-input" style="max-width:400px;">
-                <i class="bi bi-search"></i>
-                <input type="text" placeholder="Ketik nama atau no. pekerja..."
-                       value="@pjSearch"
-                       @onchange="OnPjSearchInput" @oninput="OnPjSearchInput" />
-            </div>
-            @if (pjResults.Any())
+            else if (model.Jenis == "Lainnya")
             {
-                <div style="border:1px solid var(--border);border-radius:var(--radius);margin-top:4px;max-height:200px;overflow-y:auto;background:var(--surface);box-shadow:var(--shadow-md);max-width:400px;">
-                    @foreach (var p in pjResults)
-                    {
-                        <div @onclick="() => SelectPj(p)"
-                             style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px;"
-                             onmouseover="this.style.background='var(--primary-light)'"
-                             onmouseout="this.style.background='transparent'">
-                            <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">
-                                @p.Nama[0]
-                            </div>
-                            <div>
-                                <div style="font-weight:600;">@p.Nama</div>
-                                <div style="font-size:12px;color:var(--text-muted);">@p.NoPekerja — @p.FungsiDirektorat</div>
-                            </div>
-                        </div>
-                    }
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Nama / Jenis Berita Acara <span style="color:var(--danger)">*</span></label>
+                    <InputText class="form-control" @bind-Value="model.JenisCustom" @bind-Value:after="TriggerAutoSave"
+                               placeholder="Contoh: Serah Terima Jabatan" />
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Teks ini akan tampil sebagai judul di dokumen</div>
                 </div>
             }
         </div>
-        @if (selectedPj is not null)
+        @if (model.Jenis != "Lainnya" && selectedPj is not null)
         {
             <div style="background:var(--primary-light);border:1px solid #BFDBFE;border-radius:var(--radius);padding:16px;">
                 <div class="pj-detail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -166,7 +153,7 @@
                         <div style="font-weight:600;">@selectedPj.NoPekerja</div>
                     </div>
                     <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP <span style="color:var(--danger);">*</span></div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP <span style="color:var(--text-muted); font-size: 10px;">(Opsional)</span></div>
                         <input type="tel" class="form-control" style="font-size:13px;padding:6px 10px;"
                                placeholder="Contoh: 08123456789"
                                inputmode="numeric" pattern="[0-9]*"
@@ -178,332 +165,500 @@
         }
     </div>
 
-    <!-- ── 3. Daftar Perangkat ── -->
-    <div class="form-section">
-        <div class="form-section-title">3. Daftar Perangkat</div>
+    <!-- â”€â”€ Card 2â€“5 â”€â”€ -->
+    @if (model.Jenis != "Lainnya")
+    {
+        <!-- â”€â”€ 2. Data Penanggung Jawab â”€â”€ -->
+        <div class="form-section">
+            <div class="form-section-title">2. Data Penanggung Jawab</div>
 
-        <table class="perangkat-table" style="margin-bottom:12px;table-layout:fixed;">
-            <thead>
-                <tr>
-                    <th style="width:28%">Jenis Perangkat <span style="color:var(--danger)">*</span></th>
-                    <th style="width:10%">Jumlah <span style="color:var(--danger)">*</span></th>
-                    <th style="width:12%">Satuan <span style="color:var(--danger)">*</span></th>
-                    <th style="width:20%">No. Serial <span style="color:var(--danger)">*</span></th>
-                    <th style="width:24%">Keterangan <span style="color:var(--danger)">*</span></th>
-                    <th style="width:6%;padding:0 0 0 4px;"></th>
-                </tr>
-            </thead>
-            <tbody>
+            <!-- Radio: Pekerja vs Tenaga Alih Daya -->
+            <div style="margin-bottom:16px;">
+                <label class="form-label" style="margin-bottom:8px;display:block;">Tipe Penanggung Jawab</label>
+                <div style="display:flex;gap:24px;align-items:center;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                        <input type="radio" name="tipePj" value="Pekerja"
+                               checked="@(model.TipePj == "Pekerja")"
+                               @onchange="OnSelectPekerja"
+                               style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;" />
+                        Pekerja
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
+                        <input type="radio" name="tipePj" value="TenagaAlihDaya"
+                               checked="@(model.TipePj == "TenagaAlihDaya")"
+                               @onchange="OnSelectTenagaAlihDaya"
+                               style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;" />
+                        Tenaga Alih Daya
+                    </label>
+                </div>
+                <!-- Field Pengguna: muncul jika TAD -->
+                @if (model.TipePj == "TenagaAlihDaya")
+                {
+                    <div class="form-group" style="margin-top:12px;max-width:400px;">
+                        <label class="form-label">Nama Pengguna <span style="color:var(--danger)">*</span></label>
+                        <input type="text" class="form-control"
+                               placeholder="Masukkan nama pengguna TAD"
+                               value="@model.PengunaAlihDaya"
+                               @oninput="@(e => { model.PengunaAlihDaya = e.Value?.ToString(); TriggerAutoSave(); })" />
+                    </div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Penanggung Jawab <span style="color:var(--danger)">*</span></label>
+                <div class="search-input" style="max-width:400px;">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Ketik nama atau no. pekerja..."
+                           value="@pjSearch"
+                           @onchange="OnPjSearchInput" @oninput="OnPjSearchInput" />
+                </div>
+                @if (pjResults.Any())
+                {
+                    <div style="border:1px solid var(--border);border-radius:var(--radius);margin-top:4px;max-height:200px;overflow-y:auto;background:var(--surface);box-shadow:var(--shadow-md);max-width:400px;">
+                        @foreach (var p in pjResults)
+                        {
+                            <div @onclick="() => SelectPj(p)"
+                                 style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:12px;"
+                                 onmouseover="this.style.background='var(--primary-light)'"
+                                 onmouseout="this.style.background='transparent'">
+                                <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">
+                                    @p.Nama[0]
+                                </div>
+                                <div>
+                                    <div style="font-weight:600;">@p.Nama</div>
+                                    <div style="font-size:12px;color:var(--text-muted);">@p.NoPekerja â€” @p.FungsiDirektorat</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            @if (selectedPj is not null)
+            {
+                <div style="background:var(--primary-light);border:1px solid #BFDBFE;border-radius:var(--radius);padding:16px;">
+                    <div class="pj-detail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                        <div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Nama</div>
+                            <div style="font-weight:600;">@selectedPj.Nama</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Cost Center</div>
+                            <div style="font-weight:600;">@(selectedPj.CostCenter ?? "-")</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Jabatan</div>
+                            <div style="font-weight:600;">@(selectedPj.Jabatan ?? "-")</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Fungsi/Direktorat</div>
+                            <div style="font-weight:600;">@(selectedPj.FungsiDirektorat ?? "-")</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Email</div>
+                            <div style="font-weight:600;">@(selectedPj.Email ?? "-")</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(opsional)</span></div>
+                            <input type="tel" class="form-control" style="font-size:13px;padding:6px 10px;"
+                                   placeholder="Contoh: 08123456789"
+                                   inputmode="numeric" pattern="[0-9]*"
+                                   value="@model.PjNoTelp"
+                                   @oninput="OnNoTelpInput" />
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- â”€â”€ 3. Daftar Perangkat â”€â”€ -->
+        <div class="form-section">
+            <div class="form-section-title">3. Daftar Perangkat</div>
+
+            <table class="perangkat-table" style="margin-bottom:12px;table-layout:fixed;">
+                <thead>
+                    <tr>
+                        <th style="width:28%">Jenis Perangkat <span style="color:var(--danger)">*</span></th>
+                        <th style="width:10%">Jumlah <span style="color:var(--danger)">*</span></th>
+                        <th style="width:12%">Satuan <span style="color:var(--danger)">*</span></th>
+                        <th style="width:20%">No. Serial <span style="color:var(--danger)">*</span></th>
+                        <th style="width:24%">Keterangan <span style="color:var(--danger)">*</span></th>
+                        <th style="width:6%;padding:0 0 0 4px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in model.Perangkat)
+                    {
+                        <tr>
+                            <td style="position:relative;">
+                                <!-- Trigger search -->
+                                <div @onclick="() => OpenBarangSearchForRow(p)"
+                                     style="padding:6px 10px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
+                                     onmouseover="this.style.background='var(--primary-light)'"
+                                     onmouseout="this.style.background='var(--surface)'">
+                                    <span style="@(p.BarangId == 0 ? "color:var(--text-muted);" : "")">
+                                        @(p.BarangId > 0 ? (barangOptions.FirstOrDefault(b => b.Id == p.BarangId)?.NamaBarang ?? "Pilih...") : "Cari perangkat...")
+                                    </span>
+                                    <i class="bi bi-search" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i>
+                                </div>
+                                <!-- Inline search dropdown -->
+                                @if (showBarangSearch && activeSearchRow == p)
+                                {
+                                    <div @onclick="CloseBarangSearch"
+                                         style="position:fixed;inset:0;z-index:99;"></div>
+                                    <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;">
+                                        <div style="padding:6px 8px;border-bottom:1px solid var(--border-light);">
+                                            <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;">
+                                                <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);"></i>
+                                                <input type="text" placeholder="Cari perangkat..."
+                                                       @ref="barangSearchRef"
+                                                       value="@barangSearchQuery"
+                                                       @onchange="OnBarangSearchInput" @oninput="OnBarangSearchInput"
+                                                       style="border:none;outline:none;background:transparent;font-size:13px;width:100%;" />
+                                            </div>
+                                        </div>
+                                        @if (barangSearchResults.Any())
+                                        {
+                                            <div style="max-height:320px;overflow-y:auto;">
+                                                @foreach (var b in barangSearchResults)
+                                                {
+                                                    <div @onclick="() => SelectBarangForRow(b)"
+                                                         style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:13px;font-weight:500;"
+                                                         onmouseover="this.style.background='var(--primary-light)'"
+                                                         onmouseout="this.style.background='transparent'">
+                                                        @b.NamaBarang
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div style="padding:12px 14px;font-size:13px;color:var(--text-muted);">Tidak ada hasil</div>
+                                        }
+                                    </div>
+                                }
+                            </td>
+                            <td><input type="number" min="1" value="@p.Jumlah"
+                                           @onchange="@(e => { p.Jumlah = int.TryParse(e.Value?.ToString(), out var v) ? v : 1; TriggerAutoSave(); })" /></td>
+                            <td><input type="text" value="@p.Satuan"
+                                           @onchange="@(e => { p.Satuan = e.Value?.ToString() ?? string.Empty; TriggerAutoSave(); })" /></td>
+                            <td><input type="text" value="@p.NoSerial"
+                                           @onchange="@(e => { p.NoSerial = e.Value?.ToString(); TriggerAutoSave(); })" /></td>
+                            <td><input type="text" value="@p.Keterangan"
+                                           @onchange="@(e => { p.Keterangan = e.Value?.ToString(); TriggerAutoSave(); })" /></td>
+                            <td style="padding:0 0 0 4px;vertical-align:middle;">
+                                <button type="button" class="perangkat-delete" @onclick="() => RemovePerangkat(p)"
+                                        style="width:100%;border-radius:var(--radius-sm);">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <!-- Mobile Card View -->
+            <div class="perangkat-mobile-list">
                 @foreach (var p in model.Perangkat)
                 {
-                    <tr>
-                        <td style="position:relative;">
-                            <!-- Trigger search -->
+                    <div class="perangkat-mobile-card">
+                        <div style="position:relative;">
+                            <div class="pm-label">Jenis Perangkat <span style="color:var(--danger)">*</span></div>
                             <div @onclick="() => OpenBarangSearchForRow(p)"
-                                 style="padding:6px 10px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
-                                 onmouseover="this.style.background='var(--primary-light)'"
-                                 onmouseout="this.style.background='var(--surface)'">
-                                <span style="@(p.BarangId == 0 ? "color:var(--text-muted);" : "")">
-                                    @(p.BarangId > 0 ? (barangOptions.FirstOrDefault(b => b.Id == p.BarangId)?.NamaBarang ?? "Pilih...") : "Cari perangkat...")
-                                </span>
+                                 style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                <span style="@(p.BarangId == 0 ? "color:var(--text-muted);" : "")">@(p.BarangId > 0 ? (barangOptions.FirstOrDefault(b => b.Id == p.BarangId)?.NamaBarang ?? "Pilih...") : "Cari perangkat...")</span>
                                 <i class="bi bi-search" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i>
                             </div>
-                            <!-- Inline search dropdown -->
                             @if (showBarangSearch && activeSearchRow == p)
                             {
-                                <div @onclick="CloseBarangSearch"
-                                     style="position:fixed;inset:0;z-index:99;"></div>
-                                <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;">
-                                    <div style="padding:6px 8px;border-bottom:1px solid var(--border-light);">
-                                        <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;">
-                                            <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);"></i>
-                                            <input type="text" placeholder="Cari perangkat..."
-                                                   @ref="barangSearchRef"
-                                                   value="@barangSearchQuery"
-                                                   @onchange="OnBarangSearchInput" @oninput="OnBarangSearchInput"
-                                                   style="border:none;outline:none;background:transparent;font-size:13px;width:100%;" />
-                                        </div>
+                                <div @onclick="CloseBarangSearch" style="position:fixed;inset:0;z-index:99;"></div>
+                                <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);margin-top:4px;">
+                                    <div style="padding:8px;border-bottom:1px solid var(--border-light);">
+                                        <input type="text" placeholder="Cari perangkat..."
+                                               value="@barangSearchQuery"
+                                               @onchange="OnBarangSearchInput" @oninput="OnBarangSearchInput"
+                                               style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;" />
                                     </div>
-                                    @if (barangSearchResults.Any())
-                                    {
-                                        <div style="max-height:320px;overflow-y:auto;">
+                                    <div style="max-height:260px;overflow-y:auto;">
+                                        @if (barangSearchResults.Any())
+                                        {
                                             @foreach (var b in barangSearchResults)
                                             {
                                                 <div @onclick="() => SelectBarangForRow(b)"
-                                                     style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:13px;font-weight:500;"
+                                                     style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;">
+                                                    @b.NamaBarang
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div style="padding:12px 16px;font-size:13px;color:var(--text-muted);">Tidak ada hasil</div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="pm-row">
+                            <div class="pm-col">
+                                <div class="pm-label">Jumlah <span style="color:var(--danger)">*</span></div>
+                                <input type="number" min="1" class="form-control pm-input" value="@p.Jumlah"
+                                       @onchange="@(e => { p.Jumlah = int.TryParse(e.Value?.ToString(), out var v) ? v : 1; TriggerAutoSave(); })" />
+                            </div>
+                            <div class="pm-col">
+                                <div class="pm-label">Satuan <span style="color:var(--danger)">*</span></div>
+                                <input type="text" class="form-control pm-input" value="@p.Satuan"
+                                       @onchange="@(e => { p.Satuan = e.Value?.ToString() ?? string.Empty; TriggerAutoSave(); })" />
+                            </div>
+                        </div>
+                        <div>
+                            <div class="pm-label">No. Serial</div>
+                            <input type="text" class="form-control" value="@p.NoSerial"
+                                   @onchange="@(e => { p.NoSerial = e.Value?.ToString(); TriggerAutoSave(); })" />
+                        </div>
+                        <div>
+                            <div class="pm-label">Keterangan</div>
+                            <input type="text" class="form-control" value="@p.Keterangan"
+                                   @onchange="@(e => { p.Keterangan = e.Value?.ToString(); TriggerAutoSave(); })" />
+                        </div>
+                        <div style="display:flex;justify-content:flex-end;">
+                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemovePerangkat(p)">
+                                <i class="bi bi-trash3"></i> Hapus Item
+                            </button>
+                        </div>
+                    </div>
+                }
+}
+            </div>
+
+            <!-- Tambah Perangkat -->
+            <div style="display:flex;justify-content:flex-start;">
+                <button type="button" class="btn btn-outline btn-sm" @onclick="AddPerangkat">
+                    <i class="bi bi-plus-lg"></i> Tambah Perangkat
+                </button>
+            </div>
+        </div>
+
+        <!-- ── 4. Tanda Tangan ── -->
+        <div class="form-section">
+            <div class="form-section-title">4. Tanda Tangan</div>
+            <div class="ttd-grid">
+                <!-- Yang Menyerahkan: Admin Gudang (normal) atau PJ (Penarikan) -->
+                <div class="ttd-col">
+                    <div class="ttd-label">Yang Menyerahkan</div>
+                    <div style="padding:10px 0;font-size:14px;color:var(--text-secondary);">
+                        @if (model.Jenis == "Penarikan")
+                        {
+                            @if (selectedPj is not null)
+                            {
+                                <span style="font-weight:600;color:var(--text-primary);">
+                                    <i class="bi bi-person-check" style="color:var(--success);"></i>
+                                    @selectedPj.Nama
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-muted);">Otomatis dari PJ yang dipilih</span>
+                            }
+                        }
+                        else
+                        {
+                            <div @onclick="OpenMenyerahkanSearch"
+                                 style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
+                                 onmouseover="this.style.background='var(--primary-light)'"
+                                 onmouseout="this.style.background='var(--surface)'">
+                                <span style="@(model.MenyerahkanId == 0 ? "color:var(--text-muted);" : "")">
+                                    @(model.MenyerahkanId > 0 ? (adminGudangUsers.FirstOrDefault(u => u.PegawaiId == model.MenyerahkanId)?.Nama ?? "Pilih Admin...") : "Cari Admin...")
+                                </span>
+                                <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);flex-shrink:0;"></i>
+                            </div>
+                            @if (showMenyerahkanSearch)
+                            {
+                                <div @onclick="CloseMenyerahkanSearch"
+                                     style="position:fixed;inset:0;z-index:99;"></div>
+                                <div style="position:absolute;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;margin-top:4px;">
+                                    <div style="padding:8px;border-bottom:1px solid var(--border-light);">
+                                        <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;">
+                                            <i class="bi bi-search" style="font-size:13px;color:var(--text-muted);"></i>
+                                            <input type="text" placeholder="Cari nama..."
+                                                   value="@menyerahkanSearchQuery"
+                                                   @onchange="OnMenyerahkanSearchInput" @oninput="OnMenyerahkanSearchInput"
+                                                   style="border:none;outline:none;background:transparent;font-size:14px;width:100%;" />
+                                        </div>
+                                    </div>
+                                    @if (menyerahkanSearchResults.Any())
+                                    {
+                                        <div style="max-height:200px;overflow-y:auto;">
+                                            @foreach (var u in menyerahkanSearchResults)
+                                            {
+                                                <div @onclick="() => SelectMenyerahkan(u)"
+                                                     style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;color:var(--text-primary);"
                                                      onmouseover="this.style.background='var(--primary-light)'"
                                                      onmouseout="this.style.background='transparent'">
-                                                    @b.NamaBarang
+                                                    @u.Nama
                                                 </div>
                                             }
                                         </div>
                                     }
                                     else
                                     {
-                                        <div style="padding:12px 14px;font-size:13px;color:var(--text-muted);">Tidak ada hasil</div>
+                                        <div style="padding:12px 14px;font-size:14px;color:var(--text-muted);">Tidak ada hasil</div>
                                     }
                                 </div>
                             }
-                        </td>
-                        <td><input type="number" min="1" value="@p.Jumlah"
-                                   @onchange="@(e => { p.Jumlah = int.TryParse(e.Value?.ToString(), out var v) ? v : 1; TriggerAutoSave(); })" /></td>
-                        <td><input type="text" value="@p.Satuan"
-                                   @onchange="@(e => { p.Satuan = e.Value?.ToString() ?? string.Empty; TriggerAutoSave(); })" /></td>
-                        <td><input type="text" value="@p.NoSerial"
-                                   @onchange="@(e => { p.NoSerial = e.Value?.ToString(); TriggerAutoSave(); })" /></td>
-                        <td><input type="text" value="@p.Keterangan"
-                                   @onchange="@(e => { p.Keterangan = e.Value?.ToString(); TriggerAutoSave(); })" /></td>
-                        <td style="padding:0 0 0 4px;vertical-align:middle;">
-                            <button type="button" class="perangkat-delete" @onclick="() => RemovePerangkat(p)"
-                                    style="width:100%;border-radius:var(--radius-sm);">
-                                <i class="bi bi-trash3"></i>
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                        }
+                    </div>
+                </div>
 
-        <!-- Mobile Card View for Daftar Perangkat (hidden on desktop) -->
-        <div class="perangkat-mobile-list">
-            @foreach (var p in model.Perangkat)
-            {
-                <div class="perangkat-mobile-card">
-                    <!-- Perangkat Selector -->
-                    <div style="position:relative;">
-                        <div class="pm-label">Jenis Perangkat <span style="color:var(--danger)">*</span></div>
-                        <div @onclick="() => OpenBarangSearchForRow(p)"
-                             style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                            <span style="@(p.BarangId == 0 ? "color:var(--text-muted);" : "")">@(p.BarangId > 0 ? (barangOptions.FirstOrDefault(b => b.Id == p.BarangId)?.NamaBarang ?? "Pilih...") : "Cari perangkat...")</span>
-                            <i class="bi bi-search" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i>
+                <!-- Yang Mengetahui (Approver) -->
+                <div class="ttd-col">
+                    <div class="ttd-label">Yang Mengetahui (Approver)</div>
+                    <div class="form-group" style="position:relative;">
+                        <div @onclick="OpenMengetahuiSearch"
+                             style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
+                             onmouseover="this.style.background='var(--primary-light)'"
+                             onmouseout="this.style.background='var(--surface)'">
+                            <span style="@(model.MengetahuiId == 0 ? "color:var(--text-muted);" : "")">
+                                @(model.MengetahuiId > 0 ? (approvers.FirstOrDefault(u => u.Id == model.MengetahuiId)?.Nama ?? "Pilih Approver...") : "Cari approver...")
+                            </span>
+                            <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);flex-shrink:0;"></i>
                         </div>
-                        @if (showBarangSearch && activeSearchRow == p)
+                        @if (showMengetahuiSearch)
                         {
-                            <div @onclick="CloseBarangSearch" style="position:fixed;inset:0;z-index:99;"></div>
-                            <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);margin-top:4px;">
+                            <div @onclick="CloseMengetahuiSearch"
+                                 style="position:fixed;inset:0;z-index:99;"></div>
+                            <div style="position:absolute;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;margin-top:4px;">
                                 <div style="padding:8px;border-bottom:1px solid var(--border-light);">
-                                    <input type="text" placeholder="Cari perangkat..."
-                                           value="@barangSearchQuery"
-                                           @onchange="OnBarangSearchInput" @oninput="OnBarangSearchInput"
-                                           style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;" />
+                                    <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;">
+                                        <i class="bi bi-search" style="font-size:13px;color:var(--text-muted);"></i>
+                                        <input type="text" placeholder="Cari nama..."
+                                               value="@mengetahuiSearchQuery"
+                                               @onchange="OnMengetahuiSearchInput" @oninput="OnMengetahuiSearchInput"
+                                               style="border:none;outline:none;background:transparent;font-size:14px;width:100%;" />
+                                    </div>
                                 </div>
-                                <div style="max-height:260px;overflow-y:auto;">
-                                    @if (barangSearchResults.Any())
-                                    {
-                                        @foreach (var b in barangSearchResults)
+                                @if (mengetahuiSearchResults.Any())
+                                {
+                                    <div style="max-height:200px;overflow-y:auto;">
+                                        @foreach (var u in mengetahuiSearchResults)
                                         {
-                                            <div @onclick="() => SelectBarangForRow(b)"
-                                                 style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;">
-                                                @b.NamaBarang
+                                            <div @onclick="() => SelectMengetahui(u)"
+                                                 style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;color:var(--text-primary);"
+                                                 onmouseover="this.style.background='var(--primary-light)'"
+                                                 onmouseout="this.style.background='transparent'">
+                                                @u.Nama
                                             </div>
                                         }
-                                    }
-                                    else
-                                    {
-                                        <div style="padding:12px 16px;font-size:13px;color:var(--text-muted);">Tidak ada hasil</div>
-                                    }
-                                </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="padding:12px 14px;font-size:14px;color:var(--text-muted);">Tidak ada hasil</div>
+                                }
                             </div>
                         }
                     </div>
-                    <!-- Jumlah & Satuan -->
-                    <div class="pm-row">
-                        <div class="pm-col">
-                            <div class="pm-label">Jumlah <span style="color:var(--danger)">*</span></div>
-                            <input type="number" min="1" class="form-control pm-input" value="@p.Jumlah"
-                                   @onchange="@(e => { p.Jumlah = int.TryParse(e.Value?.ToString(), out var v) ? v : 1; TriggerAutoSave(); })" />
-                        </div>
-                        <div class="pm-col">
-                            <div class="pm-label">Satuan <span style="color:var(--danger)">*</span></div>
-                            <input type="text" class="form-control pm-input" value="@p.Satuan"
-                                   @onchange="@(e => { p.Satuan = e.Value?.ToString() ?? string.Empty; TriggerAutoSave(); })" />
-                        </div>
-                    </div>
-                    <!-- No. Serial -->
-                    <div>
-                        <div class="pm-label">No. Serial</div>
-                        <input type="text" class="form-control" value="@p.NoSerial"
-                               @onchange="@(e => { p.NoSerial = e.Value?.ToString(); TriggerAutoSave(); })" />
-                    </div>
-                    <!-- Keterangan -->
-                    <div>
-                        <div class="pm-label">Keterangan</div>
-                        <input type="text" class="form-control" value="@p.Keterangan"
-                               @onchange="@(e => { p.Keterangan = e.Value?.ToString(); TriggerAutoSave(); })" />
-                    </div>
-                    <!-- Hapus -->
-                    <div style="display:flex;justify-content:flex-end;">
-                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => RemovePerangkat(p)">
-                            <i class="bi bi-trash3"></i> Hapus Item
-                        </button>
-                    </div>
                 </div>
-            }
-        </div>
 
-        <!-- Tambah Perangkat -->
-        <div style="display:flex;justify-content:flex-start;">
-            <button type="button" class="btn btn-outline btn-sm" @onclick="AddPerangkat">
-                <i class="bi bi-plus-lg"></i> Tambah Perangkat
-            </button>
-        </div>
-    </div>
-
-    <!-- ── 4. Tanda Tangan ── -->
-    <div class="form-section">
-        <div class="form-section-title">4. Tanda Tangan</div>
-        <div class="ttd-grid">
-            <!-- Yang Menyerahkan -->
-            <div class="ttd-col">
-                <div class="ttd-label">Yang Menyerahkan</div>
-                <div style="padding:10px 0;font-size:14px;color:var(--text-secondary);">
-                    <span style="font-weight:600;color:var(--text-primary);">
-                        <i class="bi bi-person-check" style="color:var(--success);"></i>
-                        @(currentUserObj?.Nama ?? "Admin Gudang")
-                    </span>
-                </div>
-            </div>
-
-            <!-- Yang Mengetahui (Approver) -->
-            <div class="ttd-col">
-                <div class="ttd-label">Yang Mengetahui (Approver)</div>
-                <div class="form-group" style="position:relative;">
-                    <div @onclick="OpenMengetahuiSearch"
-                         style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
-                         onmouseover="this.style.background='var(--primary-light)'"
-                         onmouseout="this.style.background='var(--surface)'">
-                        <span style="@(model.MengetahuiId == 0 ? "color:var(--text-muted);" : "")">
-                            @(model.MengetahuiId > 0 ? (approvers.FirstOrDefault(u => u.Id == model.MengetahuiId)?.Nama ?? "Pilih Approver...") : "Cari approver...")
-                        </span>
-                        <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);flex-shrink:0;"></i>
-                    </div>
-                    @if (showMengetahuiSearch)
-                    {
-                        <div @onclick="CloseMengetahuiSearch"
-                             style="position:fixed;inset:0;z-index:99;"></div>
-                        <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;margin-top:4px;">
-                            <div style="padding:8px;border-bottom:1px solid var(--border-light);">
-                                <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;">
-                                    <i class="bi bi-search" style="font-size:13px;color:var(--text-muted);"></i>
-                                    <input type="text" placeholder="Cari nama..."
-                                           value="@mengetahuiSearchQuery"
-                                           @onchange="OnMengetahuiSearchInput" @oninput="OnMengetahuiSearchInput"
-                                           style="border:none;outline:none;background:transparent;font-size:14px;width:100%;" />
-                                </div>
-                            </div>
-                            @if (mengetahuiSearchResults.Any())
-                            {
-                                <div style="max-height:200px;overflow-y:auto;">
-                                    @foreach (var u in mengetahuiSearchResults)
-                                    {
-                                        <div @onclick="() => SelectMengetahui(u)"
-                                             style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;color:var(--text-primary);"
-                                             onmouseover="this.style.background='var(--primary-light)'"
-                                             onmouseout="this.style.background='transparent'">
-                                            @u.Nama
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <div style="padding:12px 14px;font-size:14px;color:var(--text-muted);">Tidak ada hasil</div>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- Yang Menerima (Penanggung Jawab) -->
-            <div class="ttd-col">
-                <div class="ttd-label">Yang Menerima</div>
-                <div style="padding:10px 0;font-size:14px;color:var(--text-secondary);">
-                    @if (selectedPj is not null)
-                    {
-                        <span style="font-weight:600;color:var(--text-primary);">
-                            <i class="bi bi-person-check" style="color:var(--success);"></i>
-                            @selectedPj.Nama
-                        </span>
-                    }
-                    else
-                    {
-                        <span style="color:var(--text-muted);">Otomatis dari PJ yang dipilih</span>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── 5. Upload Foto ── -->
-    <div class="form-section">
-        <div class="form-section-title">5. Bukti Foto Serah Terima <span style="color:var(--danger)">*</span></div>
-
-        <!-- Preview gambar (dari upload baru atau dari DB) -->
-        @if (photoDataUrls.Any())
-        {
-            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;justify-content:center;">
-                @foreach (var (url, name) in photoDataUrls)
-                {
-                    <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--primary);box-shadow:var(--shadow-md);max-width:100%;">
-                        <img src="@url" alt="@name"
-                             style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
-                        <div style="background:rgba(0,0,0,0.65);padding:6px 12px;">
-                            <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;">@name</div>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-        else if (existingPhotoUrls.Any())
-        {
-            <!-- Foto dari DB (saat edit draft, tampilkan gambar asli) -->
-            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;justify-content:center;">
-                @foreach (var (url, name) in existingPhotoUrls)
-                {
-                    <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--border);box-shadow:var(--shadow-md);max-width:100%;">
-                        <img src="/@url" alt="@name"
-                             style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
-                        <div style="background:rgba(0,0,0,0.55);padding:6px 12px;">
-                            <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;">@name</div>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-
-        <!-- Upload button area (centered) -->
-        <div style="display:flex;justify-content:center;">
-            <label for="photo-upload-input" style="cursor:pointer;display:inline-block;">
-                <div class="upload-btn-styled">
-                    <i class="bi bi-cloud-arrow-up-fill" style="font-size:28px;"></i>
-                    <span style="font-weight:600;font-size:15px;">
-                        @if (photoFiles.Any())
+                <!-- Yang Menerima: PJ (normal) atau Admin Gudang (Penarikan) -->
+                <div class="ttd-col">
+                    <div class="ttd-label">Yang Menerima</div>
+                    <div style="padding:10px 0;font-size:14px;color:var(--text-secondary);">
+                        @if (model.Jenis == "Penarikan")
                         {
-                            @($"{photoFiles.Count} foto baru dipilih — Ganti")
-                        }
-                        else if (existingPhotoUrls.Any())
-                        {
-                            @($"{existingPhotoUrls.Count} foto tersimpan — Ganti")
+                            <span style="font-weight:600;color:var(--text-primary);">
+                                <i class="bi bi-person-check" style="color:var(--success);"></i>
+                                @(currentUserObj?.Nama ?? "Admin Gudang")
+                            </span>
                         }
                         else
                         {
-                            @("Pilih Foto")
+                            @if (selectedPj is not null)
+                            {
+                                <span style="font-weight:600;color:var(--text-primary);">
+                                    <i class="bi bi-person-check" style="color:var(--success);"></i>
+                                    @selectedPj.Nama
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--text-muted);">Otomatis dari PJ yang dipilih</span>
+                            }
                         }
-                    </span>
-                    <span style="font-size:12px;color:var(--text-muted);margin-top:2px;text-align:center;">JPG, PNG · maks. 5 MB per file</span>
+                    </div>
                 </div>
-            </label>
+            </div>
         </div>
-        <InputFile id="photo-upload-input" OnChange="OnPhotosSelected" multiple accept="image/*"
-                   style="display:none;" />
-    </div>
+
+        <!-- ── 5. Upload Foto ── -->
+        <div class="form-section">
+            <div class="form-section-title">5. Bukti Foto Serah Terima <span style="color:var(--text-muted);font-size:12px;font-weight:400;">(Opsional)</span></div>
+
+            <!-- Preview gambar (dari upload baru atau dari DB) -->
+            @if (photoDataUrls.Any())
+            {
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;justify-content:center;">
+                    @foreach (var (url, name) in photoDataUrls)
+                    {
+                        <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--primary);box-shadow:var(--shadow-md);max-width:100%;">
+                            <img src="@url" alt="@name"
+                                 style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
+                            <div style="background:rgba(0,0,0,0.65);padding:6px 12px;">
+                                <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;">@name</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (existingPhotoUrls.Any())
+            {
+                <!-- Foto dari DB (saat edit draft, tampilkan gambar asli) -->
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;justify-content:center;">
+                    @foreach (var (url, name) in existingPhotoUrls)
+                    {
+                        <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--border);box-shadow:var(--shadow-md);max-width:100%;">
+                            <img src="/@url" alt="@name"
+                                 style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
+                            <div style="background:rgba(0,0,0,0.55);padding:6px 12px;">
+                                <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;">@name</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Upload button area (centered) -->
+            <div style="display:flex;justify-content:center;">
+                <label for="photo-upload-input" style="cursor:pointer;display:inline-block;">
+                    <div class="upload-btn-styled">
+                        <i class="bi bi-cloud-arrow-up-fill" style="font-size:28px;"></i>
+                        <span style="font-weight:600;font-size:15px;">
+                            @if (photoFiles.Any())
+                            {
+                                @($"{photoFiles.Count} foto baru dipilih — Ganti")
+                            }
+                            else if (existingPhotoUrls.Any())
+                            {
+                                @($"{existingPhotoUrls.Count} foto tersimpan — Ganti")
+                            }
+                            else
+                            {
+                                @("Pilih Foto")
+                            }
+                        </span>
+                        <span style="font-size:12px;color:var(--text-muted);margin-top:2px;text-align:center;">JPG, PNG · maks. 5 MB per file</span>
+                    </div>
+                </label>
+            </div>
+            <InputFile id="photo-upload-input" OnChange="OnPhotosSelected" multiple accept="image/jpeg,image/png,.jpg,.jpeg,.png"
+                       style="display:none;" />
+        </div>
+    }
 
     <!-- Actions -->
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;">
         <button type="button" class="btn btn-outline" @onclick="ResetForm">
             <i class="bi bi-arrow-counterclockwise"></i> Reset
         </button>
-        <button type="submit" class="btn btn-primary" disabled="@isSaving" style="min-width:140px;">
+        <button type="submit" class="btn btn-primary" disabled="@isSaving" style="min-width:160px;">
             @if (isSaving)
             {
                 <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
@@ -511,7 +666,7 @@
             }
             else
             {
-                <span>Simpan & Lanjutkan</span>
+                <span>Simpan &amp; Lanjutkan</span>
                 <i class="bi bi-arrow-right"></i>
             }
         </button>
@@ -531,44 +686,50 @@
     private List<ApplicationUser> approvers = new();
     private List<ApplicationUser> adminGudangUsers = new();
     private List<MasterBarangEntity> barangOptions = new();
+
     private List<IBrowserFile> photoFiles = new();
     private List<(string Url, string Name)> photoDataUrls = new();
-    // Foto dari DB (path + nama) saat load draft
     private List<(string RelPath, string Name)> existingPhotoUrls = new();
+    private List<string> photosToDelete = new();
+
     private PegawaiEntity? selectedPj;
     private string pjSearch = string.Empty;
     private string errorMessage = string.Empty;
     private bool isSaving = false;
     private int _currentUserId;
+    private bool photosChanged = false;
 
-    // Autosave
     private enum AutoSaveState { Idle, Saving, Saved, Error }
     private AutoSaveState autoSaveStatus = AutoSaveState.Idle;
     private System.Threading.CancellationTokenSource? _autoSaveCts;
 
-    // Jenis dropdown state
     private bool showJenisDropdown = false;
 
-    // Barang search state
     private bool showBarangSearch = false;
     private string barangSearchQuery = string.Empty;
     private List<MasterBarangEntity> barangSearchResults = new();
     private PerangkatRow? activeSearchRow = null;
     private ElementReference barangSearchRef;
 
+    private bool showMenyerahkanSearch;
+    private string menyerahkanSearchQuery = string.Empty;
+    private List<ApplicationUser> menyerahkanSearchResults = new();
 
-
-    // Search state for Yang Mengetahui
     private bool showMengetahuiSearch;
     private string mengetahuiSearchQuery = string.Empty;
     private List<ApplicationUser> mengetahuiSearchResults = new();
     private ApplicationUser? currentUserObj;
-    private bool photosChanged = false;
+
+    // Track original signature to restore if PJ is changed back
+    private int? originalSignedPjId;
+    private string? originalTtdPjPath;
+    private DateTime? originalPjSignedAt;
+    private string? originalStatus;
 
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userIdStr = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         int.TryParse(userIdStr, out _currentUserId);
 
         allPegawai = await DbContext.Pegawai.Where(p => p.IsAktif).OrderBy(p => p.Nama).ToListAsync();
@@ -578,11 +739,8 @@
 
         currentUserObj = adminGudangUsers.FirstOrDefault(u => u.Id == _currentUserId);
         if (currentUserObj != null && !editId.HasValue)
-        {
             model.MenyerahkanId = currentUserObj.PegawaiId ?? 0;
-        }
 
-        // Mode Edit: load data BA yang sudah ada
         editId = EditIdParam;
         if (editId.HasValue)
         {
@@ -594,6 +752,11 @@
 
             if (existing is not null)
             {
+                originalSignedPjId = existing.PjId;
+                originalTtdPjPath = existing.TtdPjPath;
+                originalPjSignedAt = existing.PjSignedAt;
+                originalStatus = existing.Status;
+
                 model.Jenis = existing.Jenis;
                 model.JenisCustom = existing.JenisCustom;
                 model.Tanggal = existing.Tanggal.ToDateTime(TimeOnly.MinValue);
@@ -603,17 +766,17 @@
                     : null;
                 model.PjId = existing.PjId;
                 model.PjNoTelp = existing.PjNoTelp;
-                // MenyerahkanId harus Pegawai.Id. Data lama mungkin salah simpan sebagai
-                // ApplicationUser.Id — auto-konversi saat load agar dokumen baru langsung benar.
+                model.PengunaAlihDaya = existing.PengunaAlihDaya;
+                model.TipePj = string.IsNullOrEmpty(existing.PengunaAlihDaya) ? "Pekerja" : "TenagaAlihDaya";
+
                 if (adminGudangUsers.Any(u => u.PegawaiId == existing.MenyerahkanId))
-                    model.MenyerahkanId = existing.MenyerahkanId; // sudah format benar
+                    model.MenyerahkanId = existing.MenyerahkanId;
                 else if (adminGudangUsers.FirstOrDefault(u => u.Id == existing.MenyerahkanId) is { } oldFormatUser)
-                    model.MenyerahkanId = oldFormatUser.PegawaiId ?? 0; // konversi dari format lama
+                    model.MenyerahkanId = oldFormatUser.PegawaiId ?? 0;
                 else
                     model.MenyerahkanId = existing.MenyerahkanId;
                 model.MengetahuiId = existing.MengetahuiId;
 
-                // Pre-fill selected pegawai untuk display
                 selectedPj = allPegawai.FirstOrDefault(p => p.Id == existing.PjId);
                 if (selectedPj is not null) pjSearch = selectedPj.Nama;
 
@@ -628,34 +791,29 @@
 
                 if (!model.Perangkat.Any()) model.Perangkat.Add(new());
 
-                // Load existing photos dari DB → tampilkan gambar asli (bukan thumbnail)
                 if (existing.BuktiFotos != null)
-                {
-                    existingPhotoUrls = existing.BuktiFotos
-                        .Select(f => (f.FilePath, Path.GetFileName(f.FilePath)))
-                        .ToList();
-                }
+                    existingPhotoUrls = existing.BuktiFotos.Select(f => (f.FilePath, Path.GetFileName(f.FilePath))).ToList();
             }
             else
             {
                 editId = null;
             }
         }
-        // Untuk mode baru, draft dibuat otomatis saat autosave pertama (setelah PJ dipilih)
     }
 
-    // Buat draft pertama kali — hanya dipanggil saat sudah ada PjId valid
     private async Task CreateInitialDraftAsync()
     {
-        if (_currentUserId == 0 || model.PjId == 0 || model.MenyerahkanId == 0 || model.MengetahuiId == 0) return;
+        if (_currentUserId == 0) return;
         try
         {
             var ba = new BeritaAcaraEntity
             {
                 Tanggal = DateOnly.FromDateTime(model.Tanggal),
                 Jenis = model.Jenis,
+                JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null,
                 PjId = model.PjId,
                 PjNoTelp = model.PjNoTelp,
+                PengunaAlihDaya = model.PengunaAlihDaya,
                 MenyerahkanId = model.MenyerahkanId,
                 MengetahuiId = model.MengetahuiId,
                 TiketSscNo = model.TiketSscNo,
@@ -667,13 +825,11 @@
             await DbContext.SaveChangesAsync();
             editId = ba.Id;
         }
-        catch { /* gagal buat draft — akan dicoba lagi saat perubahan berikutnya */ }
+        catch { }
     }
 
-    // ── Autosave ──
     private void TriggerAutoSave()
     {
-        // Debounce: batalkan pending save sebelumnya, tunggu 800ms idle
         _autoSaveCts?.Cancel();
         _autoSaveCts = new System.Threading.CancellationTokenSource();
         var token = _autoSaveCts.Token;
@@ -688,14 +844,10 @@
     private async Task AutoSaveAsync()
     {
         if (_currentUserId == 0) return;
-
-        // Jika belum ada draft dan data belum cukup untuk insert, diam saja (jangan tampilkan error)
         if (!editId.HasValue)
         {
-            if (model.PjId == 0 || model.MenyerahkanId == 0 || model.MengetahuiId == 0)
-                return; // Belum cukup data untuk buat draft, tunggu sampai semua FK terisi
             await CreateInitialDraftAsync();
-            if (!editId.HasValue) return; // Masih gagal, diam saja
+            if (!editId.HasValue) return;
         }
 
         autoSaveStatus = AutoSaveState.Saving;
@@ -703,56 +855,48 @@
         try
         {
             if (!editId.HasValue) { autoSaveStatus = AutoSaveState.Error; StateHasChanged(); return; }
-
             DbContext.ChangeTracker.Clear();
             var existing = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Perangkat)
                 .FirstOrDefaultAsync(b => b.Id == editId.Value);
             if (existing is null) { autoSaveStatus = AutoSaveState.Error; StateHasChanged(); return; }
 
-            // ── Deteksi perubahan SEBELUM update ──────────────────────────────────
-            // Cek apakah ada field yang mempengaruhi konten dokumen yang berubah.
-            // Harus dilakukan sebelum existing.* diubah, karena SubmitAsync akan
-            // membandingkan existing (sudah di-autosave) vs model — jika kita tidak
-            // kosongkan DocxPath di sini, SubmitAsync akan melewati regenerasi dokumen.
-            var validPerangkat = model.Perangkat.Where(p => p.BarangId > 0).ToList();
-            bool perangkatBerubah = validPerangkat.Any() && (
-                existing.Perangkat.Count != validPerangkat.Count ||
-                validPerangkat.Any(p => !existing.Perangkat.Any(ep =>
-                    ep.BarangId == p.BarangId && ep.Jumlah == p.Jumlah &&
-                    ep.NoSerial == p.NoSerial && ep.Keterangan == p.Keterangan))
-            );
-            bool dokumenBerubah = !string.IsNullOrEmpty(existing.DocxPath) && (
-                existing.Jenis != model.Jenis ||
-                existing.JenisCustom != (model.Jenis == "Lainnya" ? model.JenisCustom : null) ||
-                existing.Tanggal != DateOnly.FromDateTime(model.Tanggal) ||
-                existing.PjId != model.PjId ||
-                existing.PjNoTelp != model.PjNoTelp ||
-                existing.MenyerahkanId != model.MenyerahkanId ||
-                existing.MengetahuiId != model.MengetahuiId ||
-                existing.TiketSscNo != model.TiketSscNo ||
-                existing.TanggalKembali != (model.TanggalKembali.HasValue
-                    ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null) ||
-                perangkatBerubah
-            );
-            // ─────────────────────────────────────────────────────────────────────
-
             existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
             existing.Jenis = model.Jenis;
             existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
-            existing.PjId = model.PjId;
             existing.PjNoTelp = model.PjNoTelp;
+            existing.PengunaAlihDaya = model.PengunaAlihDaya;
             existing.MenyerahkanId = model.MenyerahkanId;
             existing.MengetahuiId = model.MengetahuiId;
             existing.TiketSscNo = model.TiketSscNo;
             existing.TanggalKembali = model.TanggalKembali.HasValue
                 ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
 
-            // Kosongkan DocxPath agar EditorBA tahu harus regenerasi dari template
-            if (dokumenBerubah)
-                existing.DocxPath = null;
+            // Jika PJ diganti, hapus TTD PJ lama — orang baru harus TTD ulang
+            bool pjBerubah = existing.PjId != model.PjId;
+            existing.PjId = model.PjId;
+            if (pjBerubah)
+            {
+                if (model.PjId == originalSignedPjId && !string.IsNullOrEmpty(originalTtdPjPath))
+                {
+                    // Kembalikan tanda tangan jika PJ dikembalikan ke orang yang sudah pernah tanda tangan
+                    existing.TtdPjPath = originalTtdPjPath;
+                    existing.PjSignedAt = originalPjSignedAt;
+                    existing.Status = originalStatus == "Rejected" ? "Rejected" : existing.Status;
+                }
+                else
+                {
+                    existing.TtdPjPath = null;
+                    existing.PjSignedAt = null;
+                    existing.Status = existing.Status == "Rejected" ? "Draft" : existing.Status;
+                }
+            }
+
+            // Kosongkan DocxPath agar EditorBA tahu harus regenerasi dari template.
+            existing.DocxPath = null;
 
             // Update perangkat hanya jika ada yang terisi minimal 1 barang
+            var validPerangkat = model.Perangkat.Where(p => p.BarangId > 0 && p.Jumlah > 0).ToList();
             if (validPerangkat.Any())
             {
                 DbContext.PerangkatBA.RemoveRange(existing.Perangkat.ToList());
@@ -770,18 +914,12 @@
             await DbContext.SaveChangesAsync();
             autoSaveStatus = AutoSaveState.Saved;
             StateHasChanged();
-
-            // Reset ke Idle setelah 3 detik
             await Task.Delay(3000);
-            if (autoSaveStatus == AutoSaveState.Saved)
-            {
-                autoSaveStatus = AutoSaveState.Idle;
-                StateHasChanged();
-            }
+            if (autoSaveStatus == AutoSaveState.Saved) { autoSaveStatus = AutoSaveState.Idle; StateHasChanged(); }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "[AutoSaveAsync] Error saat auto-save BA");
+            Logger.LogError(ex, "[AutoSaveAsync] Error");
             autoSaveStatus = AutoSaveState.Error;
             StateHasChanged();
         }
@@ -791,8 +929,68 @@
     {
         model.Jenis = jenis;
         showJenisDropdown = false;
-        if (model.Jenis != "Peminjaman")
-            model.TanggalKembali = null;
+        if (model.Jenis != "Peminjaman") model.TanggalKembali = null;
+        if (model.Jenis != "Lainnya") model.JenisCustom = null;
+        
+        if (model.Jenis == "Lainnya")
+        {
+            model.PjId = null;
+            model.PjNoTelp = null;
+            model.PengunaAlihDaya = null;
+            model.MenyerahkanId = null;
+            model.MengetahuiId = null;
+            model.Perangkat.Clear();
+            selectedPj = null;
+            
+            // Hapus foto jika beralih ke Lainnya
+            photoDataUrls.Clear();
+            photoFiles.Clear();
+            var existingIds = existingPhotoUrls.Select(x => x.RelPath).ToList();
+            existingPhotoUrls.Clear();
+            
+            // Delete existing photos from DB if editId is present
+            if (editId.HasValue && existingIds.Any())
+            {
+                foreach (var relPath in existingIds)
+                {
+                    try
+                    {
+                        var bf = DbContext.BuktiFoto.FirstOrDefault(f => f.BaId == editId.Value && f.FilePath == relPath);
+                        if (bf != null)
+                        {
+                            DbContext.BuktiFoto.Remove(bf);
+                            var physPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", bf.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                            if (File.Exists(physPath)) File.Delete(physPath);
+                        }
+                    }
+                    catch { }
+                }
+                DbContext.SaveChanges();
+            }
+        }
+        else
+        {
+            // Restore MenyerahkanId ke default (Admin Gudang / current user) jika kosong
+            if (model.MenyerahkanId == null || model.MenyerahkanId == 0)
+            {
+                model.MenyerahkanId = currentUserObj?.PegawaiId ?? 0;
+            }
+            if (model.Perangkat.Count == 0)
+            {
+                model.Perangkat.Add(new());
+            }
+        }
+
+        TriggerAutoSave();
+    }
+
+    private void OnSelectPekerja(ChangeEventArgs e) => SelectTipePj("Pekerja");
+    private void OnSelectTenagaAlihDaya(ChangeEventArgs e) => SelectTipePj("TenagaAlihDaya");
+
+    private void SelectTipePj(string tipe)
+    {
+        model.TipePj = tipe;
+        if (tipe == "Pekerja") model.PengunaAlihDaya = null;
         TriggerAutoSave();
     }
 
@@ -802,8 +1000,8 @@
         pjResults = string.IsNullOrWhiteSpace(pjSearch) ? new() :
             allPegawai.Where(p => p.Nama.Contains(pjSearch, StringComparison.OrdinalIgnoreCase) ||
                                   p.NoPekerja.Contains(pjSearch, StringComparison.OrdinalIgnoreCase))
-                      .OrderByDescending(p => p.Nama.StartsWith(pjSearch, StringComparison.OrdinalIgnoreCase) || 
-                                              p.NoPekerja.StartsWith(pjSearch, StringComparison.OrdinalIgnoreCase))
+                      .OrderByDescending(p => p.Nama.StartsWith(pjSearch, StringComparison.OrdinalIgnoreCase) ||
+                                             p.NoPekerja.StartsWith(pjSearch, StringComparison.OrdinalIgnoreCase))
                       .ThenBy(p => p.Nama)
                       .Take(6).ToList();
     }
@@ -825,7 +1023,6 @@
         TriggerAutoSave();
     }
 
-    // ── Barang search methods ──
     private void OpenBarangSearchForRow(PerangkatRow row)
     {
         activeSearchRow = row;
@@ -845,22 +1042,23 @@
         barangSearchResults = new();
         showBarangSearch = false;
         activeSearchRow = null;
+        showMenyerahkanSearch = false;
+        menyerahkanSearchQuery = string.Empty;
+        menyerahkanSearchResults = new();
         showMengetahuiSearch = false;
         mengetahuiSearchQuery = string.Empty;
         mengetahuiSearchResults = new();
         photoFiles = new();
         photoDataUrls = new();
         existingPhotoUrls = new();
+        photosToDelete = new();
         errorMessage = string.Empty;
         editId = null;
         autoSaveStatus = AutoSaveState.Idle;
+        photosChanged = false;
     }
 
-    private void AddPerangkat()
-    {
-        model.Perangkat.Add(new());
-        // Tidak langsung membuka dropdown pencarian — user klik sendiri saat siap
-    }
+    private void AddPerangkat() => model.Perangkat.Add(new());
 
     private void RemovePerangkat(PerangkatRow row)
     {
@@ -873,8 +1071,7 @@
         barangSearchQuery = e.Value?.ToString() ?? string.Empty;
         barangSearchResults = string.IsNullOrWhiteSpace(barangSearchQuery)
             ? barangOptions.ToList()
-            : barangOptions.Where(b => b.NamaBarang?.Contains(barangSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false)
-                           .ToList();
+            : barangOptions.Where(b => b.NamaBarang?.Contains(barangSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false).ToList();
     }
 
     private void SelectBarangForRow(MasterBarangEntity b)
@@ -901,10 +1098,8 @@
     private async Task OnPhotosSelected(InputFileChangeEventArgs e)
     {
         photosChanged = true;
-        photoFiles = e.GetMultipleFiles(10).ToList();
-        photoDataUrls.Clear();
+        var newFiles = e.GetMultipleFiles(10).ToList();
 
-        // Segera simpan foto ke disk & DB + generate preview base64
         if (!editId.HasValue) await CreateInitialDraftAsync();
         if (editId.HasValue && _currentUserId > 0)
         {
@@ -914,41 +1109,21 @@
             {
                 var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
                 Directory.CreateDirectory(photoFolder);
-
-                // Hapus foto lama
-                var oldPhotos = await DbContext.BuktiFoto.Where(f => f.BaId == editId.Value).ToListAsync();
-                foreach (var old in oldPhotos)
-                {
-                    var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                        old.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                    if (File.Exists(oldPath)) File.Delete(oldPath);
-                }
-                DbContext.BuktiFoto.RemoveRange(oldPhotos);
-
-                int idx = 1;
-                existingPhotoUrls.Clear();
-                foreach (var file in photoFiles)
+                int idx = existingPhotoUrls.Count + 1;
+                foreach (var file in newFiles)
                 {
                     var ext = Path.GetExtension(file.Name);
                     var saveName = $"ba-{editId.Value}-photo-{idx}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{ext}";
                     var fullPath = Path.Combine(photoFolder, saveName);
                     var relPath = $"files/photos/{saveName}";
 
-                    // Generate preview base64
                     using var stream = file.OpenReadStream(5_000_000);
                     using var ms = new MemoryStream();
                     await stream.CopyToAsync(ms);
                     var bytes = ms.ToArray();
-                    var base64 = Convert.ToBase64String(bytes);
-                    var mime = file.ContentType ?? "image/jpeg";
-                    photoDataUrls.Add(($"data:{mime};base64,{base64}", file.Name));
-
-                    // Simpan file ke disk
                     await File.WriteAllBytesAsync(fullPath, bytes);
 
-                    // Retrieve existing entity to satisfy the EF Core shadow property (BeritaAcaraId) constraint
                     var existingBa = await DbContext.BeritaAcara.FindAsync(editId.Value);
-
                     DbContext.BuktiFoto.Add(new BuktiFoto
                     {
                         BaId = editId.Value,
@@ -967,16 +1142,15 @@
             catch (Exception ex)
             {
                 Logger.LogError(ex, "[OnPhotosSelected] Error saat upload foto");
-                // Preview tetap tampil meski save gagal
                 autoSaveStatus = AutoSaveState.Error;
                 StateHasChanged();
             }
         }
         else
         {
-            // Belum ada editId: hanya buat preview, foto akan disave di SubmitAsync
-            foreach (var file in photoFiles)
+            foreach (var file in newFiles)
             {
+                photoFiles.Add(file);
                 try
                 {
                     using var stream = file.OpenReadStream(5_000_000);
@@ -991,41 +1165,62 @@
         }
     }
 
+    private void RemoveNewPhoto(int index)
+    {
+        if (index >= 0 && index < photoDataUrls.Count)
+        {
+            photoDataUrls.RemoveAt(index);
+            if (index < photoFiles.Count) photoFiles.RemoveAt(index);
+        }
+    }
+
+    private async Task RemoveExistingPhoto(int index)
+    {
+        if (index < 0 || index >= existingPhotoUrls.Count) return;
+        var (relPath, _) = existingPhotoUrls[index];
+        existingPhotoUrls.RemoveAt(index);
+        photosChanged = true;
+        if (editId.HasValue)
+        {
+            try
+            {
+                var foto = await DbContext.BuktiFoto.FirstOrDefaultAsync(f => f.BaId == editId.Value && f.FilePath == relPath);
+                if (foto != null)
+                {
+                    DbContext.BuktiFoto.Remove(foto);
+                    await DbContext.SaveChangesAsync();
+                    var physPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (File.Exists(physPath)) File.Delete(physPath);
+                }
+            }
+            catch (Exception ex) { Logger.LogError(ex, "RemoveExistingPhoto error"); }
+        }
+    }
+
     private async Task SubmitAsync()
     {
         errorMessage = string.Empty;
 
-        // ── Validasi lengkap ──
-        if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
-        if (string.IsNullOrWhiteSpace(model.PjNoTelp)) { errorMessage = "No. Telp/HP PJ wajib diisi."; return; }
-        if (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
-        if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
-        if (model.MengetahuiId == 0 || !approvers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Approver (Yang Mengetahui) yang valid (akun mungkin telah dinonaktifkan)."; return; }
-        if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC wajib diisi."; return; }
-        if (model.Jenis == "Peminjaman" && !model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk Peminjaman."; return; }
-
-        // Validasi semua kolom perangkat
-        if (!model.Perangkat.Any(p => p.BarangId > 0)) { errorMessage = "Tambahkan minimal satu perangkat."; return; }
-        if (model.Jenis == "Peminjaman" && model.TanggalKembali.HasValue && model.TanggalKembali.Value.Date < model.Tanggal.Date) 
-        { 
-            errorMessage = "Tanggal Kembali tidak boleh sebelum Tanggal peminjaman."; 
-            return; 
-        }
-
-        var invalidPerangkat = model.Perangkat.Where(p => p.BarangId > 0).FirstOrDefault(p =>
-            p.Jumlah <= 0 ||
-            string.IsNullOrWhiteSpace(p.Satuan) ||
-            string.IsNullOrWhiteSpace(p.NoSerial) ||
-            string.IsNullOrWhiteSpace(p.Keterangan));
-        if (invalidPerangkat is not null)
+        // ── Validasi ──
+        if (model.Jenis == "Lainnya")
         {
-            errorMessage = "Semua kolom perangkat (Jumlah, Satuan, No. Serial, Keterangan) wajib diisi.";
-            return;
+            if (string.IsNullOrWhiteSpace(model.JenisCustom)) { errorMessage = "Nama/Jenis Berita Acara wajib diisi."; return; }
+        }
+        else
+        {
+            if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
+            if (model.TipePj == "TenagaAlihDaya" && string.IsNullOrWhiteSpace(model.PengunaAlihDaya)) { errorMessage = "Nama Pengguna TAD wajib diisi."; return; }
+            if (!string.IsNullOrWhiteSpace(model.PjNoTelp) && (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15)) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
+            if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
+            if (model.MengetahuiId == 0 || !approvers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Approver (Yang Mengetahui) yang valid (akun mungkin telah dinonaktifkan)."; return; }
+            if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC wajib diisi."; return; }
+            if (model.Jenis == "Peminjaman" && !model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk Peminjaman."; return; }
+            if (!model.Perangkat.Any(p => p.BarangId > 0)) { errorMessage = "Tambahkan minimal satu perangkat."; return; }
+            if (model.Jenis == "Peminjaman" && model.TanggalKembali.HasValue && model.TanggalKembali.Value.Date < model.Tanggal.Date)
+            { errorMessage = "Tanggal Kembali tidak boleh sebelum Tanggal peminjaman."; return; }
         }
 
-        // Validasi foto
-        bool hasFoto = photoFiles.Any() || existingPhotoUrls.Any();
-        if (!hasFoto) { errorMessage = "Bukti foto serah terima wajib dilampirkan."; return; }
+        // Validasi foto — opsional, tidak wajib dilampirkan
 
         // Semua validasi lulus — tampilkan overlay via JS (instant, sebelum DB operations)
         await JSRuntime.InvokeVoidAsync("appLoading.show", "Menyiapkan dokumen...", "Sedang memproses, harap tunggu");
@@ -1035,16 +1230,12 @@
             if (_currentUserId == 0)
             {
                 var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-                var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userIdStr = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 int.TryParse(userIdStr, out _currentUserId);
             }
             if (_currentUserId == 0) { errorMessage = "Sesi habis, silakan login kembali."; await JSRuntime.InvokeVoidAsync("appLoading.hide"); isSaving = false; return; }
 
-            // Jika draft belum sempat terbuat (autosave belum jalan), buat sekarang
-            if (!editId.HasValue)
-            {
-                await CreateInitialDraftAsync();
-            }
+            if (!editId.HasValue) await CreateInitialDraftAsync();
 
             if (editId.HasValue)
             {
@@ -1084,9 +1275,11 @@
                     }
                 }
 
-                // Jika data form berubah, ATAU status sebelumnya Rejected, ATAU foto diganti,
-                // dokumen HARUS digenerate ulang dari template
-                if (isChanged || existing.Status == "Rejected" || photosChanged || (photoFiles.Any() && !existingPhotoUrls.Any()))
+                // Jika data form berubah ATAU foto diganti, dokumen perlu di-generate ulang.
+                // Auto-save sudah mengurus reset TtdPjPath saat PJ diganti,
+                // sehingga di sini cukup cek apakah TtdPjPath masih ada.
+                bool pjSudahTtd = existing.Status == "Rejected" && !string.IsNullOrEmpty(existing.TtdPjPath) && existing.PjSignedAt.HasValue;
+                if (isChanged || photosChanged || (photoFiles.Any() && !existingPhotoUrls.Any()))
                 {
                     existing.DocxPath = null;
                 }
@@ -1094,23 +1287,53 @@
                 existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
                 existing.Jenis = model.Jenis;
                 existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
-                existing.PjId = model.PjId;
                 existing.PjNoTelp = model.PjNoTelp;
+                existing.PengunaAlihDaya = model.PengunaAlihDaya;
                 existing.MenyerahkanId = model.MenyerahkanId;
                 existing.MengetahuiId = model.MengetahuiId;
                 existing.TiketSscNo = model.TiketSscNo;
                 existing.TanggalKembali = model.TanggalKembali.HasValue
                     ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
 
-                // Reset rejected BA back to Draft so it re-enters the submission workflow
+                // Jika PJ diganti, hapus TTD PJ lama (auto-save biasanya sudah lakukan ini,
+                // tapi sebagai fallback jika SubmitAsync dipanggil langsung tanpa auto-save)
+                bool pjBerubahSubmit = existing.PjId != model.PjId;
+                existing.PjId = model.PjId;
+                if (pjBerubahSubmit)
+                {
+                    if (model.PjId == originalSignedPjId && !string.IsNullOrEmpty(originalTtdPjPath))
+                    {
+                        // Kembalikan tanda tangan original jika PJ dikembalikan ke orang yang sudah tanda tangan
+                        existing.TtdPjPath = originalTtdPjPath;
+                        existing.PjSignedAt = originalPjSignedAt;
+                        pjSudahTtd = true;
+                    }
+                    else
+                    {
+                        existing.TtdPjPath = null;
+                        existing.PjSignedAt = null;
+                        pjSudahTtd = false;
+                    }
+                }
+
+                // Untuk BA yang Rejected:
+                // - Jika PJ BELUM TTD atau PJ DIGANTI: reset penuh ke Draft agar masuk alur normal
+                // - Jika PJ SUDAH TTD & PJ TIDAK BERUBAH: pertahankan status Rejected + info TTD PJ;
+                //   EditorBA yang akan mengurus regenerasi + re-embed + kirim ke Approver
                 if (existing.Status == "Rejected")
                 {
-                    existing.Status = "Draft";
-                    existing.AlasanReject = null;
-                    existing.TtdPjPath = null;
+                    // AlasanReject DIPERTAHANKAN di sini — baru dihapus saat BA dikirim ke Approver
+                    // (dilakukan di EditorBA.SubmitForApprovalAsync)
                     existing.SubmittedAt = null;
-                    existing.PjSignedAt = null;
                     existing.ApprovedAt = null;
+                    if (!pjSudahTtd)
+                    {
+                        // PJ belum TTD ATAU PJ diganti — reset ke Draft, masuk alur biasa
+                        existing.Status = "Draft";
+                        existing.TtdPjPath = null;
+                        existing.PjSignedAt = null;
+                    }
+                    // Jika pjSudahTtd (PJ sama & sudah TTD): status tetap Rejected, TtdPjPath & PjSignedAt dipertahankan
                 }
 
                 DbContext.PerangkatBA.RemoveRange(existing.Perangkat.ToList());
@@ -1126,18 +1349,8 @@
                         Keterangan = p.Keterangan
                     }).ToList();
 
-                // Foto sudah disimpan on-change, tapi jika ada foto baru yang belum tersimpan (fallback)
                 if (photoFiles.Any() && !existingPhotoUrls.Any())
                 {
-                    var oldPhotos = await DbContext.BuktiFoto.Where(f => f.BaId == existing.Id).ToListAsync();
-                    foreach (var old in oldPhotos)
-                    {
-                        var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                            old.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                        if (File.Exists(oldPath)) File.Delete(oldPath);
-                    }
-                    DbContext.BuktiFoto.RemoveRange(oldPhotos);
-
                     var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
                     Directory.CreateDirectory(photoFolder);
                     int idx2 = 1;
@@ -1157,7 +1370,6 @@
             }
             else
             {
-                // Fallback: insert baru (sangat jarang terjadi)
                 var ba = new BeritaAcaraEntity
                 {
                     Tanggal = DateOnly.FromDateTime(model.Tanggal),
@@ -1165,6 +1377,7 @@
                     JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null,
                     PjId = model.PjId,
                     PjNoTelp = model.PjNoTelp,
+                    PengunaAlihDaya = model.PengunaAlihDaya,
                     MenyerahkanId = model.MenyerahkanId,
                     MengetahuiId = model.MengetahuiId,
                     TiketSscNo = model.TiketSscNo,
@@ -1185,23 +1398,6 @@
                 };
                 DbContext.Set<BeritaAcaraEntity>().Add(ba);
                 await DbContext.SaveChangesAsync();
-
-                if (photoFiles.Any())
-                {
-                    var photoFolder2 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
-                    Directory.CreateDirectory(photoFolder2);
-                    int idx3 = 1;
-                    foreach (var file in photoFiles)
-                    {
-                        var ext2 = Path.GetExtension(file.Name);
-                        var saveName2 = $"ba-{ba.Id}-photo-{idx3}{ext2}";
-                        await using var fs2 = File.Create(Path.Combine(photoFolder2, saveName2));
-                        await file.OpenReadStream(5_000_000).CopyToAsync(fs2);
-                        DbContext.BuktiFoto.Add(new BuktiFoto { BaId = ba.Id, BeritaAcara = ba, FilePath = $"files/photos/{saveName2}" });
-                        idx3++;
-                    }
-                    await DbContext.SaveChangesAsync();
-                }
                 Navigation.NavigateTo($"/editor/{ba.Id}");
             }
         }
@@ -1213,33 +1409,47 @@
         }
         finally { isSaving = false; }
     }
+    private void OpenMenyerahkanSearch()
+    {
+        menyerahkanSearchQuery = string.Empty;
+        menyerahkanSearchResults = adminGudangUsers.Take(8).ToList();
+        showMenyerahkanSearch = true;
+    }
 
-    // ── Search methods for Mengetahui ──
+    private void CloseMenyerahkanSearch() => showMenyerahkanSearch = false;
+
+    private void OnMenyerahkanSearchInput(ChangeEventArgs e)
+    {
+        menyerahkanSearchQuery = e.Value?.ToString() ?? string.Empty;
+        menyerahkanSearchResults = string.IsNullOrWhiteSpace(menyerahkanSearchQuery)
+            ? adminGudangUsers.Take(8).ToList()
+            : adminGudangUsers.Where(u => u.Nama?.Contains(menyerahkanSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false).Take(8).ToList();
+    }
+
+    private void SelectMenyerahkan(ApplicationUser u)
+    {
+        model.MenyerahkanId = u.PegawaiId ?? 0;
+        showMenyerahkanSearch = false;
+        _ = AutoSaveAsync();
+    }
+
     private void OpenMengetahuiSearch()
     {
         mengetahuiSearchQuery = string.Empty;
         mengetahuiSearchResults = approvers.Take(8).ToList();
         showMengetahuiSearch = true;
     }
-    
+
     private void CloseMengetahuiSearch() => showMengetahuiSearch = false;
-    
+
     private void OnMengetahuiSearchInput(ChangeEventArgs e)
     {
         mengetahuiSearchQuery = e.Value?.ToString() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(mengetahuiSearchQuery))
-        {
-            mengetahuiSearchResults = approvers.Take(8).ToList();
-        }
-        else
-        {
-            mengetahuiSearchResults = approvers
-                .Where(u => u.Nama?.Contains(mengetahuiSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false)
-                .Take(8)
-                .ToList();
-        }
+        mengetahuiSearchResults = string.IsNullOrWhiteSpace(mengetahuiSearchQuery)
+            ? approvers.Take(8).ToList()
+            : approvers.Where(u => u.Nama?.Contains(mengetahuiSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false).Take(8).ToList();
     }
-    
+
     private void SelectMengetahui(ApplicationUser u)
     {
         model.MengetahuiId = u.Id;
@@ -1251,10 +1461,12 @@
     {
         public string Jenis { get; set; } = "Alokasi";
         public string? JenisCustom { get; set; }
-        public int PjId { get; set; }
+        public string TipePj { get; set; } = "Pekerja";
+        public string? PengunaAlihDaya { get; set; }
+        public int? PjId { get; set; }
         public string? PjNoTelp { get; set; }
-        public int MenyerahkanId { get; set; }
-        public int MengetahuiId { get; set; }
+        public int? MenyerahkanId { get; set; }
+        public int? MengetahuiId { get; set; }
         public string? TiketSscNo { get; set; }
         public DateTime Tanggal { get; set; } = DateTime.Today;
         public DateTime? TanggalKembali { get; set; }
@@ -1270,3 +1482,4 @@
         public string? Keterangan { get; set; }
     }
 }
+
