@@ -147,7 +147,7 @@ else
                 <h4 style="font-size:14px;color:var(--text-secondary);">Info Akun</h4>
                 <div style="font-size:13px;color:var(--text-muted);line-height:1.7;">
                     <div><strong>Role:</strong> @GetRoleLabel(currentUser.Role)</div>
-                    <div style="margin-top:4px;"><strong>Status:</strong>
+                    <div style="margin-top:4px;"><strong>Status: </strong>
                         @if (currentUser.IsDeleted)
                         {
                             <span style="color:var(--danger);">Nonaktif</span>
@@ -157,18 +157,6 @@ else
                             <span style="color:#16A34A;">Aktif</span>
                         }
                     </div>
-                    @if (!string.IsNullOrEmpty(currentUser.TtdPath))
-                    {
-                        <div style="margin-top:4px;">
-                            <span style="color:#16A34A;"><i class="bi bi-check-circle-fill"></i> TTD sudah disetel</span>
-                        </div>
-                    }
-                    else if (currentUser.Role != "AdminIT")
-                    {
-                        <div style="margin-top:4px;">
-                            <span style="color:#D97706;"><i class="bi bi-exclamation-triangle-fill"></i> TTD belum disetel</span>
-                        </div>
-                    }
                 </div>
             </div>
 
@@ -181,8 +169,16 @@ else
                         <img src="/@currentUser.TtdPath?v=@ttdCacheBuster" alt="Tanda Tangan" style="max-height:60px;max-width:100%;object-fit:contain;" />
                     </div>
                 }
-                <button class="btn btn-outline" style="width:100%; margin-bottom: 32px;" @onclick="OpenTtdModal">
-                    <i class="bi bi-pen"></i> Ubah Tanda Tangan
+                <button class="btn btn-outline" style="width:100%; margin-bottom: 32px;" @onclick="OpenTtdModal" disabled="@isOpeningModal">
+                    @if (isOpeningModal)
+                    {
+                        <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
+                        <span style="margin-left: 8px;">Memproses...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-pen"></i> <span>Ubah Tanda Tangan</span>
+                    }
                 </button>
             }
         </div>
@@ -269,6 +265,7 @@ else
 
     // Modals
     private bool showTtdModal = false;
+    private bool isOpeningModal = false;
 
     // Profile pic
     private IBrowserFile? profilePicFile;
@@ -298,6 +295,8 @@ else
 
     private async Task OpenTtdModal()
     {
+        isOpeningModal = true;
+        
         showTtdModal = true;
         ttdMode = "draw";
         isCanvasEmpty = true;
@@ -305,6 +304,8 @@ else
         await Task.Delay(100);
         await JS.InvokeVoidAsync("ttdCanvas.init");
         try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
+        
+        isOpeningModal = false;
     }
 
     private async Task SwitchTtdMode(string mode)
