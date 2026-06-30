@@ -66,7 +66,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IExcelService, ExcelService>();
         services.AddScoped<DueDateCheckerJob>();
-
+        services.AddScoped<AutoApproveJob>();
         return services;
     }
 }

@@ -402,7 +402,7 @@ else if (currentRole == "Approver")
                         <th style="cursor:pointer;" @onclick="@(() => SortApprover("No. Surat"))">No. Surat <i class="bi @GetApproverSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortApprover("Jenis BA"))">Jenis Berita Acara <i class="bi @GetApproverSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortApprover("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetApproverSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Tanggal Submit"))">Tanggal Submit <i class="bi @GetApproverSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Tanggal Submit"))">Waktu Submit <i class="bi @GetApproverSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -415,7 +415,10 @@ else if (currentRole == "Approver")
                                 <div class="cell-main">@ba.Pj?.Nama</div>
                                 <div class="cell-sub">@ba.Pj?.FungsiDirektorat</div>
                             </td>
-                            <td>@ba.SubmittedAt?.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <div>@ba.SubmittedAt?.ToString("dd MMM yyyy")</div>
+                                <div style="font-size:11px;color:var(--text-muted);">@ba.SubmittedAt?.ToString("HH:mm") WIB</div>
+                            </td>
                         </tr>
                     }
                 </tbody>

@@ -224,12 +224,13 @@ public class DocumentService : IDocumentService
                         if (!File.Exists(fotoPhysical)) continue;
 
                         var ext = Path.GetExtension(fotoPhysical).ToLowerInvariant();
-                        var imgPart = ext switch
+                        if (ext != ".png" && ext != ".jpg" && ext != ".jpeg")
                         {
-                            ".png"  => mainPart.AddImagePart(ImagePartType.Png),
-                            ".jpg" or ".jpeg" => mainPart.AddImagePart(ImagePartType.Jpeg),
-                            _ => mainPart.AddImagePart(ImagePartType.Jpeg)
-                        };
+                            _logger.LogWarning("[GenerateDocx] Format gambar tidak didukung ({ext}), melewati foto: {path}", ext, fotoPhysical);
+                            continue;
+                        }
+                        var imgPartType = ext == ".png" ? ImagePartType.Png : ImagePartType.Jpeg;
+                        var imgPart = mainPart.AddImagePart(imgPartType);
                         using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
 
                         var dims = GetImageDimensions(fotoPhysical);
@@ -269,12 +270,13 @@ public class DocumentService : IDocumentService
                     if (!File.Exists(fotoPhysical)) continue;
 
                     var ext = Path.GetExtension(fotoPhysical).ToLowerInvariant();
-                    var imgPart = ext switch
+                    if (ext != ".png" && ext != ".jpg" && ext != ".jpeg")
                     {
-                        ".png"  => mainPart.AddImagePart(ImagePartType.Png),
-                        ".jpg" or ".jpeg" => mainPart.AddImagePart(ImagePartType.Jpeg),
-                        _ => mainPart.AddImagePart(ImagePartType.Jpeg)
-                    };
+                        _logger.LogWarning("[GenerateDocx] Format gambar tidak didukung ({ext}), melewati foto: {path}", ext, fotoPhysical);
+                        continue;
+                    }
+                    var imgPartType = ext == ".png" ? ImagePartType.Png : ImagePartType.Jpeg;
+                    var imgPart = mainPart.AddImagePart(imgPartType);
                     using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
 
                     var dims = GetImageDimensions(fotoPhysical);
@@ -372,16 +374,6 @@ public class DocumentService : IDocumentService
         return ba.DocxPath!;
     }
 
-    public async Task<string> EmbedTtdPreviewApproverAsync(int baId, string ttdPath)
-    {
-        var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
-        string physicalPath = GetPhysicalPath(ba.DocxPath!);
-        EnsureFileExists(physicalPath);
-
-        await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_APPROVER}}");
-
-        return ba.DocxPath!;
-    }
 
     public async Task<string> EmbedTtdPjAsync(int baId, string ttdPath)
     {

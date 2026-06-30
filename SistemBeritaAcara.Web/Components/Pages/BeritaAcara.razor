@@ -166,7 +166,7 @@
                         <div style="font-weight:600;">@selectedPj.NoPekerja</div>
                     </div>
                     <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP <span style="color:var(--danger);">*</span></div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP <span style="color:var(--text-muted); font-size: 10px;">(Opsional)</span></div>
                         <input type="tel" class="form-control" style="font-size:13px;padding:6px 10px;"
                                placeholder="Contoh: 08123456789"
                                inputmode="numeric" pattern="[0-9]*"
@@ -436,7 +436,7 @@
 
     <!-- ── 5. Upload Foto ── -->
     <div class="form-section">
-        <div class="form-section-title">5. Bukti Foto Serah Terima <span style="color:var(--danger)">*</span></div>
+        <div class="form-section-title">5. Bukti Foto Serah Terima <span style="color:var(--text-muted);font-size:12px;font-weight:400;">(Opsional)</span></div>
 
         <!-- Preview gambar (dari upload baru atau dari DB) -->
         @if (photoDataUrls.Any())
@@ -494,7 +494,7 @@
                 </div>
             </label>
         </div>
-        <InputFile id="photo-upload-input" OnChange="OnPhotosSelected" multiple accept="image/*"
+        <InputFile id="photo-upload-input" OnChange="OnPhotosSelected" multiple accept="image/jpeg,image/png,.jpg,.jpeg,.png"
                    style="display:none;" />
     </div>
 
@@ -565,6 +565,12 @@
     private ApplicationUser? currentUserObj;
     private bool photosChanged = false;
 
+    // Track original signature to restore if PJ is changed back
+    private int? originalSignedPjId;
+    private string? originalTtdPjPath;
+    private DateTime? originalPjSignedAt;
+    private string? originalStatus;
+
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -594,6 +600,11 @@
 
             if (existing is not null)
             {
+                originalSignedPjId = existing.PjId;
+                originalTtdPjPath = existing.TtdPjPath;
+                originalPjSignedAt = existing.PjSignedAt;
+                originalStatus = existing.Status;
+
                 model.Jenis = existing.Jenis;
                 model.JenisCustom = existing.JenisCustom;
                 model.Tanggal = existing.Tanggal.ToDateTime(TimeOnly.MinValue);
@@ -740,7 +751,6 @@
             existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
             existing.Jenis = model.Jenis;
             existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
-            existing.PjId = model.PjId;
             existing.PjNoTelp = model.PjNoTelp;
             existing.MenyerahkanId = model.MenyerahkanId;
             existing.MengetahuiId = model.MengetahuiId;
@@ -748,7 +758,27 @@
             existing.TanggalKembali = model.TanggalKembali.HasValue
                 ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
 
-            // Kosongkan DocxPath agar EditorBA tahu harus regenerasi dari template
+            // Jika PJ diganti, hapus TTD PJ lama — orang baru harus TTD ulang
+            bool pjBerubah = existing.PjId != model.PjId;
+            existing.PjId = model.PjId;
+            if (pjBerubah)
+            {
+                if (model.PjId == originalSignedPjId && !string.IsNullOrEmpty(originalTtdPjPath))
+                {
+                    // Kembalikan tanda tangan jika PJ dikembalikan ke orang yang sudah pernah tanda tangan
+                    existing.TtdPjPath = originalTtdPjPath;
+                    existing.PjSignedAt = originalPjSignedAt;
+                    existing.Status = originalStatus == "Rejected" ? "Rejected" : existing.Status;
+                }
+                else
+                {
+                    existing.TtdPjPath = null;
+                    existing.PjSignedAt = null;
+                    existing.Status = existing.Status == "Rejected" ? "Draft" : existing.Status;
+                }
+            }
+
+            // Kosongkan DocxPath agar EditorBA tahu harus regenerasi dari template.
             if (dokumenBerubah)
                 existing.DocxPath = null;
 
@@ -997,8 +1027,7 @@
 
         // ── Validasi lengkap ──
         if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
-        if (string.IsNullOrWhiteSpace(model.PjNoTelp)) { errorMessage = "No. Telp/HP PJ wajib diisi."; return; }
-        if (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
+        if (!string.IsNullOrWhiteSpace(model.PjNoTelp) && (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15)) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
         if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
         if (model.MengetahuiId == 0 || !approvers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Approver (Yang Mengetahui) yang valid (akun mungkin telah dinonaktifkan)."; return; }
         if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC wajib diisi."; return; }
@@ -1023,9 +1052,7 @@
             return;
         }
 
-        // Validasi foto
-        bool hasFoto = photoFiles.Any() || existingPhotoUrls.Any();
-        if (!hasFoto) { errorMessage = "Bukti foto serah terima wajib dilampirkan."; return; }
+        // Validasi foto — opsional, tidak wajib dilampirkan
 
         // Semua validasi lulus — tampilkan overlay via JS (instant, sebelum DB operations)
         await JSRuntime.InvokeVoidAsync("appLoading.show", "Menyiapkan dokumen...", "Sedang memproses, harap tunggu");
@@ -1084,9 +1111,11 @@
                     }
                 }
 
-                // Jika data form berubah, ATAU status sebelumnya Rejected, ATAU foto diganti,
-                // dokumen HARUS digenerate ulang dari template
-                if (isChanged || existing.Status == "Rejected" || photosChanged || (photoFiles.Any() && !existingPhotoUrls.Any()))
+                // Jika data form berubah ATAU foto diganti, dokumen perlu di-generate ulang.
+                // Auto-save sudah mengurus reset TtdPjPath saat PJ diganti,
+                // sehingga di sini cukup cek apakah TtdPjPath masih ada.
+                bool pjSudahTtd = existing.Status == "Rejected" && !string.IsNullOrEmpty(existing.TtdPjPath) && existing.PjSignedAt.HasValue;
+                if (isChanged || photosChanged || (photoFiles.Any() && !existingPhotoUrls.Any()))
                 {
                     existing.DocxPath = null;
                 }
@@ -1094,7 +1123,6 @@
                 existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
                 existing.Jenis = model.Jenis;
                 existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
-                existing.PjId = model.PjId;
                 existing.PjNoTelp = model.PjNoTelp;
                 existing.MenyerahkanId = model.MenyerahkanId;
                 existing.MengetahuiId = model.MengetahuiId;
@@ -1102,15 +1130,45 @@
                 existing.TanggalKembali = model.TanggalKembali.HasValue
                     ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
 
-                // Reset rejected BA back to Draft so it re-enters the submission workflow
+                // Jika PJ diganti, hapus TTD PJ lama (auto-save biasanya sudah lakukan ini,
+                // tapi sebagai fallback jika SubmitAsync dipanggil langsung tanpa auto-save)
+                bool pjBerubahSubmit = existing.PjId != model.PjId;
+                existing.PjId = model.PjId;
+                if (pjBerubahSubmit)
+                {
+                    if (model.PjId == originalSignedPjId && !string.IsNullOrEmpty(originalTtdPjPath))
+                    {
+                        // Kembalikan tanda tangan original jika PJ dikembalikan ke orang yang sudah tanda tangan
+                        existing.TtdPjPath = originalTtdPjPath;
+                        existing.PjSignedAt = originalPjSignedAt;
+                        pjSudahTtd = true;
+                    }
+                    else
+                    {
+                        existing.TtdPjPath = null;
+                        existing.PjSignedAt = null;
+                        pjSudahTtd = false;
+                    }
+                }
+
+                // Untuk BA yang Rejected:
+                // - Jika PJ BELUM TTD atau PJ DIGANTI: reset penuh ke Draft agar masuk alur normal
+                // - Jika PJ SUDAH TTD & PJ TIDAK BERUBAH: pertahankan status Rejected + info TTD PJ;
+                //   EditorBA yang akan mengurus regenerasi + re-embed + kirim ke Approver
                 if (existing.Status == "Rejected")
                 {
-                    existing.Status = "Draft";
-                    existing.AlasanReject = null;
-                    existing.TtdPjPath = null;
+                    // AlasanReject DIPERTAHANKAN di sini — baru dihapus saat BA dikirim ke Approver
+                    // (dilakukan di EditorBA.SubmitForApprovalAsync)
                     existing.SubmittedAt = null;
-                    existing.PjSignedAt = null;
                     existing.ApprovedAt = null;
+                    if (!pjSudahTtd)
+                    {
+                        // PJ belum TTD ATAU PJ diganti — reset ke Draft, masuk alur biasa
+                        existing.Status = "Draft";
+                        existing.TtdPjPath = null;
+                        existing.PjSignedAt = null;
+                    }
+                    // Jika pjSudahTtd (PJ sama & sudah TTD): status tetap Rejected, TtdPjPath & PjSignedAt dipertahankan
                 }
 
                 DbContext.PerangkatBA.RemoveRange(existing.Perangkat.ToList());
