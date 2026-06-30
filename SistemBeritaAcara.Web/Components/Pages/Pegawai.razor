@@ -7,6 +7,7 @@
 @inject IExcelService ExcelService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserManager<ApplicationUser> UserManager
+@inject IJSRuntime JS
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
 
@@ -14,10 +15,23 @@
 
 <div class="page-header d-flex align-center justify-between">
     <div>
+        <h1 class="page-title">Data Pegawai</h1>
     </div>
-    <button class="btn btn-primary" @onclick="() => showUpload = true">
-        <i class="bi bi-arrow-up-circle"></i> Update Data Pegawai
-    </button>
+    <div style="display:flex;gap:8px;">
+        <button @onclick="ExportExcelAsync" disabled="@isExporting"
+                style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid #16A34A;background:@(isExporting ? "#F0FDF4" : "#F0FDF4");color:#16A34A;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
+                onmouseover="if(!this.disabled)this.style.background='#DCFCE7'" onmouseout="this.style.background='#F0FDF4'">
+            <i class="bi bi-file-earmark-excel" style="font-size:15px;"></i>
+            @(isExporting ? "Mengexport..." : "Export Excel")
+        </button>
+        <button @onclick="() => showUpload = true"
+                style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
+                onmouseover="this.style.background='var(--primary-light)';this.style.borderColor='var(--primary)';this.style.color='var(--primary)'"
+                onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text-primary)'">
+            <i class="bi bi-upload" style="font-size:14px;"></i>
+            Import Excel
+        </button>
+    </div>
 </div>
 
 <!-- Stat Card -->
@@ -26,21 +40,37 @@
         <div class="stat-card-icon total"><i class="bi bi-person-badge"></i></div>
         <div class="stat-card-info">
             <div class="stat-card-label">Total Pegawai</div>
-            <div class="stat-card-value">@allPegawai.Count</div>
+            <div class="stat-card-value">@allPegawai.Count(p => p.IsAktif)</div>
         </div>
     </div>
 </div>
 
-<!-- Search + Toggle -->
-<div class="search-bar">
-    <div class="search-input" style="max-width:320px;">
-        <i class="bi bi-search"></i>
-        <input type="text" placeholder="Cari nama, No. Pekerja, atau jabatan..."
-               @bind="search" @bind:event="oninput" />
+<!-- Alert -->
+@if (!string.IsNullOrEmpty(alertMessage))
+{
+    <div style="background:@(alertIsError ? "var(--danger-light)" : "#F0FDF4");border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;color:@(alertIsError ? "var(--danger)" : "#16A34A");font-size:14px;display:flex;align-items:center;gap:8px;">
+        <i class="bi @(alertIsError ? "bi-exclamation-circle-fill" : "bi-check-circle-fill")"></i>
+        @alertMessage
     </div>
-    <div style="font-size:13px; color:var(--text-secondary); margin-left:12px;">
-        Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, TotalFilteredItems) dari @TotalFilteredItems pegawai
+}
+
+<!-- Search + Tambah -->
+<div class="search-bar" style="justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:12px;">
+        <div class="search-input" style="max-width:320px;">
+            <i class="bi bi-search"></i>
+            <input type="text" placeholder="Cari nama, No. Pekerja, atau jabatan..."
+                   @bind="search" @bind:event="oninput" />
+        </div>
+        <div style="font-size:13px;color:var(--text-secondary);">
+            Menampilkan @((currentPage - 1) * pageSize + 1)–@Math.Min(currentPage * pageSize, TotalFilteredItems) dari @TotalFilteredItems pegawai
+        </div>
     </div>
+    <button @onclick="OpenTambah"
+            style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:none;background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;"
+            onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+        <i class="bi bi-plus-lg" style="font-size:14px;"></i> Tambah Pegawai
+    </button>
 </div>
 
 @if (isLoading)
@@ -49,53 +79,64 @@
 }
 else
 {
-    @if (!string.IsNullOrEmpty(importResult))
-    {
-        var isErr = importResult.StartsWith("Gagal");
-        <div style="background:@(isErr ? "var(--danger-light)" : "#F0FDF4");border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;color:@(isErr ? "var(--danger)" : "#16A34A");font-size:14px;">
-            @importResult
-        </div>
-    }
-
     <div class="card">
         <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama / No. Pekerja"))">Nama / No. Pekerja <i class="bi @GetSortIcon("Nama / No. Pekerja")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Jabatan"))">Jabatan <i class="bi @GetSortIcon("Jabatan")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Fungsi/Direktorat"))">Fungsi/Direktorat <i class="bi @GetSortIcon("Fungsi/Direktorat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Email"))">Email <i class="bi @GetSortIcon("Email")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Cost Center"))">Cost Center <i class="bi @GetSortIcon("Cost Center")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var p in FilteredPegawai)
-                {
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <td>
-                            <div class="cell-main">@p.Nama</div>
-                            <div class="cell-sub">No. Pekerja: @p.NoPekerja</div>
-                        </td>
-                        <td>@p.Jabatan</td>
-                        <td>@p.FungsiDirektorat</td>
-                        <td>@p.Email</td>
-                        <td>@p.CostCenter</td>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama / No. Pekerja"))">Nama / No. Pekerja <i class="bi @GetSortIcon("Nama / No. Pekerja")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Jabatan"))">Jabatan <i class="bi @GetSortIcon("Jabatan")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Fungsi/Direktorat"))">Fungsi/Direktorat <i class="bi @GetSortIcon("Fungsi/Direktorat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Email"))">Email <i class="bi @GetSortIcon("Email")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Cost Center"))">Cost Center <i class="bi @GetSortIcon("Cost Center")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th>No. Telp</th>
+                        <th style="width:90px;text-align:center;">Aksi</th>
                     </tr>
-                }
-                @if (!FilteredPegawai.Any())
-                {
-                    <tr>
-                        <td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">
-                            Tidak ada data pegawai yang sesuai filter
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var p in FilteredPegawai)
+                    {
+                        <tr>
+                            <td>
+                                <div class="cell-main">@p.Nama</div>
+                                <div class="cell-sub">No. Pekerja: @p.NoPekerja</div>
+                            </td>
+                            <td>@p.Jabatan</td>
+                            <td>@p.FungsiDirektorat</td>
+                            <td>@p.Email</td>
+                            <td>@p.CostCenter</td>
+                            <td style="color:var(--text-secondary);font-size:13px;">@(p.NoTelp ?? "-")</td>
+                            <td style="text-align:center;">
+                                <div style="display:flex;gap:4px;justify-content:center;">
+                                    <button @onclick="() => OpenEdit(p)" title="Edit"
+                                            style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text-secondary);cursor:pointer;transition:all .15s;"
+                                            onmouseover="this.style.background='var(--primary-light)';this.style.borderColor='var(--primary)';this.style.color='var(--primary)'"
+                                            onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+                                        <i class="bi bi-pencil" style="font-size:13px;"></i>
+                                    </button>
+                                    <button @onclick="() => OpenHapus(p)" title="Hapus"
+                                            style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;border:1px solid #FECACA;background:#FFF5F5;color:var(--danger);cursor:pointer;transition:all .15s;"
+                                            onmouseover="this.style.background='#FEE2E2';this.style.borderColor='var(--danger)'"
+                                            onmouseout="this.style.background='#FFF5F5';this.style.borderColor='#FECACA'">
+                                        <i class="bi bi-trash" style="font-size:13px;"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!FilteredPegawai.Any())
+                    {
+                        <tr>
+                            <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
+                                Tidak ada data pegawai yang sesuai filter
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
-        
-        @if (TotalFilteredItems > 0)
+
+        @if (TotalFilteredItems > pageSize)
         {
             <SistemBeritaAcara.Web.Components.Shared.Pagination
                 CurrentPage="@currentPage"
@@ -106,19 +147,97 @@ else
     </div>
 }
 
-<!-- Upload Modal -->
+<!-- ── Modal Tambah / Edit ── -->
+@if (showForm)
+{
+    <div class="modal-overlay" @onclick="CloseForm">
+        <div class="modal-content" style="max-width:560px;" @onclick:stopPropagation>
+            <button class="modal-close" @onclick="CloseForm"><i class="bi bi-x-lg"></i></button>
+            <div style="font-size:18px;font-weight:700;margin-bottom:20px;">
+                @(isEditMode ? "Edit Pegawai" : "Tambah Pegawai")
+            </div>
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div style="background:var(--danger-light);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;color:var(--danger);font-size:13px;">
+                    @formError
+                </div>
+            }
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Nama <span style="color:var(--danger)">*</span></label>
+                    <input class="form-control" @bind="formNama" placeholder="Nama lengkap" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">No. Pekerja <span style="color:var(--danger)">*</span></label>
+                    <input class="form-control" @bind="formNoPekerja" placeholder="Nomor pekerja" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Jabatan</label>
+                    <input class="form-control" @bind="formJabatan" placeholder="Jabatan" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fungsi/Direktorat</label>
+                    <input class="form-control" @bind="formFungsi" placeholder="Fungsi atau Direktorat" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email <span style="color:var(--danger)">*</span></label>
+                    <input class="form-control" type="email" @bind="formEmail" placeholder="email@pertamina.com" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cost Center</label>
+                    <input class="form-control" @bind="formCostCenter" placeholder="Cost center" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">No. Telp</label>
+                    <input class="form-control" @bind="formNoTelp" placeholder="08xxxxxxxxxx" />
+                </div>
+            </div>
+
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:24px;">
+                <button class="btn btn-outline" @onclick="CloseForm">Batal</button>
+                <button class="btn btn-primary" @onclick="SaveFormAsync" disabled="@isSaving">
+                    @(isSaving ? "Menyimpan..." : (isEditMode ? "Simpan Perubahan" : "Tambah"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ── Modal Konfirmasi Hapus ── -->
+@if (showHapus && hapusTarget != null)
+{
+    <div class="modal-overlay" @onclick="() => showHapus = false">
+        <div class="modal-content" style="max-width:420px;" @onclick:stopPropagation>
+            <div style="text-align:center;padding:8px 0 16px;">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size:40px;color:var(--warning);"></i>
+                <div style="font-size:17px;font-weight:700;margin-top:12px;">Hapus Pegawai?</div>
+                <div style="font-size:14px;color:var(--text-secondary);margin-top:8px;">
+                    <strong>@hapusTarget.Nama</strong> akan dihapus dari daftar pegawai aktif.
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+                <button class="btn btn-outline" @onclick="() => showHapus = false">Batal</button>
+                <button class="btn" style="background:var(--danger);color:#fff;" @onclick="HapusAsync" disabled="@isSaving">
+                    @(isSaving ? "Menghapus..." : "Ya, Hapus")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ── Modal Import Excel ── -->
 @if (showUpload)
 {
     <div class="modal-overlay" @onclick="() => showUpload = false">
         <div class="modal-content" style="max-width:500px;" @onclick:stopPropagation>
-            <button class="modal-close" @onclick="() => showUpload = false">
-                <i class="bi bi-x-lg"></i>
-            </button>
+            <button class="modal-close" @onclick="() => showUpload = false"><i class="bi bi-x-lg"></i></button>
             <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Import Data Pegawai</div>
             <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">
                 Upload file Excel (.xlsx) dengan kolom: Nama, No Pekerja, Jabatan, Fungsi/Direktorat, Email, Cost Center
             </div>
-            <div style="display:flex;justify-content:center;margin: 24px 0;">
+            <div style="display:flex;justify-content:center;margin:24px 0;">
                 <label for="pegawai-upload-input" style="cursor:pointer;display:inline-block;">
                     <div class="upload-btn-styled">
                         <i class="bi bi-cloud-arrow-up-fill" style="font-size:28px;"></i>
@@ -141,38 +260,45 @@ else
 @code {
     private List<PegawaiEntity> allPegawai = new();
     private bool isLoading = true;
+    private bool isSaving = false;
+    private bool isExporting = false;
     private bool showUpload = false;
     private bool isImporting = false;
-    private bool showInactive = false;
-    private string importResult = string.Empty;
+    private bool showForm = false;
+    private bool isEditMode = false;
+    private bool showHapus = false;
+    private PegawaiEntity? hapusTarget;
+    private PegawaiEntity? editTarget;
+
+    private string alertMessage = string.Empty;
+    private bool alertIsError = false;
+    private string formError = string.Empty;
+
+    // Form fields
+    private string formNama = string.Empty;
+    private string formNoPekerja = string.Empty;
+    private string formJabatan = string.Empty;
+    private string formFungsi = string.Empty;
+    private string formEmail = string.Empty;
+    private string formCostCenter = string.Empty;
+    private string formNoTelp = string.Empty;
+
     private string sortColumn = "Nama / No. Pekerja";
     private bool sortAscending = true;
-
     private int currentPage = 1;
     private int pageSize = 10;
     private string _search = string.Empty;
-    private string search 
+    private string search
     {
         get => _search;
-        set 
-        {
-            _search = value;
-            currentPage = 1; // reset page saat pencarian berubah
-        }
+        set { _search = value; currentPage = 1; }
     }
 
     private void SortTable(string column)
     {
-        if (sortColumn == column)
-        {
-            sortAscending = !sortAscending;
-        }
-        else
-        {
-            sortColumn = column;
-            sortAscending = true;
-        }
-        currentPage = 1; // reset page saat kolom sort berubah
+        if (sortColumn == column) sortAscending = !sortAscending;
+        else { sortColumn = column; sortAscending = true; }
+        currentPage = 1;
     }
 
     private string GetSortIcon(string column)
@@ -206,7 +332,6 @@ else
                 "Fungsi/Direktorat" => sortAscending ? query.OrderBy(p => p.FungsiDirektorat) : query.OrderByDescending(p => p.FungsiDirektorat),
                 "Email" => sortAscending ? query.OrderBy(p => p.Email) : query.OrderByDescending(p => p.Email),
                 "Cost Center" => sortAscending ? query.OrderBy(p => p.CostCenter) : query.OrderByDescending(p => p.CostCenter),
-                "Status" => sortAscending ? query.OrderByDescending(p => p.IsAktif) : query.OrderBy(p => p.IsAktif),
                 _ => query
             };
 
@@ -222,22 +347,152 @@ else
         isLoading = false;
     }
 
+    private void OpenTambah()
+    {
+        isEditMode = false;
+        editTarget = null;
+        formNama = formNoPekerja = formJabatan = formFungsi = formEmail = formCostCenter = formNoTelp = string.Empty;
+        formError = string.Empty;
+        showForm = true;
+    }
+
+    private void OpenEdit(PegawaiEntity p)
+    {
+        isEditMode = true;
+        editTarget = p;
+        formNama = p.Nama;
+        formNoPekerja = p.NoPekerja;
+        formJabatan = p.Jabatan ?? string.Empty;
+        formFungsi = p.FungsiDirektorat ?? string.Empty;
+        formEmail = p.Email ?? string.Empty;
+        formCostCenter = p.CostCenter ?? string.Empty;
+        formNoTelp = p.NoTelp ?? string.Empty;
+        formError = string.Empty;
+        showForm = true;
+    }
+
+    private void OpenHapus(PegawaiEntity p)
+    {
+        hapusTarget = p;
+        showHapus = true;
+    }
+
+    private void CloseForm()
+    {
+        showForm = false;
+        formError = string.Empty;
+    }
+
+    private async Task SaveFormAsync()
+    {
+        formError = string.Empty;
+        if (string.IsNullOrWhiteSpace(formNama)) { formError = "Nama wajib diisi."; return; }
+        if (string.IsNullOrWhiteSpace(formNoPekerja)) { formError = "No. Pekerja wajib diisi."; return; }
+        if (string.IsNullOrWhiteSpace(formEmail)) { formError = "Email wajib diisi."; return; }
+
+        // Cek duplikat No. Pekerja (kecuali diri sendiri saat edit)
+        var duplicate = allPegawai.FirstOrDefault(p =>
+            p.NoPekerja == formNoPekerja.Trim() && p.Id != (editTarget?.Id ?? 0));
+        if (duplicate != null) { formError = $"No. Pekerja '{formNoPekerja}' sudah digunakan oleh pegawai lain."; return; }
+
+        isSaving = true;
+        try
+        {
+            if (isEditMode && editTarget != null)
+            {
+                var entity = await DbContext.Pegawai.FindAsync(editTarget.Id);
+                if (entity == null) return;
+                entity.Nama = formNama.Trim();
+                entity.NoPekerja = formNoPekerja.Trim();
+                entity.Jabatan = string.IsNullOrWhiteSpace(formJabatan) ? null : formJabatan.Trim();
+                entity.FungsiDirektorat = string.IsNullOrWhiteSpace(formFungsi) ? null : formFungsi.Trim();
+                entity.Email = string.IsNullOrWhiteSpace(formEmail) ? null : formEmail.Trim();
+                entity.CostCenter = string.IsNullOrWhiteSpace(formCostCenter) ? null : formCostCenter.Trim();
+                entity.NoTelp = string.IsNullOrWhiteSpace(formNoTelp) ? null : formNoTelp.Trim();
+            }
+            else
+            {
+                DbContext.Pegawai.Add(new PegawaiEntity
+                {
+                    Nama = formNama.Trim(),
+                    NoPekerja = formNoPekerja.Trim(),
+                    Jabatan = string.IsNullOrWhiteSpace(formJabatan) ? null : formJabatan.Trim(),
+                    FungsiDirektorat = string.IsNullOrWhiteSpace(formFungsi) ? null : formFungsi.Trim(),
+                    Email = string.IsNullOrWhiteSpace(formEmail) ? null : formEmail.Trim(),
+                    CostCenter = string.IsNullOrWhiteSpace(formCostCenter) ? null : formCostCenter.Trim(),
+                    NoTelp = string.IsNullOrWhiteSpace(formNoTelp) ? null : formNoTelp.Trim(),
+                    IsAktif = true
+                });
+            }
+
+            await DbContext.SaveChangesAsync();
+            showForm = false;
+            SetAlert(isEditMode ? "Pegawai berhasil diperbarui." : "Pegawai berhasil ditambahkan.", false);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            formError = $"Gagal menyimpan: {ex.Message}";
+        }
+        finally { isSaving = false; }
+    }
+
+    private async Task HapusAsync()
+    {
+        if (hapusTarget == null) return;
+        isSaving = true;
+        try
+        {
+            var entity = await DbContext.Pegawai.FindAsync(hapusTarget.Id);
+            if (entity != null)
+            {
+                entity.IsAktif = false;
+                await DbContext.SaveChangesAsync();
+            }
+            showHapus = false;
+            SetAlert($"Pegawai '{hapusTarget.Nama}' berhasil dihapus.", false);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            SetAlert($"Gagal menghapus: {ex.Message}", true);
+        }
+        finally { isSaving = false; hapusTarget = null; }
+    }
+
+    private async Task ExportExcelAsync()
+    {
+        isExporting = true;
+        try
+        {
+            var data = allPegawai.Where(p => p.IsAktif).OrderBy(p => p.Nama);
+            var bytes = await ExcelService.ExportPegawaiAsync(data);
+            await JS.InvokeVoidAsync("downloadFileFromBytes", "DataPegawai.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
+        }
+        finally { isExporting = false; }
+    }
+
     private async Task OnImportFileChanged(InputFileChangeEventArgs e)
     {
         isImporting = true;
-        importResult = string.Empty;
         try
         {
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
             var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
             using var stream = e.File.OpenReadStream(10_000_000);
             var (added, updated, deactivated, errors) = await ExcelService.ImportPegawaiAsync(stream, currentUser!.Id, e.File.Name);
-            importResult = $"Berhasil: {added} ditambahkan, {updated} diperbarui, {deactivated} dinonaktifkan.";
-            if (errors.Any()) importResult += $" Kesalahan: {string.Join("; ", errors)}";
             showUpload = false;
+            SetAlert($"Berhasil: {added} ditambahkan, {updated} diperbarui, {deactivated} dinonaktifkan." +
+                     (errors.Any() ? $" Kesalahan: {string.Join("; ", errors)}" : ""), false);
             await LoadAsync();
         }
-        catch (Exception ex) { importResult = $"Gagal impor: {ex.Message}"; }
+        catch (Exception ex) { SetAlert($"Gagal impor: {ex.Message}", true); }
         finally { isImporting = false; }
+    }
+
+    private void SetAlert(string msg, bool isError)
+    {
+        alertMessage = msg;
+        alertIsError = isError;
     }
 }
