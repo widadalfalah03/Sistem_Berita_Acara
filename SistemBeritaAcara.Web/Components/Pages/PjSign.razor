@@ -108,22 +108,57 @@ else
                 <div class="error-box"><i class="bi bi-exclamation-circle-fill"></i> @actionMessage</div>
             }
 
-            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">Gambar tanda tangan Anda di kotak ini:</div>
-            <div class="canvas-wrap">
-                <canvas id="pjSignCanvas" width="800" height="200"
-                        style="height:160px;"
-                        @onmousedown="OnCanvasMouseDown"
-                        @onmousemove="OnCanvasMouseMove"
-                        @onmouseup="OnMouseUp"
-                        @onmouseleave="OnMouseUp"
-                        @ontouchstart="OnTouchStart"
-                        @ontouchmove="OnTouchMove"
-                        @ontouchend="OnTouchEnd"></canvas>
-            </div>
-            <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
-                <button type="button" class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
-                    <i class="bi bi-trash"></i> Bersihkan
+            <!-- Tab bar -->
+            <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;">
+                <button @onclick='() => SwitchPjMode("draw")'
+                        style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:@(pjTtdMode=="draw"?"var(--primary)":"transparent");color:@(pjTtdMode=="draw"?"white":"var(--text-secondary)");">
+                    <i class="bi bi-pen-fill" style="margin-right:5px;"></i>Gambar
                 </button>
+                <button @onclick='() => SwitchPjMode("upload")'
+                        style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(pjTtdMode=="upload"?"var(--primary)":"transparent");color:@(pjTtdMode=="upload"?"white":"var(--text-secondary)");">
+                    <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload Gambar
+                </button>
+            </div>
+
+            <!-- MODE: GAMBAR -->
+            <div style="display:@(pjTtdMode == "draw" ? "block" : "none")">
+                <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">Gambar tanda tangan Anda di kotak ini:</div>
+                <div class="canvas-wrap">
+                    <canvas id="pjSignCanvas" width="800" height="200"
+                            style="height:160px;"
+                            @onmousedown="OnCanvasMouseDown"
+                            @onmousemove="OnCanvasMouseMove"
+                            @onmouseup="OnMouseUp"
+                            @onmouseleave="OnMouseUp"
+                            @ontouchstart="OnTouchStart"
+                            @ontouchmove="OnTouchMove"
+                            @ontouchend="OnTouchEnd"></canvas>
+                </div>
+                <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+                    <button type="button" class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
+                        <i class="bi bi-eraser"></i> Bersihkan
+                    </button>
+                </div>
+            </div>
+
+            <!-- MODE: UPLOAD -->
+            <div style="display:@(pjTtdMode == "upload" ? "block" : "none");margin-bottom:16px;">
+                <label for="pj-ul-input" style="cursor:pointer;display:block;">
+                    <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg);padding:18px;text-align:center;transition:border-color .15s;"
+                         onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                        <i class="bi bi-image" style="font-size:26px;color:var(--primary);display:block;margin-bottom:6px;"></i>
+                        <div style="font-weight:600;font-size:13px;margin-bottom:2px;">Klik untuk pilih gambar</div>
+                        <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
+                    </div>
+                    <input type="file" id="pj-ul-input" accept="image/*" style="display:none"
+                           onchange="ttdUpload.onFileChange('pj-ul-input', 'pj-ul-canvas', 'pj-ul-wrap')" />
+                </label>
+
+                <div id="pj-ul-wrap" style="display:none;margin-top:12px;">
+                    <div style="background:white;border-radius:var(--radius);border:2px solid var(--border);padding:6px;min-height:60px;display:flex;align-items:center;justify-content:center;">
+                        <canvas id="pj-ul-canvas" style="display:block;max-width:100%;height:auto;"></canvas>
+                    </div>
+                </div>
             </div>
 
             <button class="btn btn-primary" style="width:100%;padding:14px;" @onclick="SubmitSignatureAsync" disabled="@isSubmitting">
@@ -244,6 +279,7 @@ else
     private long cacheBreaker;
 
     private bool _isDrawing = false;
+    private string pjTtdMode = "draw"; // "draw" | "upload"
 
     protected override async Task OnInitializedAsync()
     {
@@ -318,6 +354,15 @@ else
         await JS.InvokeVoidAsync("pjCanvas.move", e);
     }
 
+    private async Task SwitchPjMode(string mode)
+    {
+        pjTtdMode = mode;
+        if (mode == "draw")
+            try { await JS.InvokeVoidAsync("pjCanvas.init"); } catch { }
+        else
+            try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
+    }
+
     private async Task ClearCanvasAsync()
         => await JS.InvokeVoidAsync("pjCanvas.clear");
 
@@ -332,14 +377,30 @@ else
             string fpath;
             string fname;
 
-            bool isEmpty = await JS.InvokeAsync<bool>("pjCanvas.isEmpty");
-            if (isEmpty)
+            string? dataUrl;
+            if (pjTtdMode == "upload")
             {
-                actionMessage = "Silakan gambar tanda tangan Anda terlebih dahulu.";
-                isSubmitting = false;
-                return;
+                bool hasImg = await JS.InvokeAsync<bool>("ttdUpload.hasImage");
+                if (!hasImg)
+                {
+                    actionMessage = "Silakan upload gambar tanda tangan terlebih dahulu.";
+                    isSubmitting = false;
+                    return;
+                }
+                dataUrl = await JS.InvokeAsync<string>("ttdUpload.getDataUrl");
             }
-            var dataUrl = await JS.InvokeAsync<string>("pjCanvas.getDataUrl");
+            else
+            {
+                bool isEmpty = await JS.InvokeAsync<bool>("pjCanvas.isEmpty");
+                if (isEmpty)
+                {
+                    actionMessage = "Silakan gambar tanda tangan Anda terlebih dahulu.";
+                    isSubmitting = false;
+                    return;
+                }
+                dataUrl = await JS.InvokeAsync<string>("pjCanvas.getDataUrl");
+            }
+            if (string.IsNullOrEmpty(dataUrl)) { actionMessage = "Gagal membaca data tanda tangan."; isSubmitting = false; return; }
             var bytes = Convert.FromBase64String(dataUrl.Split(',')[1]);
             fname = $"ba-{ba!.Id}-pj.png";
             fpath = Path.Combine(folder, fname);

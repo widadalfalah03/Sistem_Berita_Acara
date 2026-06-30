@@ -196,25 +196,60 @@ else
         <div style="background:var(--bg);width:600px;max-width:95%;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-lg);" @onclick:stopPropagation="true">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <h4 style="margin:0;font-size:18px;"><i class="bi bi-pen" style="color:var(--primary);margin-right:6px;"></i> Ubah Tanda Tangan</h4>
-                <button class="btn-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);" @onclick="CloseTtdModal">&times;</button>
+                <button style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);" @onclick="CloseTtdModal">&times;</button>
             </div>
 
-            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Gambarkan tanda tangan digital Anda yang baru di bawah ini.</p>
+            <!-- Tab bar -->
+            <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
+                <button @onclick='() => SwitchTtdMode("draw")'
+                        style="flex:1;padding:9px 12px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:@(ttdMode=="draw"?"var(--primary)":"transparent");color:@(ttdMode=="draw"?"white":"var(--text-secondary)");">
+                    <i class="bi bi-pen-fill" style="margin-right:5px;"></i>Gambar
+                </button>
+                <button @onclick='() => SwitchTtdMode("upload")'
+                        style="flex:1;padding:9px 12px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(ttdMode=="upload"?"var(--primary)":"transparent");color:@(ttdMode=="upload"?"white":"var(--text-secondary)");">
+                    <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload Gambar
+                </button>
+            </div>
 
-            <div style="border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white;margin-bottom:12px;position:relative;">
-                <canvas id="ttd-canvas" width="600" height="200"
-                        style="width:100%;height:200px;cursor:crosshair;touch-action:none;display:block;">
-                </canvas>
-                <div id="ttd-placeholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
-                    <span style="font-size:14px;color:var(--text-muted);">Gambar tanda tangan Anda di sini</span>
+            <!-- ── MODE: GAMBAR ── -->
+            <div style="display:@(ttdMode == "draw" ? "block" : "none")">
+                <div style="border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;background:white;margin-bottom:12px;position:relative;">
+                    <canvas id="ttd-canvas" width="600" height="200" style="width:100%;height:200px;cursor:crosshair;touch-action:none;display:block;"></canvas>
+                    <div id="ttd-placeholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                        <span style="font-size:14px;color:var(--text-muted);">Gambar tanda tangan Anda di sini</span>
+                    </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
+                        <i class="bi bi-eraser"></i> Hapus
+                    </button>
+                    <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@isSavingTtd">
+                        @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
+                        else { <i class="bi bi-save"></i> <span>Simpan</span> }
+                    </button>
                 </div>
             </div>
-            
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
-                <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
-                    <i class="bi bi-eraser"></i> Hapus TTD
-                </button>
-                <div style="display:flex;gap:8px;">
+
+            <!-- ── MODE: UPLOAD ── -->
+            <div style="display:@(ttdMode == "upload" ? "block" : "none")">
+                <label for="ttd-ul-input" style="cursor:pointer;display:block;">
+                    <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--surface);padding:20px;text-align:center;transition:border-color .15s;"
+                         onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                        <i class="bi bi-image" style="font-size:30px;color:var(--primary);display:block;margin-bottom:8px;"></i>
+                        <div style="font-weight:600;font-size:14px;margin-bottom:3px;">Klik untuk pilih gambar</div>
+                        <div style="font-size:12px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
+                    </div>
+                    <input type="file" id="ttd-ul-input" accept="image/*" style="display:none"
+                           onchange="ttdUpload.onFileChange('ttd-ul-input', 'ttd-ul-canvas', 'ttd-ul-wrap')" />
+                </label>
+
+                <div id="ttd-ul-wrap" style="display:none;margin-top:14px;">
+                    <div style="background:white;border-radius:var(--radius);border:2px solid var(--border);padding:8px;min-height:80px;display:flex;align-items:center;justify-content:center;">
+                        <canvas id="ttd-ul-canvas" style="display:block;max-width:100%;height:auto;"></canvas>
+                    </div>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;margin-top:16px;">
                     <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@isSavingTtd">
                         @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
                         else { <i class="bi bi-save"></i> <span>Simpan</span> }
@@ -244,6 +279,7 @@ else
     private bool isSavingTtd;
     private bool isCanvasEmpty = true;
     private bool isDrawingActive = false;
+    private string ttdMode = "draw"; // "draw" | "upload"
 
 
 
@@ -263,16 +299,28 @@ else
     private async Task OpenTtdModal()
     {
         showTtdModal = true;
+        ttdMode = "draw";
         isCanvasEmpty = true;
         isDrawingActive = false;
-        // Delay slight to allow DOM to render modal canvas, then init it
         await Task.Delay(100);
         await JS.InvokeVoidAsync("ttdCanvas.init");
+        try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
+    }
+
+    private async Task SwitchTtdMode(string mode)
+    {
+        ttdMode = mode;
+        await Task.Delay(50);
+        if (mode == "draw")
+            await JS.InvokeVoidAsync("ttdCanvas.init");
+        else
+            try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
     }
 
     private void CloseTtdModal()
     {
         showTtdModal = false;
+        ttdMode = "draw";
     }
 
     // ── Canvas drawing events ──
@@ -292,15 +340,20 @@ else
         globalMessage = string.Empty;
         try
         {
-            bool isEmpty = await JS.InvokeAsync<bool>("ttdCanvas.isEmpty_check");
-            if (isEmpty)
+            string? dataUrl;
+            if (ttdMode == "upload")
             {
-                globalMessage = "Gagal: Silakan gambar tanda tangan Anda terlebih dahulu.";
-                return;
+                bool hasImg = await JS.InvokeAsync<bool>("ttdUpload.hasImage");
+                if (!hasImg) { globalMessage = "Gagal: Silakan upload gambar tanda tangan terlebih dahulu."; return; }
+                dataUrl = await JS.InvokeAsync<string>("ttdUpload.getDataUrl");
             }
-
-            var dataUrl = await JS.InvokeAsync<string>("ttdCanvas.getDataUrl");
-            if (string.IsNullOrEmpty(dataUrl)) { globalMessage = "Gagal membaca canvas TTD."; return; }
+            else
+            {
+                bool isEmpty = await JS.InvokeAsync<bool>("ttdCanvas.isEmpty_check");
+                if (isEmpty) { globalMessage = "Gagal: Silakan gambar tanda tangan Anda terlebih dahulu."; return; }
+                dataUrl = await JS.InvokeAsync<string>("ttdCanvas.getDataUrl");
+            }
+            if (string.IsNullOrEmpty(dataUrl)) { globalMessage = "Gagal membaca data TTD."; return; }
 
             // dataUrl format: "data:image/png;base64,XXXXX"
             var base64 = dataUrl.Split(',')[1];
