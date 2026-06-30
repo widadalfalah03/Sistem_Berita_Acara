@@ -159,14 +159,32 @@ else
 
         revisiBA = await revisiQuery.OrderByDescending(b => b.ApprovedAt).ToListAsync();
 
-        // Riwayat: BA yang pernah ditolak (WasRejected=true) tapi sudah direvisi (Status != "Rejected")
-        IQueryable<BeritaAcaraEntity> riwayatQuery = baseQuery.Where(b => b.WasRejected && b.Status != "Rejected");
-        if (currentRole == "AdminGudangBarang")
-            riwayatQuery = riwayatQuery.Where(b => b.CreatedBy == currentUserId);
-        else if (currentRole == "Approver")
-            riwayatQuery = riwayatQuery.Where(b => b.MengetahuiId == currentUserId);
+        // Riwayat: Ambil dari Notification agar setiap kali ditolak tercatat sebagai satu baris riwayat terpisah
+        IQueryable<SistemBeritaAcara.Core.Entities.Notification> notifQuery = DbContext.Notification
+            .Include(n => n.BeritaAcara).ThenInclude(b => b!.Pj)
+            .Include(n => n.BeritaAcara).ThenInclude(b => b!.Mengetahui)
+            .Where(n => n.Tipe == "BA_REJECTED" && n.BaId != null);
 
-        riwayatBA = await riwayatQuery.OrderByDescending(b => b.ApprovedAt).ToListAsync();
+        if (currentRole == "AdminGudangBarang")
+            notifQuery = notifQuery.Where(n => n.BeritaAcara!.CreatedBy == currentUserId);
+        else if (currentRole == "Approver")
+            notifQuery = notifQuery.Where(n => n.BeritaAcara!.MengetahuiId == currentUserId);
+
+        var historyList = await notifQuery.OrderByDescending(n => n.CreatedAt).ToListAsync();
+        
+        riwayatBA = historyList.Select(n => new BeritaAcaraEntity
+        {
+            Id = n.BaId ?? 0,
+            NomorSurat = n.BeritaAcara?.NomorSurat,
+            Jenis = n.BeritaAcara?.Jenis ?? "-",
+            AlasanReject = n.Message.Contains("ditolak: ") ? n.Message[(n.Message.IndexOf("ditolak: ") + 9)..] : n.Message,
+            ApprovedAt = n.CreatedAt,
+            Status = "Rejected",
+            CreatedBy = n.BeritaAcara?.CreatedBy ?? 0,
+            MengetahuiId = n.BeritaAcara?.MengetahuiId,
+            Pj = n.BeritaAcara?.Pj,
+            Mengetahui = n.BeritaAcara?.Mengetahui
+        }).ToList();
 
         isLoading = false;
     }
