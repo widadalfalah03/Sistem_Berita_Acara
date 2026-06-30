@@ -773,7 +773,8 @@ public class DocumentService : IDocumentService
         var relPath = $"files/documents/{fileName}";
 
         string judul = ba.JenisCustom ?? "Lainnya";
-        string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
+        // Gunakan "Draft" sebagai placeholder — akan diganti nomor surat final oleh PatchNomorSuratAsync
+        string nomorSurat = "Draft";
 
         await Task.Run(() =>
         {

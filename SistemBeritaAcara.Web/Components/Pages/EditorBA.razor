@@ -271,7 +271,10 @@
                     var trackedBa = await DbContext.Set<BeritaAcaraEntity>().FindAsync(Id);
                     if (trackedBa != null)
                     {
-                        trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+                        // Lainnya: generate dokumen simpel (judul + nomor surat saja, tanpa template lengkap)
+                        trackedBa.DocxPath = ba.Jenis == "Lainnya"
+                            ? await DocumentService.GenerateLainnyaDocxAsync(ba)
+                            : await DocumentService.GenerateDocxAsync(ba);
                         await DbContext.SaveChangesAsync();
                         ba = await DbContext.Set<BeritaAcaraEntity>()
                             .AsNoTracking()
@@ -281,11 +284,15 @@
                             .FirstOrDefaultAsync(b => b.Id == Id);
                     }
 
-                    var currentUser = await DbContext.Users.FindAsync(_currentUserId);
-                    if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
+                    // TTD Menyerahkan hanya untuk BA yang punya blok tanda tangan (bukan Lainnya)
+                    if (ba?.Jenis != "Lainnya")
                     {
-                        var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                        await DocumentService.EmbedTtdMenyerahkanAsync(Id, ttdPhysicalPath);
+                        var currentUser = await DbContext.Users.FindAsync(_currentUserId);
+                        if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
+                        {
+                            var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                            await DocumentService.EmbedTtdMenyerahkanAsync(Id, ttdPhysicalPath);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -378,16 +385,20 @@
 
         try
         {
-            var currentUser = await DbContext.Users.FindAsync(_currentUserId);
-            if (currentUser == null || string.IsNullOrEmpty(currentUser.TtdPath))
+            // Lainnya tidak perlu TTD sama sekali — cek TTD hanya untuk jenis lain
+            ApplicationUser? currentUser = null;
+            if (ba.Jenis != "Lainnya")
             {
-                errorMessage = "Gagal Submit: Anda belum mengunggah Tanda Tangan. Silakan unggah di Profil terlebih dahulu.";
-                isSubmitting = false;
-                return;
+                currentUser = await DbContext.Users.FindAsync(_currentUserId);
+                if (currentUser == null || string.IsNullOrEmpty(currentUser.TtdPath))
+                {
+                    errorMessage = "Gagal Submit: Anda belum mengunggah Tanda Tangan. Silakan unggah di Profil terlebih dahulu.";
+                    isSubmitting = false;
+                    return;
+                }
             }
 
             // Muat ulang entity BA dengan tracking agar EF bisa melacak perubahan.
-            // ba di state komponen ini adalah AsNoTracking — tidak bisa dipakai langsung untuk SaveChanges.
             DbContext.ChangeTracker.Clear();
             var trackedBa = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Pj)
@@ -404,15 +415,15 @@
 
             if (string.IsNullOrEmpty(trackedBa.DocxPath))
             {
-                trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(trackedBa);
+                trackedBa.DocxPath = trackedBa.Jenis == "Lainnya"
+                    ? await DocumentService.GenerateLainnyaDocxAsync(trackedBa)
+                    : await DocumentService.GenerateDocxAsync(trackedBa);
                 await DbContext.SaveChangesAsync();
             }
 
-            var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-            await DocumentService.EmbedTtdMenyerahkanAsync(trackedBa.Id, ttdPhysicalPath);
-
             if (trackedBa.Jenis == "Lainnya")
             {
+                // Lainnya: langsung ke Arsip tanpa TTD, nomor surat di-generate dan di-patch
                 var (counterValue, nomorSurat) = await BACounterService.GetNextNomorSuratAsync(trackedBa.Tanggal, trackedBa.Jenis);
                 trackedBa.NomorSurat = nomorSurat;
                 trackedBa.CounterValue = counterValue;
@@ -426,6 +437,10 @@
             }
             else
             {
+                // Embed TTD Menyerahkan (Admin GB) untuk BA selain Lainnya
+                var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser!.TtdPath!.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                await DocumentService.EmbedTtdMenyerahkanAsync(trackedBa.Id, ttdPhysicalPath);
+
                 bool pjAlreadySigned = !string.IsNullOrEmpty(trackedBa.TtdPjPath) && trackedBa.PjSignedAt.HasValue;
 
                 if (pjAlreadySigned)

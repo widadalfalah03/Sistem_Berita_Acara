@@ -10,6 +10,6 @@ public interface IDocumentService
     Task<string> EmbedTtdPjAsync(int baId, string ttdPath);
     Task<string> EmbedTtdMengetahuiAsync(int baId, string ttdPath);
     Task ConvertDocxToPdfAsync(string docxPhysicalPath);
-    /// <summary>Generate dokumen simpel untuk BA Jenis Lainnya (teks centered besar).</summary>
-
+    /// <summary>Generate dokumen simpel untuk BA Jenis Lainnya: BERITA ACARA + judul custom + nomor surat.</summary>
+    Task<string> GenerateLainnyaDocxAsync(BeritaAcara ba);
 }
