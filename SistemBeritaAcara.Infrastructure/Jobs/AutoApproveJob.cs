@@ -76,7 +76,7 @@ public class AutoApproveJob(
 
                 // 5. Kirim notifikasi ke Approver (inbox)
                 string msgInbox = $"Dokumen {ba.NomorSurat ?? $"BA-{ba.Id}"} telah disetujui otomatis (PJ melewati batas 24 jam) dan membutuhkan otorisasi Anda.";
-                await notificationService.SendAsync(ba.MengetahuiId, "APPROVAL_REQUIRED", msgInbox, ba.Id);
+                await notificationService.SendAsync(ba.MengetahuiId ?? 0, "APPROVAL_REQUIRED", msgInbox, ba.Id);
 
                 // 6. Kirim email ke Approver
                 if (!string.IsNullOrEmpty(ba.Mengetahui?.Email))

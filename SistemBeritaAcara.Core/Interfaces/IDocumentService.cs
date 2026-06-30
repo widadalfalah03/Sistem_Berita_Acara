@@ -1,4 +1,4 @@
-using SistemBeritaAcara.Core.Entities;
+﻿using SistemBeritaAcara.Core.Entities;
 
 namespace SistemBeritaAcara.Core.Interfaces;
 
@@ -10,4 +10,6 @@ public interface IDocumentService
     Task<string> EmbedTtdPjAsync(int baId, string ttdPath);
     Task<string> EmbedTtdMengetahuiAsync(int baId, string ttdPath);
     Task ConvertDocxToPdfAsync(string docxPhysicalPath);
+    /// <summary>Generate dokumen simpel untuk BA Jenis Lainnya (teks centered besar).</summary>
+
 }
