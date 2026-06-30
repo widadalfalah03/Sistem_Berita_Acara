@@ -161,7 +161,8 @@ else
 
         // Riwayat: Ambil dari Notification agar setiap kali ditolak tercatat sebagai satu baris riwayat terpisah
         IQueryable<SistemBeritaAcara.Core.Entities.Notification> notifQuery = DbContext.Notification
-            .Include(n => n.BeritaAcara)
+            .Include(n => n.BeritaAcara).ThenInclude(b => b!.Pj)
+            .Include(n => n.BeritaAcara).ThenInclude(b => b!.Mengetahui)
             .Where(n => n.Tipe == "BA_REJECTED" && n.BaId != null);
 
         if (currentRole == "AdminGudangBarang")
@@ -180,7 +181,9 @@ else
             ApprovedAt = n.CreatedAt,
             Status = "Rejected",
             CreatedBy = n.BeritaAcara?.CreatedBy ?? 0,
-            MengetahuiId = n.BeritaAcara?.MengetahuiId
+            MengetahuiId = n.BeritaAcara?.MengetahuiId,
+            Pj = n.BeritaAcara?.Pj,
+            Mengetahui = n.BeritaAcara?.Mengetahui
         }).ToList();
 
         isLoading = false;
