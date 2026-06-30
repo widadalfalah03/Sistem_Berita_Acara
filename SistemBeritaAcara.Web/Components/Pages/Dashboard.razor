@@ -402,7 +402,7 @@ else if (currentRole == "Approver")
                         <th style="cursor:pointer;" @onclick="@(() => SortApprover("No. Surat"))">No. Surat <i class="bi @GetApproverSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortApprover("Jenis BA"))">Jenis Berita Acara <i class="bi @GetApproverSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortApprover("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetApproverSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Tanggal Submit"))">Tanggal Submit <i class="bi @GetApproverSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Tanggal Submit"))">Waktu Submit <i class="bi @GetApproverSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -415,7 +415,10 @@ else if (currentRole == "Approver")
                                 <div class="cell-main">@ba.Pj?.Nama</div>
                                 <div class="cell-sub">@ba.Pj?.FungsiDirektorat</div>
                             </td>
-                            <td>@ba.SubmittedAt?.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <div>@ba.SubmittedAt?.ToString("dd MMM yyyy")</div>
+                                <div style="font-size:11px;color:var(--text-muted);">@ba.SubmittedAt?.ToString("HH:mm") WIB</div>
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -600,7 +603,7 @@ else if (currentRole == "AdminIT")
 
         stat.Draft = myBA.Count(b => b.Status == "Draft");
         stat.Progress = myBA.Count(b => b.Status is "WaitingPJSign" or "WaitingApproval");
-        stat.Approved = myBA.Count(b => b.Status == "Approved");
+        stat.Approved = myBA.Count(b => b.Status == "Approved" || b.Status == "Archived");
         stat.Rejected = myBA.Count(b => b.Status == "Rejected");
 
         jenisData.Alokasi = myBA.Count(b => b.Jenis == "Alokasi");
@@ -609,7 +612,7 @@ else if (currentRole == "AdminIT")
 
         activePeminjaman = myBA
             .Where(b => b.Jenis == "Peminjaman" && b.TanggalKembali.HasValue
-                        && b.Status == "Approved" && !b.IsReturned)
+                        && (b.Status == "Approved" || b.Status == "Archived") && !b.IsReturned)
             .OrderBy(b => b.TanggalKembali)
             .ToList();
     }
@@ -622,7 +625,7 @@ else if (currentRole == "AdminIT")
             .ToListAsync();
 
         approverStat.Pending = myQueue.Count(b => b.Status == "WaitingApproval");
-        var approvedBA = myQueue.Where(b => b.Status == "Approved").ToList();
+        var approvedBA = myQueue.Where(b => b.Status == "Approved" || b.Status == "Archived").ToList();
         approverStat.Total = approvedBA.Count;
         approverStat.ApprovedAlokasi = approvedBA.Count(b => b.Jenis == "Alokasi");
         approverStat.ApprovedPeminjaman = approvedBA.Count(b => b.Jenis == "Peminjaman");
@@ -697,6 +700,7 @@ else if (currentRole == "AdminIT")
     private static string GetStatusPill(string status) => status switch
     {
         "Approved" => "pill-approved",
+        "Archived" => "pill-approved",
         "Rejected" => "pill-rejected",
         "WaitingApproval" => "pill-waiting-approval",
         "WaitingPJSign" => "pill-waiting-pj",
@@ -706,6 +710,7 @@ else if (currentRole == "AdminIT")
     private static string GetStatusLabel(string status) => status switch
     {
         "Approved" => "Disetujui",
+        "Archived" => "Disetujui",
         "Rejected" => "Ditolak",
         "WaitingApproval" => "Menunggu Approval",
         "WaitingPJSign" => "Menunggu TTD Penanggung Jawab",

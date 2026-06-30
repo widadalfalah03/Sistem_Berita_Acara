@@ -8,10 +8,12 @@ public class BeritaAcara
     public DateOnly Tanggal { get; set; }
     public string Jenis { get; set; } = string.Empty;
     public string? JenisCustom { get; set; }
-    public int PjId { get; set; }
+    public int? PjId { get; set; }
     public string? PjNoTelp { get; set; }
-    public int MenyerahkanId { get; set; }
-    public int MengetahuiId { get; set; }
+    /// <summary>Diisi jika tipe PJ adalah Tenaga Alih Daya (TAD). Nama pengguna/user TAD.</summary>
+    public string? PengunaAlihDaya { get; set; }
+    public int? MenyerahkanId { get; set; }
+    public int? MengetahuiId { get; set; }
     public string? TiketSscNo { get; set; }
     public DateOnly? TanggalKembali { get; set; }
     public string Status { get; set; } = "Draft";
@@ -29,9 +31,9 @@ public class BeritaAcara
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-    public Pegawai Pj { get; set; } = null!;
-    public Pegawai Menyerahkan { get; set; } = null!;
-    public ApplicationUser Mengetahui { get; set; } = null!;
+    public Pegawai? Pj { get; set; }
+    public Pegawai? Menyerahkan { get; set; }
+    public ApplicationUser? Mengetahui { get; set; }
     public ApplicationUser Creator { get; set; } = null!;
     public ICollection<PerangkatBA> Perangkat { get; set; } = [];
     public ICollection<BuktiFoto> BuktiFotos { get; set; } = [];
