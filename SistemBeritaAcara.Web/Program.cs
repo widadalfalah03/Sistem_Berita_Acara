@@ -311,4 +311,9 @@ RecurringJob.AddOrUpdate<DueDateCheckerJob>(
     job => job.CheckDueDatesAsync(),
     Cron.Daily(7));
 
+RecurringJob.AddOrUpdate<AutoApproveJob>(
+    "cek-auto-approve-pj",
+    job => job.ProcessAutoApproveAsync(),
+    Cron.Hourly());
+
 app.Run();

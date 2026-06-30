@@ -356,18 +356,7 @@ else
             // File TTD PJ sengaja TIDAK dihapus di sini — dibutuhkan lagi saat Approve
             // untuk di-embed ulang ke dokumen final (ApproveAsync akan menghapusnya setelah selesai)
 
-            // Auto-embed approver preview so draft PDF is ready for the approver
-            if (approverUser != null && !string.IsNullOrWhiteSpace(approverUser.TtdPath))
-            {
-                var approverTtdPhysical = Path.Combine(
-                    Directory.GetCurrentDirectory(), "wwwroot",
-                    approverUser.TtdPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                if (File.Exists(approverTtdPhysical))
-                {
-                    try { await DocumentService.EmbedTtdPreviewApproverAsync(ba.Id, approverTtdPhysical); }
-                    catch { /* non-critical */ }
-                }
-            }
+
 
             await NotificationService.SendToRoleAsync("Approver", "WAITING_APPROVAL",
                 $"Draft BA telah ditandatangani PJ ({ba.Pj?.Nama}) dan menunggu approval Anda.", ba.Id);

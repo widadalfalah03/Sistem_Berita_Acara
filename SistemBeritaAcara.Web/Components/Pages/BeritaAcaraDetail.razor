@@ -376,16 +376,7 @@ else
 
         isApprover = currentRole == "Approver" && appUser.Id == ba.MengetahuiId;
 
-        // Embed signature of Approver for preview purposes if they are viewing it
-        if (isApprover && ba.Status == "WaitingApproval" && !string.IsNullOrEmpty(appUser.TtdPath))
-        {
-            var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", appUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-            try
-            {
-                await DocumentService.EmbedTtdPreviewApproverAsync(ba.Id, ttdPhysicalPath);
-            }
-            catch { /* Ignore if it's already embedded or fails */ }
-        }
+
 
         pdfVersion = DateTime.UtcNow.Ticks;
         isLoading = false;
@@ -487,6 +478,8 @@ else
             }
 
             // Re-embed TTD PJ (Yang Menerima) — file masih ada, dihapus setelah ini
+            // PENGECUALIAN: jika TTD PJ adalah stempel sistem auto-approve, JANGAN dihapus
+            // (itu aset bersama di wwwroot/images/, bukan file personal PJ)
             if (!string.IsNullOrWhiteSpace(ba.TtdPjPath))
             {
                 var pjTtdPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
@@ -494,8 +487,13 @@ else
                 if (File.Exists(pjTtdPhysical))
                 {
                     await DocumentService.EmbedTtdPjAsync(ba.Id, pjTtdPhysical);
-                    // Hapus file TTD PJ sekarang — sudah di-embed ke dokumen final
-                    try { File.Delete(pjTtdPhysical); } catch { }
+                    // Hapus file TTD PJ personal setelah di-embed ke dokumen final
+                    // JANGAN hapus jika ini adalah stempel sistem auto-approve
+                    bool isAutoApproveStamp = ba.TtdPjPath.Contains("auto_approve_stamp");
+                    if (!isAutoApproveStamp)
+                    {
+                        try { File.Delete(pjTtdPhysical); } catch { }
+                    }
                 }
             }
 
