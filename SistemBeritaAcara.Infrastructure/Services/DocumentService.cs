@@ -251,6 +251,8 @@ public class DocumentService : IDocumentService
                 if (ba.BuktiFotos != null && ba.BuktiFotos.Any())
                 {
                     uint imgId = 100U;
+                    var containerPara = new Paragraph();
+                    containerPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
                     foreach (var foto in ba.BuktiFotos)
                     {
                         var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
@@ -267,25 +269,25 @@ public class DocumentService : IDocumentService
                         using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
 
                         var dims = GetImageDimensions(fotoPhysical);
-                        long cx = 5400000L;
-                        long cy = 3960000L;
+                        long cx = 2700000L;
+                        long cy = 1980000L;
                         if (dims.width > 0 && dims.height > 0)
                         {
                             double imgRatio = (double)dims.width / dims.height;
                             if (imgRatio > 1.0) { // Landscape
-                                cx = 5400000L;
-                                cy = (long)(5400000L / imgRatio);
+                                cx = 2700000L;
+                                cy = (long)(2700000L / imgRatio);
                             } else { // Portrait or Square
-                                cy = 5400000L;
-                                cx = (long)(5400000L * imgRatio);
+                                cy = 2700000L;
+                                cx = (long)(2700000L * imgRatio);
                             }
                         }
 
                         var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId++);
-                        var imgPara = new Paragraph(new Run(drawing));
-                        imgPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
-                        mainPart.Document.Body!.Append(imgPara);
+                        containerPara.Append(new Run(drawing));
+                        containerPara.Append(new Run(new Text("  ")));
                     }
+                    mainPart.Document.Body!.Append(containerPara);
                 }
             }
             else if (ba.Jenis != "Lainnya" && ba.BuktiFotos != null && ba.BuktiFotos.Any())
@@ -297,6 +299,8 @@ public class DocumentService : IDocumentService
                 });
 
                 uint imgId = 200U;
+                var containerPara = new Paragraph();
+                containerPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
                 foreach (var foto in ba.BuktiFotos)
                 {
                     var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
@@ -313,25 +317,25 @@ public class DocumentService : IDocumentService
                     using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
 
                     var dims = GetImageDimensions(fotoPhysical);
-                    long cx = 5400000L;
-                    long cy = 3960000L;
+                    long cx = 2700000L;
+                    long cy = 1980000L;
                     if (dims.width > 0 && dims.height > 0)
                     {
                         double imgRatio = (double)dims.width / dims.height;
                         if (imgRatio > 1.0) { // Landscape
-                            cx = 5400000L;
-                            cy = (long)(5400000L / imgRatio);
+                            cx = 2700000L;
+                            cy = (long)(2700000L / imgRatio);
                         } else { // Portrait or Square
-                            cy = 5400000L;
-                            cx = (long)(5400000L * imgRatio);
+                            cy = 2700000L;
+                            cx = (long)(2700000L * imgRatio);
                         }
                     }
 
                     var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId++);
-                    var imgPara = new Paragraph(new Run(drawing));
-                    imgPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
-                    mainPart.Document.Body!.Append(imgPara);
+                    containerPara.Append(new Run(drawing));
+                    containerPara.Append(new Run(new Text("  ")));
                 }
+                mainPart.Document.Body!.Append(containerPara);
             }
 
             mainPart.Document.Save();
