@@ -19,17 +19,23 @@
       "skillPath": ".agents/skills/everything-claude-code/SKILL.md",
       "computedHash": "59891637565c983eb16b976d8f76ca7e1662765e9573e321d2c8af8e9bdb222b"
     },
+    "high-end-visual-design": {
+      "source": "leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/soft-skill/SKILL.md",
+      "computedHash": "f730e4132775f13eea19e3dc39afc6bb453cfc0498872b127ad8f0d47cfd802d"
+    },
     "huashu-design": {
       "source": "alchaincyf/huashu-design",
       "sourceType": "github",
       "skillPath": "SKILL.md",
-      "computedHash": "bda9e53b62591079172055c1ac28df8dc9a03e1fc958962dfc7cde4a2255315d"
+      "computedHash": "78e1678a8faab0ff306e19f39ba362a2248180e167146b21d8a46c549f468083"
     },
     "impeccable": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "skillPath": ".agents/skills/impeccable/SKILL.md",
-      "computedHash": "87d128e3980037fa8e203062cd8fcf2f4d35c340fd8eb93b6c02ab050315bea8"
+      "computedHash": "e237e1c1c8dfe6c74fb24502669219a846d25834b1a104fdf865f2830a48cf49"
     },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
