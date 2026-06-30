@@ -113,9 +113,9 @@ else
                 <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:14px;flex-shrink:0;">
                     <span class="arsip-row-date">@ba.Tanggal.ToString("dd MMM yyyy")</span>
-                    @if (!string.IsNullOrEmpty(ba.DocxFinalPath))
+                    @if (!string.IsNullOrEmpty(ba.DocxFinalPath) || !string.IsNullOrEmpty(ba.DocxPath))
                     {
-                        <a href="/@ba.DocxFinalPath" download
+                        <a href="/api/ba/@ba.Id/download" download
                            class="arsip-row-download"
                            @onclick:stopPropagation="true"
                            title="Unduh dokumen">
@@ -238,7 +238,7 @@ else
             .Include(b => b.Menyerahkan)
             .Include(b => b.Mengetahui)
             .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
-            .Where(b => b.Status == "Approved");
+            .Where(b => b.Status == "Approved" || b.Status == "Archived");
 
 
         allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();

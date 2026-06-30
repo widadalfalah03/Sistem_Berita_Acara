@@ -603,7 +603,7 @@ else if (currentRole == "AdminIT")
 
         stat.Draft = myBA.Count(b => b.Status == "Draft");
         stat.Progress = myBA.Count(b => b.Status is "WaitingPJSign" or "WaitingApproval");
-        stat.Approved = myBA.Count(b => b.Status == "Approved");
+        stat.Approved = myBA.Count(b => b.Status == "Approved" || b.Status == "Archived");
         stat.Rejected = myBA.Count(b => b.Status == "Rejected");
 
         jenisData.Alokasi = myBA.Count(b => b.Jenis == "Alokasi");
@@ -612,7 +612,7 @@ else if (currentRole == "AdminIT")
 
         activePeminjaman = myBA
             .Where(b => b.Jenis == "Peminjaman" && b.TanggalKembali.HasValue
-                        && b.Status == "Approved" && !b.IsReturned)
+                        && (b.Status == "Approved" || b.Status == "Archived") && !b.IsReturned)
             .OrderBy(b => b.TanggalKembali)
             .ToList();
     }
@@ -625,7 +625,7 @@ else if (currentRole == "AdminIT")
             .ToListAsync();
 
         approverStat.Pending = myQueue.Count(b => b.Status == "WaitingApproval");
-        var approvedBA = myQueue.Where(b => b.Status == "Approved").ToList();
+        var approvedBA = myQueue.Where(b => b.Status == "Approved" || b.Status == "Archived").ToList();
         approverStat.Total = approvedBA.Count;
         approverStat.ApprovedAlokasi = approvedBA.Count(b => b.Jenis == "Alokasi");
         approverStat.ApprovedPeminjaman = approvedBA.Count(b => b.Jenis == "Peminjaman");
@@ -700,6 +700,7 @@ else if (currentRole == "AdminIT")
     private static string GetStatusPill(string status) => status switch
     {
         "Approved" => "pill-approved",
+        "Archived" => "pill-approved",
         "Rejected" => "pill-rejected",
         "WaitingApproval" => "pill-waiting-approval",
         "WaitingPJSign" => "pill-waiting-pj",
@@ -709,6 +710,7 @@ else if (currentRole == "AdminIT")
     private static string GetStatusLabel(string status) => status switch
     {
         "Approved" => "Disetujui",
+        "Archived" => "Disetujui",
         "Rejected" => "Ditolak",
         "WaitingApproval" => "Menunggu Approval",
         "WaitingPJSign" => "Menunggu TTD Penanggung Jawab",

@@ -31,15 +31,26 @@ public class DocumentService : IDocumentService
         Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures"));
     }
 
-    private string GetTemplatePath(string jenis)
+    private string GetTemplatePath(string jenis, string? pengunaAlihDaya)
     {
-        var fileName = jenis == "Peminjaman" ? "BA_Template_Peminjaman.docx" : "BA_Template_Alokasi.docx";
+        string jenisUpper = (jenis ?? "ALOKASI").ToUpper();
+        if (jenisUpper == "LAINNYA")
+        {
+            return Path.Combine(_templatesDir, "Template_BA_LAINNYA.docx");
+        }
+
+        string roleSuffix = string.IsNullOrWhiteSpace(pengunaAlihDaya) ? "Pekerja" : "TAD";
+        if (jenisUpper != "ALOKASI" && jenisUpper != "PEMINJAMAN" && jenisUpper != "PENARIKAN")
+        {
+            jenisUpper = "ALOKASI";
+        }
+        var fileName = $"Template_BA_{jenisUpper}_{roleSuffix}.docx";
         return Path.Combine(_templatesDir, fileName);
     }
 
     public async Task<string> GenerateDocxAsync(BeritaAcara ba)
     {
-        var templatePath = GetTemplatePath(ba.Jenis ?? "Alokasi");
+        var templatePath = GetTemplatePath(ba.Jenis ?? "Alokasi", ba.PengunaAlihDaya);
         if (!File.Exists(templatePath))
         {
             throw new FileNotFoundException($"Template DOCX tidak ditemukan: {Path.GetFileName(templatePath)}. Pastikan file ada di wwwroot/files/templates/");
@@ -64,14 +75,14 @@ public class DocumentService : IDocumentService
                 ? string.Join(", ", ba.Perangkat.Select(p => p.Barang?.NamaBarang ?? "-").Distinct())
                 : "-";
 
-            // Tanggal kembali (Peminjaman only) — tampilkan "-" jika tidak diisi
+            // Tanggal kembali (Peminjaman only) â€” tampilkan "-" jika tidak diisi
             var tanggalKembaliStr = ba.Jenis == "Peminjaman"
                 ? (ba.TanggalKembali.HasValue
                     ? ba.TanggalKembali.Value.ToString("dd MMMM yyyy", idCulture)
                     : "-")
                 : string.Empty;
 
-            // Jabatan approver — prefer Pegawai.Jabatan (loaded via DB if ApplicationUser.Jabatan is null)
+            // Jabatan approver â€” prefer Pegawai.Jabatan (loaded via DB if ApplicationUser.Jabatan is null)
             string jabatanApprover;
             if (!string.IsNullOrWhiteSpace(ba.Mengetahui?.Jabatan))
             {
@@ -98,6 +109,7 @@ public class DocumentService : IDocumentService
 
             var replacements = new Dictionary<string, string>
             {
+                { "BERITA ACARA ALOKASI BARANG", ba.Jenis == "Lainnya" ? (ba.JenisCustom?.ToUpper() ?? "BERITA ACARA LAINNYA") : "BERITA ACARA ALOKASI BARANG" },
                 { "{{NomorSurat}}", ba.NomorSurat ?? "Draft" },
                 { "{{Tanggal}}", ba.Tanggal.ToString("dd MMMM yyyy", idCulture) },
                 { "{{HariTanggal}}", ba.Tanggal.ToString("dddd", idCulture) },
@@ -112,15 +124,16 @@ public class DocumentService : IDocumentService
                 { "{{NoPekerjaPJ}}", ba.Pj?.NoPekerja ?? "-" },
                 { "{{NoTelpPJ}}", ba.PjNoTelp ?? ba.Pj?.NoTelp ?? "-" },
                 { "{{Menyerahkan}}", ba.Menyerahkan?.Nama ?? "-" },
-                { "{{Approver}}", ba.Mengetahui?.Nama ?? "-" },
-                { "{{JabatanApprover}}", jabatanApprover },
+                { "{{Reviewer}}", ba.Mengetahui?.Nama ?? "-" },
+                { "{{JabatanReviewer}}", jabatanApprover },
+                { "{{NamaPengguna}}", ba.PengunaAlihDaya ?? "-" },
                 { "{{TujuanBA}}", tujuanStr },
                 { "{{JenisPerangkat}}", jenisPerangkatStr },
                 { "{{TiketSscNo}}", ba.TiketSscNo ?? "-" },
                 { "{{TanggalKembali}}", tanggalKembaliStr },
             };
 
-            // Ganti placeholder — gunakan paragraph-level replacement agar
+            // Ganti placeholder â€” gunakan paragraph-level replacement agar
             // placeholder yang terpecah oleh spellcheck Word (proofErr) ikut terganti.
             foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
             {
@@ -143,17 +156,37 @@ public class DocumentService : IDocumentService
             }
 
             // Kunci lebar kolom semua tabel agar Word tidak auto-resize saat file dibuka
-            // (mencegah teks nomor surat turun ke baris bawah akibat kolom menyempit)
+            // dan Sembunyikan garis tabel jika memuat tanda tangan
             foreach (var table in mainPart.Document.Body!.Descendants<Table>())
             {
                 var tblPr = table.Elements<TableProperties>().FirstOrDefault();
-                if (tblPr != null)
+                if (tblPr == null)
                 {
-                    var layout = tblPr.Elements<TableLayout>().FirstOrDefault();
-                    if (layout == null)
-                        tblPr.Append(new TableLayout { Type = TableLayoutValues.Fixed });
-                    else
-                        layout.Type = TableLayoutValues.Fixed;
+                    tblPr = new TableProperties();
+                    table.InsertAt(tblPr, 0);
+                }
+
+                var layout = tblPr.Elements<TableLayout>().FirstOrDefault();
+                if (layout == null)
+                    tblPr.Append(new TableLayout { Type = TableLayoutValues.Fixed });
+                else
+                    layout.Type = TableLayoutValues.Fixed;
+
+                var fullTableText = string.Concat(table.Descendants<Text>().Select(t => t.Text));
+                if (fullTableText.Contains("{{SIG_"))
+                {
+                    var tblBorders = tblPr.Elements<TableBorders>().FirstOrDefault();
+                    if (tblBorders == null)
+                    {
+                        tblBorders = new TableBorders();
+                        tblPr.Append(tblBorders);
+                    }
+                    tblBorders.TopBorder = new TopBorder { Val = BorderValues.Nil };
+                    tblBorders.BottomBorder = new BottomBorder { Val = BorderValues.Nil };
+                    tblBorders.LeftBorder = new LeftBorder { Val = BorderValues.Nil };
+                    tblBorders.RightBorder = new RightBorder { Val = BorderValues.Nil };
+                    tblBorders.InsideHorizontalBorder = new InsideHorizontalBorder { Val = BorderValues.Nil };
+                    tblBorders.InsideVerticalBorder = new InsideVerticalBorder { Val = BorderValues.Nil };
                 }
             }
 
@@ -169,7 +202,7 @@ public class DocumentService : IDocumentService
                 {
                     var newRow = (TableRow)templateRow.CloneNode(true);
 
-                    // Row number: template cell has "{{PerangkatNo}}." — replace the placeholder part
+                    // Row number: template cell has "{{PerangkatNo}}." â€” replace the placeholder part
                     var noCell = newRow.Elements<TableCell>().FirstOrDefault();
                     if (noCell != null)
                     {
@@ -202,7 +235,7 @@ public class DocumentService : IDocumentService
                 templateRow.Remove();
             }
 
-            // 3. Ganti placeholder foto — hapus Drawing di luar tabel (bukti foto sample),
+            // 3. Ganti placeholder foto â€” hapus Drawing di luar tabel (bukti foto sample),
             //    tapi JANGAN hapus Drawing di dalam <w:tc> (logo Pertamina di header tabel)
             var drawingParas = mainPart.Document.Body!.Descendants<Paragraph>()
                 .Where(p => p.Descendants<Drawing>().Any()
@@ -255,7 +288,7 @@ public class DocumentService : IDocumentService
                     }
                 }
             }
-            else if (ba.BuktiFotos != null && ba.BuktiFotos.Any())
+            else if (ba.Jenis != "Lainnya" && ba.BuktiFotos != null && ba.BuktiFotos.Any())
             {
                 mainPart.Document.Body!.Append(new Paragraph(new Run(new Break { Type = BreakValues.Page })));
                 mainPart.Document.Body!.Append(new Paragraph(new Run(new Text("Bukti Foto Serah Terima")))
@@ -304,7 +337,7 @@ public class DocumentService : IDocumentService
             mainPart.Document.Save();
         }
 
-        // Convert ke PDF — dibungkus Task.Run agar Spire.Doc (CPU-bound, ~3-8 detik) tidak
+        // Convert ke PDF â€” dibungkus Task.Run agar Spire.Doc (CPU-bound, ~3-8 detik) tidak
         // memblokir thread pool thread Blazor Server. Tanpa Task.Run, circuit tidak bisa
         // mengirim render update (termasuk loading overlay) selama konversi berlangsung.
         try
@@ -322,7 +355,7 @@ public class DocumentService : IDocumentService
 
     /// <summary>
     /// Mengganti teks nomor surat lama ("Draft") dengan nomor surat final
-    /// di dalam DOCX yang sudah ada — tanpa meregenerasi dokumen dari template.
+    /// di dalam DOCX yang sudah ada â€” tanpa meregenerasi dokumen dari template.
     /// Digunakan saat BA yang sudah diedit via ONLYOFFICE disetujui.
     /// </summary>
     public async Task PatchNomorSuratAsync(int baId, string nomorSurat)
@@ -341,9 +374,9 @@ public class DocumentService : IDocumentService
 
             foreach (var text in mainPart.Document.Body!.Descendants<Text>())
             {
-                if (text.Text == "Draft")
+                if (text.Text != null && text.Text.Contains("Draft"))
                 {
-                    text.Text = nomorSurat;
+                    text.Text = text.Text.Replace("Draft", nomorSurat);
                     changed = true;
                 }
             }
@@ -374,6 +407,16 @@ public class DocumentService : IDocumentService
         return ba.DocxPath!;
     }
 
+    public async Task<string> EmbedTtdPreviewApproverAsync(int baId, string ttdPath)
+    {
+        var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
+        string physicalPath = GetPhysicalPath(ba.DocxPath!);
+        EnsureFileExists(physicalPath);
+
+        await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_REVIEWER}}");
+
+        return ba.DocxPath!;
+    }
 
     public async Task<string> EmbedTtdPjAsync(int baId, string ttdPath)
     {
@@ -399,7 +442,7 @@ public class DocumentService : IDocumentService
         string finalPhysicalPath = GetPhysicalPath(finalRelativePath);
         File.Copy(draftPhysicalPath, finalPhysicalPath, true);
 
-        await EmbedSignatureSpireAsync(finalPhysicalPath, ttdPath, "{{SIG_APPROVER}}");
+        await EmbedSignatureSpireAsync(finalPhysicalPath, ttdPath, "{{SIG_REVIEWER}}");
 
         ba.DocxFinalPath = finalRelativePath;
         await _db.SaveChangesAsync();
@@ -414,7 +457,7 @@ public class DocumentService : IDocumentService
         // Embed image dengan OpenXML SDK agar distL/distR = 0 sehingga TTD selalu align left
         // sejajar tepat di atas nama penandatangan.
         // Struktur template (3 row): Row1=label, Row2=SIG placeholder, Row3=nama
-        // → Gambar disisipkan langsung ke paragraf di Row2 (sel yang berisi {{SIG_*}}),
+        // â†’ Gambar disisipkan langsung ke paragraf di Row2 (sel yang berisi {{SIG_*}}),
         //   menggantikan teks placeholder tersebut.
         using (var wordDoc = WordprocessingDocument.Open(docPath, true))
         {
@@ -473,7 +516,7 @@ public class DocumentService : IDocumentService
                 {
                     DistanceFromTop    = 0U,
                     DistanceFromBottom = 0U,
-                    DistanceFromLeft   = 0U,   // ← tidak ada offset kiri agar sejajar kiri sel
+                    DistanceFromLeft   = 0U,   // â† tidak ada offset kiri agar sejajar kiri sel
                     DistanceFromRight  = 0U
                 });
 
@@ -482,7 +525,7 @@ public class DocumentService : IDocumentService
                 var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
                 if (!fullText.Contains(placeholder)) continue;
 
-                // ── Strategi baru (template 3-row) ────────────────────────────────────────
+                // â”€â”€ Strategi baru (template 3-row) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 // Paragraf placeholder berada di Row2 (sel SIG).
                 // Ganti SELURUH run di paragraf ini dengan satu run berisi gambar.
                 // Atur alignment eksplisit Left + Indentation 0 agar gambar selalu
@@ -535,7 +578,7 @@ public class DocumentService : IDocumentService
             mainPart.Document.Save();
         }
 
-        // Konversi DOCX → PDF dalam Task.Run agar Spire.Doc tidak memblokir
+        // Konversi DOCX â†’ PDF dalam Task.Run agar Spire.Doc tidak memblokir
         // circuit thread Blazor Server selama konversi berlangsung.
         try
         {
@@ -719,4 +762,76 @@ public class DocumentService : IDocumentService
 
         return new Drawing(inline);
     }
+
+    // â”€â”€ Template simpel untuk BA Lainnya â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    public async Task<string> GenerateLainnyaDocxAsync(BeritaAcara ba)
+    {
+        var docFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
+        Directory.CreateDirectory(docFolder);
+        var fileName = $"BA-Lainnya-{ba.Id}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}.docx";
+        var fullPath = Path.Combine(docFolder, fileName);
+        var relPath = $"files/documents/{fileName}";
+
+        string judul = ba.JenisCustom ?? "Lainnya";
+        string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
+
+        await Task.Run(() =>
+        {
+            using var doc = WordprocessingDocument.Create(fullPath, WordprocessingDocumentType.Document);
+            var mainPart = doc.AddMainDocumentPart();
+            mainPart.Document = new Document();
+            var body = mainPart.Document.AppendChild(new Body());
+
+            // Margin kecil untuk kertas A4
+            var sectPr = new SectionProperties(
+                new PageMargin { Top = 1440, Bottom = 1440, Left = 1440, Right = 1440 }
+            );
+
+            // Helper: buat paragraph teks centered besar
+            void AddCenteredText(string text, int sizeHalfPt, bool bold = false, int spaceBeforePt = 0)
+            {
+                var para = new Paragraph();
+                var pPr = new ParagraphProperties();
+                pPr.Justification = new Justification { Val = JustificationValues.Center };
+                if (spaceBeforePt > 0)
+                    pPr.SpacingBetweenLines = new SpacingBetweenLines { Before = (StringValue)(spaceBeforePt * 20).ToString() };
+                para.Append(pPr);
+
+                var run = new Run();
+                var rPr = new RunProperties();
+                rPr.FontSize = new FontSize { Val = sizeHalfPt.ToString() };
+                rPr.FontSizeComplexScript = new FontSizeComplexScript { Val = sizeHalfPt.ToString() };
+                if (bold) rPr.Bold = new Bold();
+                rPr.RunFonts = new RunFonts { Ascii = "Arial", HighAnsi = "Arial" };
+                run.Append(rPr);
+                run.Append(new Text(text));
+                para.Append(run);
+                body.Append(para);
+            }
+
+            // Spacer di atas (Â±30% dari halaman)
+            body.Append(new Paragraph(new ParagraphProperties(
+                new Justification { Val = JustificationValues.Center },
+                new SpacingBetweenLines { Before = "4000" }
+            )));
+
+            // Baris 1: BERITA ACARA
+            AddCenteredText("BERITA ACARA", sizeHalfPt: 72, bold: true, spaceBeforePt: 0);
+
+            // Baris 2: JENIS BERITA ACARA
+            AddCenteredText(judul.ToUpperInvariant(), sizeHalfPt: 56, bold: true, spaceBeforePt: 20);
+
+            // Baris 3: Nomor BA
+            AddCenteredText(nomorSurat, sizeHalfPt: 40, bold: false, spaceBeforePt: 24);
+
+            body.Append(sectPr);
+            mainPart.Document.Save();
+        });
+
+        // Convert ke PDF
+        await Task.Run(() => ConvertDocxToPdfInternal(fullPath, fullPath.Replace(".docx", ".pdf")));
+
+        return relPath;
+    }
 }
+
