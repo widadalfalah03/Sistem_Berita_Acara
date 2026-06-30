@@ -2131,7 +2131,7 @@ input[type="password"]::-ms-clear {
     border-radius: var(--radius);
 }
 
-.valid.modified:not([type=checkbox]) { outline: 1px solid var(--success); }
+/* .valid.modified:not([type=checkbox]) { outline: 1px solid var(--success); } */
 .invalid { outline: 1px solid var(--danger); }
 .validation-message { color: var(--danger); font-size: 12px; margin-top: 4px; }
 

@@ -96,7 +96,7 @@
                 @if (model.Jenis != "Lainnya")
                 {
                     <div class="form-group">
-                        <label class="form-label">No. Tiket My SSC/Nota Dinas <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(opsional)</span></label>
+                        <label class="form-label">No. Tiket My SSC/Nota Dinas</label>
                         <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="Contoh: INC-20240001" />
                     </div>
                 }
@@ -120,49 +120,7 @@
                 </div>
             }
         </div>
-        @if (model.Jenis != "Lainnya" && selectedPj is not null)
-        {
-            <div style="background:var(--primary-light);border:1px solid #BFDBFE;border-radius:var(--radius);padding:16px;">
-                <div class="pj-detail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Nama</div>
-                        <div style="font-weight:600;">@selectedPj.Nama</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Cost Center</div>
-                        <div style="font-weight:600;">@(selectedPj.CostCenter ?? "-")</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Jabatan</div>
-                        <div style="font-weight:600;">@(selectedPj.Jabatan ?? "-")</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Fungsi/Direktorat</div>
-                        <div style="font-weight:600;">@(selectedPj.FungsiDirektorat ?? "-")</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Alamat</div>
-                        <div style="font-weight:600;">@(selectedPj.FungsiDirektorat ?? "-")</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Email</div>
-                        <div style="font-weight:600;">@(selectedPj.Email ?? "-")</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">No. Pekerja</div>
-                        <div style="font-weight:600;">@selectedPj.NoPekerja</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP <span style="color:var(--text-muted); font-size: 10px;">(Opsional)</span></div>
-                        <input type="tel" class="form-control" style="font-size:13px;padding:6px 10px;"
-                               placeholder="Contoh: 08123456789"
-                               inputmode="numeric" pattern="[0-9]*"
-                               value="@model.PjNoTelp"
-                               @oninput="OnNoTelpInput" />
-                    </div>
-                </div>
-            </div>
-        }
+
     </div>
 
     <!-- â”€â”€ Card 2â€“5 â”€â”€ -->
@@ -226,7 +184,7 @@
                                 </div>
                                 <div>
                                     <div style="font-weight:600;">@p.Nama</div>
-                                    <div style="font-size:12px;color:var(--text-muted);">@p.NoPekerja â€” @p.FungsiDirektorat</div>
+                                    <div style="font-size:12px;color:var(--text-muted);">@p.NoPekerja - @p.FungsiDirektorat</div>
                                 </div>
                             </div>
                         }
@@ -254,11 +212,19 @@
                             <div style="font-weight:600;">@(selectedPj.FungsiDirektorat ?? "-")</div>
                         </div>
                         <div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Alamat</div>
+                            <div style="font-weight:600;">@(selectedPj.FungsiDirektorat ?? "-")</div>
+                        </div>
+                        <div>
                             <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">Email</div>
                             <div style="font-weight:600;">@(selectedPj.Email ?? "-")</div>
                         </div>
                         <div>
-                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(opsional)</span></div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px;">No. Pekerja</div>
+                            <div style="font-weight:600;">@selectedPj.NoPekerja</div>
+                        </div>
+                        <div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">No. Telp/HP</div>
                             <input type="tel" class="form-control" style="font-size:13px;padding:6px 10px;"
                                    placeholder="Contoh: 08123456789"
                                    inputmode="numeric" pattern="[0-9]*"
@@ -280,8 +246,8 @@
                         <th style="width:28%">Jenis Perangkat <span style="color:var(--danger)">*</span></th>
                         <th style="width:10%">Jumlah <span style="color:var(--danger)">*</span></th>
                         <th style="width:12%">Satuan <span style="color:var(--danger)">*</span></th>
-                        <th style="width:20%">No. Serial <span style="color:var(--danger)">*</span></th>
-                        <th style="width:24%">Keterangan <span style="color:var(--danger)">*</span></th>
+                        <th style="width:20%">No. Serial</th>
+                        <th style="width:24%">Keterangan</th>
                         <th style="width:6%;padding:0 0 0 4px;"></th>
                     </tr>
                 </thead>
@@ -461,49 +427,10 @@
                         }
                         else
                         {
-                            <div @onclick="OpenMenyerahkanSearch"
-                                 style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
-                                 onmouseover="this.style.background='var(--primary-light)'"
-                                 onmouseout="this.style.background='var(--surface)'">
-                                <span style="@(model.MenyerahkanId == 0 ? "color:var(--text-muted);" : "")">
-                                    @(model.MenyerahkanId > 0 ? (adminGudangUsers.FirstOrDefault(u => u.PegawaiId == model.MenyerahkanId)?.Nama ?? "Pilih Admin...") : "Cari Admin...")
-                                </span>
-                                <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);flex-shrink:0;"></i>
-                            </div>
-                            @if (showMenyerahkanSearch)
-                            {
-                                <div @onclick="CloseMenyerahkanSearch"
-                                     style="position:fixed;inset:0;z-index:99;"></div>
-                                <div style="position:absolute;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;margin-top:4px;">
-                                    <div style="padding:8px;border-bottom:1px solid var(--border-light);">
-                                        <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;">
-                                            <i class="bi bi-search" style="font-size:13px;color:var(--text-muted);"></i>
-                                            <input type="text" placeholder="Cari nama..."
-                                                   value="@menyerahkanSearchQuery"
-                                                   @onchange="OnMenyerahkanSearchInput" @oninput="OnMenyerahkanSearchInput"
-                                                   style="border:none;outline:none;background:transparent;font-size:14px;width:100%;" />
-                                        </div>
-                                    </div>
-                                    @if (menyerahkanSearchResults.Any())
-                                    {
-                                        <div style="max-height:200px;overflow-y:auto;">
-                                            @foreach (var u in menyerahkanSearchResults)
-                                            {
-                                                <div @onclick="() => SelectMenyerahkan(u)"
-                                                     style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;color:var(--text-primary);"
-                                                     onmouseover="this.style.background='var(--primary-light)'"
-                                                     onmouseout="this.style.background='transparent'">
-                                                    @u.Nama
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div style="padding:12px 14px;font-size:14px;color:var(--text-muted);">Tidak ada hasil</div>
-                                    }
-                                </div>
-                            }
+                            <span style="font-weight:600;color:var(--text-primary);">
+                                <i class="bi bi-person-check" style="color:var(--success);"></i>
+                                @(adminGudangUsers.FirstOrDefault(u => u.PegawaiId == model.MenyerahkanId)?.Nama ?? currentUserObj?.Nama ?? "Admin Gudang")
+                            </span>
                         }
                     </div>
                 </div>
@@ -525,7 +452,7 @@
                         {
                             <div @onclick="CloseMengetahuiSearch"
                                  style="position:fixed;inset:0;z-index:99;"></div>
-                            <div style="position:absolute;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;margin-top:4px;">
+                            <div style="position:absolute;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);width:100%;left:0;right:0;margin-top:4px;">
                                 <div style="padding:8px;border-bottom:1px solid var(--border-light);">
                                     <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;">
                                         <i class="bi bi-search" style="font-size:13px;color:var(--text-muted);"></i>
@@ -590,61 +517,62 @@
 
         <!-- ── 5. Upload Foto ── -->
         <div class="form-section">
-            <div class="form-section-title">5. Bukti Foto Serah Terima <span style="color:var(--text-muted);font-size:12px;font-weight:400;">(Opsional)</span></div>
+            <div class="form-section-title">5. Bukti Foto Serah Terima</div>
 
-            <!-- Preview gambar (dari upload baru atau dari DB) -->
             @if (photoDataUrls.Any())
             {
-                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;justify-content:center;">
-                    @foreach (var (url, name) in photoDataUrls)
+                <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;align-items:center;">
+                    @for (int i = 0; i < photoDataUrls.Count; i++)
                     {
-                        <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--primary);box-shadow:var(--shadow-md);max-width:100%;">
+                        var idx = i;
+                        var url = photoDataUrls[i].Url;
+                        var name = photoDataUrls[i].Name;
+                        <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--primary);box-shadow:var(--shadow-md);max-width:100%;display:flex;flex-direction:column;">
+                            <div style="background:rgba(0,0,0,0.65);padding:6px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                                <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@name</div>
+                                <i class="bi bi-x-lg" style="font-size:14px;color:white;cursor:pointer;flex-shrink:0;" @onclick="() => RemoveNewPhoto(idx)"></i>
+                            </div>
                             <img src="@url" alt="@name"
                                  style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
-                            <div style="background:rgba(0,0,0,0.65);padding:6px 12px;">
-                                <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;">@name</div>
-                            </div>
                         </div>
                     }
                 </div>
             }
-            else if (existingPhotoUrls.Any())
+            @if (existingPhotoUrls.Any())
             {
-                <!-- Foto dari DB (saat edit draft, tampilkan gambar asli) -->
-                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;justify-content:center;">
-                    @foreach (var (url, name) in existingPhotoUrls)
+                <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;align-items:center;">
+                    @for (int i = 0; i < existingPhotoUrls.Count; i++)
                     {
-                        <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--border);box-shadow:var(--shadow-md);max-width:100%;">
+                        var idx = i;
+                        var url = existingPhotoUrls[i].RelPath;
+                        var name = existingPhotoUrls[i].Name;
+                        <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--border);box-shadow:var(--shadow-md);max-width:100%;display:flex;flex-direction:column;">
+                            <div style="background:rgba(0,0,0,0.55);padding:6px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                                <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@name</div>
+                                <i class="bi bi-x-lg" style="font-size:14px;color:white;cursor:pointer;flex-shrink:0;" @onclick="() => RemoveExistingPhoto(idx)"></i>
+                            </div>
                             <img src="/@url" alt="@name"
                                  style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
-                            <div style="background:rgba(0,0,0,0.55);padding:6px 12px;">
-                                <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;">@name</div>
-                            </div>
                         </div>
                     }
                 </div>
             }
 
-            <!-- Upload button area (centered) -->
             <div style="display:flex;justify-content:center;">
                 <label for="photo-upload-input" style="cursor:pointer;display:inline-block;">
                     <div class="upload-btn-styled">
                         <i class="bi bi-cloud-arrow-up-fill" style="font-size:28px;"></i>
                         <span style="font-weight:600;font-size:15px;">
-                            @if (photoFiles.Any())
+                            @if (photoFiles.Any() || existingPhotoUrls.Any())
                             {
-                                @($"{photoFiles.Count} foto baru dipilih — Ganti")
-                            }
-                            else if (existingPhotoUrls.Any())
-                            {
-                                @($"{existingPhotoUrls.Count} foto tersimpan — Ganti")
+                                @("Tambah Foto")
                             }
                             else
                             {
                                 @("Pilih Foto")
                             }
                         </span>
-                        <span style="font-size:12px;color:var(--text-muted);margin-top:2px;text-align:center;">JPG, PNG · maks. 5 MB per file</span>
+                        <span style="font-size:12px;color:var(--text-muted);margin-top:2px;text-align:center;">JPG, PNG &middot; maks. 5 MB per file</span>
                     </div>
                 </label>
             </div>
@@ -1213,7 +1141,7 @@
             if (!string.IsNullOrWhiteSpace(model.PjNoTelp) && (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15)) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
             if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
             if (model.MengetahuiId == 0 || !approvers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Approver (Yang Mengetahui) yang valid (akun mungkin telah dinonaktifkan)."; return; }
-            if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC wajib diisi."; return; }
+
             if (model.Jenis == "Peminjaman" && !model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk Peminjaman."; return; }
             if (!model.Perangkat.Any(p => p.BarangId > 0)) { errorMessage = "Tambahkan minimal satu perangkat."; return; }
             if (model.Jenis == "Peminjaman" && model.TanggalKembali.HasValue && model.TanggalKembali.Value.Date < model.Tanggal.Date)
