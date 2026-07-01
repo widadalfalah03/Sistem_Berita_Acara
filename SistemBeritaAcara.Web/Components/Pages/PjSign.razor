@@ -402,6 +402,17 @@ else
             }
             if (string.IsNullOrEmpty(dataUrl)) { actionMessage = "Gagal membaca data tanda tangan."; isSubmitting = false; return; }
             var bytes = Convert.FromBase64String(dataUrl.Split(',')[1]);
+
+            // H-6: Validasi magic bytes — tolak file yang bukan PNG atau JPEG
+            if (bytes.Length < 4 ||
+                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && // PNG
+                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) // JPEG
+            {
+                actionMessage = "Gagal: File yang diupload bukan gambar yang valid (PNG/JPEG).";
+                isSubmitting = false;
+                return;
+            }
+
             fname = $"ba-{ba!.Id}-pj.png";
             fpath = Path.Combine(folder, fname);
             await File.WriteAllBytesAsync(fpath, bytes);

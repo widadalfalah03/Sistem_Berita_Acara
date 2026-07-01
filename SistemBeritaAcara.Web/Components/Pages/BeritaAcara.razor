@@ -1060,6 +1060,14 @@
                     using var ms = new MemoryStream();
                     await stream.CopyToAsync(ms);
                     var bytes = ms.ToArray();
+
+                    // H-5: Validasi magic bytes — pastikan file benar-benar PNG atau JPEG
+                    if (!IsValidImageBytes(bytes))
+                    {
+                        autoSaveStatus = AutoSaveState.Error;
+                        StateHasChanged();
+                        return;
+                    }
                     await File.WriteAllBytesAsync(fullPath, bytes);
 
                     var existingBa = await DbContext.BeritaAcara.FindAsync(editId.Value);
@@ -1102,6 +1110,15 @@
                 catch { }
             }
         }
+    }
+
+    // H-5/H-6: Validasi magic bytes — hanya izinkan PNG (89 50 4E 47) dan JPEG (FF D8 FF)
+    private static bool IsValidImageBytes(byte[] bytes)
+    {
+        if (bytes.Length < 4) return false;
+        if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return true; // PNG
+        if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return true; // JPEG
+        return false;
     }
 
     private void RemoveNewPhoto(int index)

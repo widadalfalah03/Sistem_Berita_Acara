@@ -11,6 +11,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject IConfiguration Configuration
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 @implements IDisposable
@@ -496,7 +497,7 @@
                         trackedBa.Id
                     );
 
-                    var baseUrlReviewer = Navigation.BaseUri.TrimEnd('/');
+                    var baseUrlReviewer = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
                     var barangListReviewer = trackedBa.Perangkat
                         .Select(p => {
                             string nama = p.Barang?.NamaBarang ?? "Perangkat";
@@ -537,7 +538,7 @@
                     trackedBa.AlasanReject = null;
                     await DbContext.SaveChangesAsync();
 
-                    var baseUrl = Navigation.BaseUri.TrimEnd('/');
+                    var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
                     var barangListEditor = trackedBa.Perangkat
                         .Select(p => {
                             string nama = p.Barang?.NamaBarang ?? "Perangkat";

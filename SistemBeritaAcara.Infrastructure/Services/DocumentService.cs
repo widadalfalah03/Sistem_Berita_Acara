@@ -436,9 +436,12 @@ public class DocumentService : IDocumentService
 
             foreach (var text in mainPart.Document.Body!.Descendants<Text>())
             {
-                if (text.Text != null && text.Text.Contains("Draft"))
+                // H-3: Gunakan exact match bukan Contains/Replace untuk menghindari korupsi konten
+                // yang kebetulan mengandung kata "Draft" (misal: nama perangkat "Draft Book").
+                // Placeholder di template adalah satu text run yang isinya persis "Draft".
+                if (text.Text == "Draft")
                 {
-                    text.Text = text.Text.Replace("Draft", nomorSurat);
+                    text.Text = nomorSurat;
                     changed = true;
                 }
             }

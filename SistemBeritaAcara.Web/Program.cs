@@ -147,7 +147,9 @@ if (!app.Environment.IsDevelopment())
 // Baca X-Forwarded-* headers dari reverse proxy/ngrok agar redirect URL pakai host ngrok
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
+    // Hanya terima forwarded headers dari loopback (reverse proxy di server yang sama)
+    KnownProxies = { System.Net.IPAddress.Loopback, System.Net.IPAddress.IPv6Loopback }
 });
 
 // Izinkan ngrok melewati header verifikasi (hanya berpengaruh saat pakai ngrok di development)
@@ -222,6 +224,12 @@ app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
     SistemBeritaAcara.Infrastructure.Data.AppDbContext db,
     SistemBeritaAcara.Core.Interfaces.IDocumentService documentService) =>
 {
+    // Validasi shared secret — cegah request dari luar yang memalsukan callback OnlyOffice
+    var expectedSecret = cfg["OnlyOffice:CallbackSecret"] ?? "";
+    var providedSecret = ctx.Request.Query["secret"].ToString();
+    if (!string.IsNullOrEmpty(expectedSecret) && providedSecret != expectedSecret)
+        return Results.Unauthorized();
+
     try
     {
         var payload = await ctx.Request.ReadFromJsonAsync<System.Text.Json.JsonElement>();
@@ -347,7 +355,7 @@ app.MapGet("/api/ba/{baId:int}/download", async (
 
     var bytes = await File.ReadAllBytesAsync(pdfPath);
     return Results.File(bytes, "application/pdf", filename);
-}).DisableAntiforgery();
+}).RequireAuthorization().DisableAntiforgery();
 
 // Database and roles are ensured earlier before app start
 

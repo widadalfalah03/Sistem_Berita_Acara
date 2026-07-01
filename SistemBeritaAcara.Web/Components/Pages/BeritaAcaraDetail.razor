@@ -418,7 +418,7 @@ else
             ba!.Status = "WaitingPJSign";
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
-            var baseUrl = Navigation.BaseUri.TrimEnd('/');
+            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangListMagic = ba.Perangkat
                 .Select(p => {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
@@ -445,10 +445,12 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
-            // Server-side guard: cegah approval jika status sudah berubah
+            // H-1: Re-fetch status langsung dari DB (bukan dari memori) untuk cegah double-approve
+            // jika dua reviewer membuka BA yang sama secara bersamaan.
+            await DbContext.Entry(ba!).ReloadAsync();
             if (ba!.Status != "WaitingApproval")
             {
-                actionIsError = true; actionMessage = "Gagal: Status BA sudah berubah. Refresh halaman dan coba lagi.";
+                actionIsError = true; actionMessage = "Gagal: Status BA sudah berubah (mungkin sudah diproses). Refresh halaman dan coba lagi.";
                 isProcessing = false; isReviewerAction = false; return;
             }
 
@@ -525,16 +527,19 @@ else
 
             // Embed TTD Yang Mengetahui (Reviewer)
             await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, reviewerTtdPhysical);
+
+            // H-2: Bungkus kedua SaveChanges dalam satu transaction agar atomic
+            await using var tx = await DbContext.Database.BeginTransactionAsync();
             ba.Status = "Approved";
             ba.ApprovedAt = DateTime.Now;
-            ba.ExcelExported = false; // akan di-set true setelah berhasil export
+            ba.ExcelExported = false;
             await DbContext.SaveChangesAsync();
-            if (!ba.ExcelExported)
-            {
-                await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
-                ba.ExcelExported = true;
-                await DbContext.SaveChangesAsync();
-            }
+
+            // Export Excel di luar TX (operasi file), tapi flag ExcelExported di-commit bersama
+            await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
+            ba.ExcelExported = true;
+            await DbContext.SaveChangesAsync();
+            await tx.CommitAsync();
             await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah disetujui.", ba.Id);
 
             // Email ke Admin Gudang & Barang (creator)
@@ -573,13 +578,16 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
-            // Server-side guard: cegah reject jika status sudah berubah
+            // H-1: Re-fetch status dari DB untuk cegah reject pada BA yang sudah di-approve
+            await DbContext.Entry(ba!).ReloadAsync();
             if (ba!.Status != "WaitingApproval")
             {
-                rejectError = "Status BA sudah berubah. Refresh halaman dan coba lagi.";
+                rejectError = "Status BA sudah berubah (mungkin sudah diproses). Refresh halaman dan coba lagi.";
                 isProcessing = false; isReviewerAction = false; return;
             }
 
+            // H-2: Gunakan transaction agar reject + history tersimpan bersama-sama
+            await using var txReject = await DbContext.Database.BeginTransactionAsync();
             ba!.Status = "Rejected";
             ba.AlasanReject = rejectReason;
             ba.WasRejected = true;
@@ -600,6 +608,7 @@ else
             };
             DbContext.BeritaAcaraHistory.Add(history);
             await DbContext.SaveChangesAsync();
+            await txReject.CommitAsync();
 
             var label = ba.NomorSurat ?? "";
             var text = $"Berita Acara {ba.Jenis} {label} ditolak: {rejectReason}".Replace("  ", " ").Trim();

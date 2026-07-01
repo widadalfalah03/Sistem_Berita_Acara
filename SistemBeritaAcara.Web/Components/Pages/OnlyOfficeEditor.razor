@@ -154,7 +154,10 @@ else
 
             var appBaseUrl = (Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var docUrl = $"{appBaseUrl}/{ba.DocxPath}";
-            var callbackUrl = $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}";
+            var callbackSecret = Configuration["OnlyOffice:CallbackSecret"] ?? "";
+            var callbackUrl = string.IsNullOrEmpty(callbackSecret)
+                ? $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}"
+                : $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}?secret={Uri.EscapeDataString(callbackSecret)}";
 
             // Key unik per sesi editor — disimpan untuk dipakai di Command Service saat forceSave
             _docKey = $"{ba.Id}-{DateTime.Now.Ticks}";
