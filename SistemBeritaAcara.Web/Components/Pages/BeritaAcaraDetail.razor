@@ -1,4 +1,4 @@
-@page "/berita-acara/{Id:int}"
+﻿@page "/berita-acara/{Id:int}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.EntityFrameworkCore
@@ -20,13 +20,13 @@
 <PageTitle>Detail Berita Acara — Sistem Berita Acara</PageTitle>
 
 
-@* ── Fullscreen overlay saat approver memproses Setuju / Tolak ── *@
-@if (isProcessing && isApproverAction)
+@* ── Fullscreen overlay saat reviewer memproses Setuju / Tolak ── *@
+@if (isProcessing && isReviewerAction)
 {
     <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
         <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
-        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">@approverActionLabel</div>
-        <div style="font-size:13px;color:var(--text-muted);">@approverActionSubLabel</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">@reviewerActionLabel</div>
+        <div style="font-size:13px;color:var(--text-muted);">@reviewerActionSubLabel</div>
     </div>
 }
 
@@ -57,9 +57,9 @@ else
         </div>
     }
 
-    @if (isApprover && ba.Status == "WaitingApproval")
+    @if (isReviewer && ba.Status == "WaitingApproval")
     {
-        <!-- ════ REVIEW LAYOUT (Approver) ════ -->
+        <!-- ════ REVIEW LAYOUT (Reviewer) ════ -->
         <div class="review-layout">
             <!-- Preview area -->
             <div class="review-preview">
@@ -191,9 +191,9 @@ else
                     <div class="card-header"><h3>Pihak Terkait</h3></div>
                     <div class="card-body">
                         <table style="width:100%;border-collapse:collapse;">
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">Yang Menyerahkan</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Menyerahkan?.Nama</td></tr>
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Yang Mengetahui</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Mengetahui?.Nama</td></tr>
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Yang Menerima</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Pj?.Nama</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">PJ (Menerima)</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Pj?.Nama</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Menyerahkan</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Menyerahkan?.Nama</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Reviewer</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Mengetahui?.Nama</td></tr>
                         </table>
                     </div>
                 </div>
@@ -324,7 +324,7 @@ else
     private BeritaAcaraEntity? ba;
     private bool isLoading = true;
     private bool notFound;
-    private bool isApprover;
+    private bool isReviewer;
     private bool showRejectModal = false;
     private string rejectReason = string.Empty;
     private string rejectError = string.Empty;
@@ -332,9 +332,9 @@ else
     private bool actionIsError = false;
     private string currentRole = string.Empty;
     private bool isProcessing = false;
-    private bool isApproverAction = false;
-    private string approverActionLabel = string.Empty;
-    private string approverActionSubLabel = string.Empty;
+    private bool isReviewerAction = false;
+    private string reviewerActionLabel = string.Empty;
+    private string reviewerActionSubLabel = string.Empty;
     private long pdfVersion = DateTime.UtcNow.Ticks;
 
 
@@ -359,7 +359,7 @@ else
 
         if (ba is null) { notFound = true; isLoading = false; return; }
 
-        isApprover = currentRole == "Approver" && appUser.Id == ba.MengetahuiId;
+        isReviewer = currentRole == "Reviewer" && appUser.Id == ba.MengetahuiId;
 
 
 
@@ -398,9 +398,9 @@ else
     private async Task ApproveAsync()
     {
         isProcessing = true;
-        isApproverAction = true;
-        approverActionLabel = "Menyetujui dokumen...";
-        approverActionSubLabel = "Menyematkan tanda tangan dan membuat dokumen final";
+        isReviewerAction = true;
+        reviewerActionLabel = "Menyetujui dokumen...";
+        reviewerActionSubLabel = "Menyematkan tanda tangan dan membuat dokumen final";
         await InvokeAsync(StateHasChanged);
         try
         {
@@ -408,17 +408,17 @@ else
             if (ba!.Status != "WaitingApproval")
             {
                 actionIsError = true; actionMessage = "Gagal: Status BA sudah berubah. Refresh halaman dan coba lagi.";
-                isProcessing = false; isApproverAction = false; return;
+                isProcessing = false; isReviewerAction = false; return;
             }
 
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
             var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
-            var approverTtdPhysical = string.IsNullOrWhiteSpace(currentUser?.TtdPath)
+            var reviewerTtdPhysical = string.IsNullOrWhiteSpace(currentUser?.TtdPath)
                 ? null
                 : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-            if (currentUser is null || approverTtdPhysical is null || !File.Exists(approverTtdPhysical))
+            if (currentUser is null || reviewerTtdPhysical is null || !File.Exists(reviewerTtdPhysical))
             {
-                actionIsError = true; actionMessage = "Gagal: Approver belum memiliki file TTD yang valid. Silakan setup TTD di halaman Profil terlebih dahulu.";
+                actionIsError = true; actionMessage = "Gagal: Reviewer belum memiliki file TTD yang valid. Silakan setup TTD di halaman Profil terlebih dahulu.";
                 isProcessing = false;
                 return;
             }
@@ -482,8 +482,8 @@ else
                 }
             }
 
-            // Embed TTD Yang Mengetahui (Approver)
-            await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, approverTtdPhysical);
+            // Embed TTD Yang Mengetahui (Reviewer)
+            await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, reviewerTtdPhysical);
             ba.Status = "Approved";
             ba.ApprovedAt = DateTime.Now;
             ba.ExcelExported = false; // akan di-set true setelah berhasil export
@@ -518,16 +518,16 @@ else
             await LoadAsync();
         }
         catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}"; }
-        finally { isProcessing = false; isApproverAction = false; }
+        finally { isProcessing = false; isReviewerAction = false; }
     }
 
     private async Task RejectAsync()
     {
         if (string.IsNullOrWhiteSpace(rejectReason)) { rejectError = "Alasan penolakan wajib diisi."; return; }
         isProcessing = true;
-        isApproverAction = true;
-        approverActionLabel = "Menolak dokumen...";
-        approverActionSubLabel = "Menyimpan alasan penolakan dan mengirim notifikasi";
+        isReviewerAction = true;
+        reviewerActionLabel = "Menolak dokumen...";
+        reviewerActionSubLabel = "Menyimpan alasan penolakan dan mengirim notifikasi";
         await InvokeAsync(StateHasChanged);
         try
         {
@@ -535,7 +535,7 @@ else
             if (ba!.Status != "WaitingApproval")
             {
                 rejectError = "Status BA sudah berubah. Refresh halaman dan coba lagi.";
-                isProcessing = false; isApproverAction = false; return;
+                isProcessing = false; isReviewerAction = false; return;
             }
 
             ba!.Status = "Rejected";
@@ -572,7 +572,7 @@ else
             await LoadAsync();
         }
         catch (Exception ex) { rejectError = $"Gagal: {ex.Message}"; }
-        finally { isProcessing = false; isApproverAction = false; }
+        finally { isProcessing = false; isReviewerAction = false; }
     }
 
     private static string GetStatusPill(string s) => s switch
@@ -610,7 +610,7 @@ else
                  : From == "notifikasi" ? "/notifikasi"
                  : "/draft";
                  
-        if (currentRole == "Approver" && string.IsNullOrEmpty(From))
+        if (currentRole == "Reviewer" && string.IsNullOrEmpty(From))
             dest = "/dashboard";
 
         Navigation.NavigateTo(dest);

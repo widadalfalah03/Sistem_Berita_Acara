@@ -1,4 +1,4 @@
-using Hangfire;
+﻿using Hangfire;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -69,7 +69,7 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     var userManager = preScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
     // ── 1. Roles ──────────────────────────────────────────────────────────
-    foreach (var role in new[] { "AdminIT", "AdminGudangBarang", "Approver" })
+    foreach (var role in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
     {
         if (!await roleManager.RoleExistsAsync(role))
             await roleManager.CreateAsync(new IdentityRole<int>(role));

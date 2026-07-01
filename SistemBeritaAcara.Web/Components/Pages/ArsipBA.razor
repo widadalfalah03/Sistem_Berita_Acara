@@ -1,4 +1,4 @@
-@page "/archive"
+﻿@page "/archive"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -13,7 +13,7 @@
 
 <PageTitle>Archive — Sistem Berita Acara</PageTitle>
 
-@if ((currentRole == "AdminGudangBarang" || currentRole == "Approver") && !isLoading && allBA.Count > 0)
+@if ((currentRole == "AdminGudangBarang" || currentRole == "Reviewer") && !isLoading && allBA.Count > 0)
 {
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button class="btn btn-primary btn-sm @(isExporting ? "btn-loading" : "")"
@@ -77,7 +77,7 @@
                         <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
                             <i class="bi bi-person-check" style="margin-right:4px;"></i> Yang Mengetahui
                         </label>
-                        <input type="text" placeholder="Nama approver..." @bind="mengetahuiSearch" @bind:event="oninput"
+                        <input type="text" placeholder="Nama reviewer..." @bind="mengetahuiSearch" @bind:event="oninput"
                                style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
                     </div>
 
