@@ -91,9 +91,11 @@ else if (currentRole == "AdminGudangBarang")
         <div class="jenis-card">
             <div class="jenis-title">Jenis Berita Acara</div>
             @{
-                var total = jenisData.Alokasi + jenisData.Peminjaman;
+                var total = jenisData.Alokasi + jenisData.Peminjaman + jenisData.Penarikan + jenisData.Lainnya;
                 var pctAlokasi = total > 0 ? (int)Math.Round((double)jenisData.Alokasi / total * 100) : 0;
                 var pctPeminjaman = total > 0 ? (int)Math.Round((double)jenisData.Peminjaman / total * 100) : 0;
+                var pctPenarikan = total > 0 ? (int)Math.Round((double)jenisData.Penarikan / total * 100) : 0;
+                var pctLainnya = total > 0 ? (int)Math.Round((double)jenisData.Lainnya / total * 100) : 0;
             }
               <div class="jenis-item">
                   <div class="jenis-label">
@@ -108,6 +110,20 @@ else if (currentRole == "AdminGudangBarang")
                       <span class="jenis-pct">@pctPeminjaman%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill peminjaman" style="width:@pctPeminjaman%"></div></div>
+              </div>
+              <div class="jenis-item">
+                  <div class="jenis-label">
+                      <span class="jenis-name">Penarikan</span>
+                      <span class="jenis-pct">@pctPenarikan%</span>
+                  </div>
+                  <div class="jenis-bar"><div class="jenis-fill penarikan" style="width:@pctPenarikan%; background: #F59E0B"></div></div>
+              </div>
+              <div class="jenis-item">
+                  <div class="jenis-label">
+                      <span class="jenis-name">Lainnya</span>
+                      <span class="jenis-pct">@pctLainnya%</span>
+                  </div>
+                  <div class="jenis-bar"><div class="jenis-fill lainnya" style="width:@pctLainnya%; background: #64748B"></div></div>
               </div>
         </div>
 
@@ -354,6 +370,22 @@ else if (currentRole == "Reviewer")
                 <div class="stat-card-desc">Berita Acara Peminjaman</div>
             </div>
         </div>
+        <div class="stat-card">
+            <div class="stat-card-icon" style="background:#FEF3C7;color:#D97706;"><i class="bi bi-box-arrow-down"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Penarikan</div>
+                <div class="stat-card-value" style="color:#D97706">@reviewerStat.ApprovedPenarikan</div>
+                <div class="stat-card-desc">Berita Acara Penarikan</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon" style="background:#F1F5F9;color:#475569;"><i class="bi bi-file-earmark-plus"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Lainnya</div>
+                <div class="stat-card-value" style="color:#475569">@reviewerStat.ApprovedLainnya</div>
+                <div class="stat-card-desc">Berita Acara Lainnya</div>
+            </div>
+        </div>
     </div>
 
     <div class="dashboard-grid">
@@ -493,7 +525,7 @@ else if (currentRole == "AdminIT")
 
     // Gudang stats
     private (int Draft, int Progress, int Approved, int Rejected) stat;
-    private (int Alokasi, int Peminjaman, int Lainnya) jenisData;
+    private (int Alokasi, int Peminjaman, int Penarikan, int Lainnya) jenisData;
     private List<int> reviewerTrendApproved = new();
     private List<BAEntity> activePeminjaman = new();
     private List<int[]> trendData = new(); // [month-6..month-0]
@@ -505,7 +537,7 @@ else if (currentRole == "AdminIT")
     private BAEntity? modalBA = null;
 
     // Reviewer stats
-    private (int Pending, int Total, int ApprovedAlokasi, int ApprovedPeminjaman) reviewerStat;
+    private (int Pending, int Total, int ApprovedAlokasi, int ApprovedPeminjaman, int ApprovedPenarikan, int ApprovedLainnya) reviewerStat;
     private List<BAEntity> reviewerQueue = new();
 
     // AdminIT stats
@@ -578,9 +610,9 @@ else if (currentRole == "AdminIT")
                 });
 
             await JS.InvokeVoidAsync("chartInterop.createDonutChart", "reviewerDonut",
-                new[] { "Alokasi", "Peminjaman" },
-                new[] { reviewerStat.ApprovedAlokasi, reviewerStat.ApprovedPeminjaman },
-                new[] { "#3B82F6", "#8B5CF6" });
+                new[] { "Alokasi", "Peminjaman", "Penarikan", "Lainnya" },
+                new[] { reviewerStat.ApprovedAlokasi, reviewerStat.ApprovedPeminjaman, reviewerStat.ApprovedPenarikan, reviewerStat.ApprovedLainnya },
+                new[] { "#3B82F6", "#8B5CF6", "#F59E0B", "#64748B" });
         }
         else if (currentRole == "AdminIT")
         {
@@ -608,7 +640,8 @@ else if (currentRole == "AdminIT")
 
         jenisData.Alokasi = myBA.Count(b => b.Jenis == "Alokasi");
         jenisData.Peminjaman = myBA.Count(b => b.Jenis == "Peminjaman");
-        jenisData.Lainnya = myBA.Count(b => b.Jenis != "Alokasi" && b.Jenis != "Peminjaman");
+        jenisData.Penarikan = myBA.Count(b => b.Jenis == "Penarikan");
+        jenisData.Lainnya = myBA.Count(b => b.Jenis != "Alokasi" && b.Jenis != "Peminjaman" && b.Jenis != "Penarikan");
 
         activePeminjaman = myBA
             .Where(b => b.Jenis == "Peminjaman" && b.TanggalKembali.HasValue
@@ -629,6 +662,8 @@ else if (currentRole == "AdminIT")
         reviewerStat.Total = approvedBA.Count;
         reviewerStat.ApprovedAlokasi = approvedBA.Count(b => b.Jenis == "Alokasi");
         reviewerStat.ApprovedPeminjaman = approvedBA.Count(b => b.Jenis == "Peminjaman");
+        reviewerStat.ApprovedPenarikan = approvedBA.Count(b => b.Jenis == "Penarikan");
+        reviewerStat.ApprovedLainnya = approvedBA.Count(b => b.Jenis != "Alokasi" && b.Jenis != "Peminjaman" && b.Jenis != "Penarikan");
 
         reviewerQueue = myQueue
             .Where(b => b.Status == "WaitingApproval")
