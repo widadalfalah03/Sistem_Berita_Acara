@@ -8,6 +8,8 @@ using SistemBeritaAcara.Infrastructure.Data;
 using SistemBeritaAcara.Infrastructure.Jobs;
 using SistemBeritaAcara.Web.Components;
 using SistemBeritaAcara.Web.Filters;
+using SistemBeritaAcara.Web.Hubs;
+using SistemBeritaAcara.Web.Services;
 using System.Globalization;
 
 // ── Atur kultur global ke Bahasa Indonesia ──────────────────────────────────
@@ -102,6 +104,10 @@ builder.Services.ConfigureApplicationCookie(opt =>
 
 builder.Services.AddAuthorization();
 
+// ── SignalR untuk real-time update status BA ──────────────────────────────
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<BaUpdateService>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -139,6 +145,9 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// ── Map SignalR Hub ───────────────────────────────────────────────────────
+app.MapHub<BaHub>("/hubs/ba");
 
 // ── Auth Endpoints (POST must be used for cookie auth from Blazor Server) ──
 app.MapPost("/account/login", async (

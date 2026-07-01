@@ -8,6 +8,7 @@
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IAsyncDisposable
 
 <PageTitle>Progress Berita Acara — Sistem Berita Acara</PageTitle>
 
@@ -192,6 +193,64 @@ else if (currentRole == "Reviewer")
         isLoading = false;
     }
 
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Fire-and-forget: koneksi SignalR di latar belakang, tidak memblokir render
+            _ = ConnectSignalRAsync();
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task ConnectSignalRAsync()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/ba"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On("BaListUpdated", async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await ReloadListAsync();
+                    StateHasChanged();
+                });
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch
+        {
+            // SignalR gagal connect — page tetap berjalan normal tanpa real-time
+        }
+    }
+
+    private async Task ReloadListAsync()
+    {
+        if (currentRole == "AdminGudangBarang")
+        {
+            baList = await DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Pj).Include(b => b.Mengetahui)
+                .Where(b => b.CreatedBy == currentUserId &&
+                            (b.Status == "WaitingPJSign" || b.Status == "WaitingApproval"))
+                .OrderByDescending(b => b.SubmittedAt)
+                .ToListAsync();
+        }
+        else if (currentRole == "Reviewer")
+        {
+            baList = await DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Pj)
+                .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
+                .Where(b => b.MengetahuiId == currentUserId && b.Status == "WaitingApproval")
+                .OrderByDescending(b => b.SubmittedAt)
+                .ToListAsync();
+        }
+    }
+
     private static string GetJenisPill(string jenis) => jenis switch
     {
         "Alokasi" => "pill-alokasi",
@@ -208,5 +267,16 @@ else if (currentRole == "Reviewer")
         if (diff.TotalDays < 1) return $"{(int)diff.TotalHours} jam lalu";
         if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} hari lalu";
         return dt.Value.ToString("dd MMM yyyy");
+    }
+
+    private Microsoft.AspNetCore.SignalR.Client.HubConnection? _hubConnection;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.StopAsync();
+            await _hubConnection.DisposeAsync();
+        }
     }
 }

@@ -10,6 +10,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject IConfiguration Configuration
+@inject SistemBeritaAcara.Web.Services.BaUpdateService BaUpdateService
 @layout EmptyLayout
 @rendermode InteractiveServer
 
@@ -423,6 +424,7 @@ else
                 $"Berita Acara {ba.Jenis} telah ditandatangani PJ ({ba.Pj?.Nama}) dan menunggu review Anda.", ba.Id);
             await NotificationService.SendToRoleAsync("AdminGudangBarang", "PJ_SIGNED",
                 $"Berita Acara {ba.Jenis} telah ditandatangani PJ ({ba.Pj?.Nama}).", ba.Id);
+            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
 
             // Email notifikasi ke Reviewer
             if (reviewerUser != null && !string.IsNullOrEmpty(reviewerUser.Email))
