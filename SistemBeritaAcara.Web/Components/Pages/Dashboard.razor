@@ -97,28 +97,28 @@ else if (currentRole == "AdminGudangBarang")
                 var pctPenarikan = total > 0 ? (int)Math.Round((double)jenisData.Penarikan / total * 100) : 0;
                 var pctLainnya = total > 0 ? (int)Math.Round((double)jenisData.Lainnya / total * 100) : 0;
             }
-              <div class="jenis-item" title="@jenisData.Alokasi Berita Acara Selesai">
+              <div class="jenis-item" title="Alokasi: @jenisData.Alokasi">
                   <div class="jenis-label">
                       <span class="jenis-name">Alokasi</span>
                       <span class="jenis-pct">@pctAlokasi%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill alokasi" style="width:@pctAlokasi%"></div></div>
               </div>
-              <div class="jenis-item" title="@jenisData.Peminjaman Berita Acara Selesai">
+              <div class="jenis-item" title="Peminjaman: @jenisData.Peminjaman">
                   <div class="jenis-label">
                       <span class="jenis-name">Peminjaman</span>
                       <span class="jenis-pct">@pctPeminjaman%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill peminjaman" style="width:@pctPeminjaman%"></div></div>
               </div>
-              <div class="jenis-item" title="@jenisData.Penarikan Berita Acara Selesai">
+              <div class="jenis-item" title="Penarikan: @jenisData.Penarikan">
                   <div class="jenis-label">
                       <span class="jenis-name">Penarikan</span>
                       <span class="jenis-pct">@pctPenarikan%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill penarikan" style="width:@pctPenarikan%; background: #F59E0B"></div></div>
               </div>
-              <div class="jenis-item" title="@jenisData.Lainnya Berita Acara Selesai">
+              <div class="jenis-item" title="Lainnya: @jenisData.Lainnya">
                   <div class="jenis-label">
                       <span class="jenis-name">Lainnya</span>
                       <span class="jenis-pct">@pctLainnya%</span>
