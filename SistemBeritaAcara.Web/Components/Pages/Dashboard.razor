@@ -1,4 +1,4 @@
-@page "/dashboard"
+﻿@page "/dashboard"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -56,7 +56,7 @@ else if (currentRole == "AdminGudangBarang")
             <div class="stat-card-info">
                 <div class="stat-card-label">Ditolak</div>
                 <div class="stat-card-value red">@stat.Rejected</div>
-                <div class="stat-card-desc">Dikembalikan approver</div>
+                <div class="stat-card-desc">Dikembalikan reviewer</div>
             </div>
         </div>
     </div>
@@ -317,16 +317,16 @@ else if (currentRole == "AdminGudangBarang")
         </div>
     </div>
 }
-else if (currentRole == "Approver")
+else if (currentRole == "Reviewer")
 {
-    <!-- ════ DASHBOARD APPROVER ════ -->
+    <!-- ════ DASHBOARD REVIEWER ════ -->
     <div class="dashboard-fill">
     <div class="stat-cards">
         <div class="stat-card">
             <div class="stat-card-icon pending"><i class="bi bi-inbox"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Antrean Pending</div>
-                <div class="stat-card-value red">@approverStat.Pending</div>
+                <div class="stat-card-value red">@reviewerStat.Pending</div>
                 <div class="stat-card-desc">Perlu diproses</div>
             </div>
         </div>
@@ -334,7 +334,7 @@ else if (currentRole == "Approver")
             <div class="stat-card-icon total"><i class="bi bi-clipboard-data"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Total Review</div>
-                <div class="stat-card-value">@approverStat.Total</div>
+                <div class="stat-card-value">@reviewerStat.Total</div>
                 <div class="stat-card-desc">Semua waktu</div>
             </div>
         </div>
@@ -342,7 +342,7 @@ else if (currentRole == "Approver")
             <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Alokasi</div>
-                <div class="stat-card-value blue">@approverStat.ApprovedAlokasi</div>
+                <div class="stat-card-value blue">@reviewerStat.ApprovedAlokasi</div>
                 <div class="stat-card-desc">Berita Acara Alokasi</div>
             </div>
         </div>
@@ -350,7 +350,7 @@ else if (currentRole == "Approver")
             <div class="stat-card-icon approved"><i class="bi bi-arrow-left-right"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Peminjaman</div>
-                <div class="stat-card-value purple">@approverStat.ApprovedPeminjaman</div>
+                <div class="stat-card-value purple">@reviewerStat.ApprovedPeminjaman</div>
                 <div class="stat-card-desc">Berita Acara Peminjaman</div>
             </div>
         </div>
@@ -363,7 +363,7 @@ else if (currentRole == "Approver")
                 <span class="chart-period">6 Bulan Terakhir</span>
             </div>
             <div class="chart-container" style="flex:1;position:relative;min-height:0;">
-                <canvas id="approverTrendChart"></canvas>
+                <canvas id="reviewerTrendChart"></canvas>
             </div>
         </div>
         <div class="chart-card">
@@ -371,7 +371,7 @@ else if (currentRole == "Approver")
                 <span class="chart-title">Approval</span>
             </div>
             <div class="chart-container" style="flex:1;position:relative;min-height:0;">
-                <canvas id="approverDonut"></canvas>
+                <canvas id="reviewerDonut"></canvas>
             </div>
         </div>
     </div>
@@ -381,12 +381,12 @@ else if (currentRole == "Approver")
     <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;">
         <div class="card-header" style="flex-shrink:0;">
             <h3>Antrean Persetujuan</h3>
-            @if (approverQueue.Any())
+            @if (reviewerQueue.Any())
             {
-                <span class="pill pill-waiting-approval">@approverQueue.Count Menunggu</span>
+                <span class="pill pill-waiting-approval">@reviewerQueue.Count Menunggu</span>
             }
         </div>
-        @if (!approverQueue.Any())
+        @if (!reviewerQueue.Any())
         {
             <div style="text-align:center;padding:48px;color:var(--text-muted);flex:1;">
                 <i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:12px;"></i>
@@ -399,14 +399,14 @@ else if (currentRole == "Approver")
             <table class="data-table table-hover">
                 <thead style="position:sticky;top:0;background:var(--bg);z-index:1;">
                     <tr>
-                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("No. Surat"))">No. Surat <i class="bi @GetApproverSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Jenis BA"))">Jenis Berita Acara <i class="bi @GetApproverSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetApproverSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortApprover("Tanggal Submit"))">Waktu Submit <i class="bi @GetApproverSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortReviewer("No. Surat"))">No. Surat <i class="bi @GetReviewerSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortReviewer("Jenis BA"))">Jenis Berita Acara <i class="bi @GetReviewerSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortReviewer("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetReviewerSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortReviewer("Tanggal Submit"))">Waktu Submit <i class="bi @GetReviewerSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var ba in SortedApproverQueue)
+                    @foreach (var ba in SortedReviewerQueue)
                     {
                         <tr @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}?from=dashboard"))" style="cursor:pointer;" class="clickable-row">
                             <td><span class="fw-semibold text-primary">@ba.NomorSurat</span></td>
@@ -461,8 +461,8 @@ else if (currentRole == "AdminIT")
         <div class="stat-card">
             <div class="stat-card-icon progress"><i class="bi bi-person-check-fill"></i></div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Approver</div>
-                <div class="stat-card-value blue">@userStats.Approver</div>
+                <div class="stat-card-label">Reviewer</div>
+                <div class="stat-card-value blue">@userStats.Reviewer</div>
                 <div class="stat-card-desc">Penanda tangan akhir</div>
             </div>
         </div>
@@ -494,7 +494,7 @@ else if (currentRole == "AdminIT")
     // Gudang stats
     private (int Draft, int Progress, int Approved, int Rejected) stat;
     private (int Alokasi, int Peminjaman, int Lainnya) jenisData;
-    private List<int> approverTrendApproved = new();
+    private List<int> reviewerTrendApproved = new();
     private List<BAEntity> activePeminjaman = new();
     private List<int[]> trendData = new(); // [month-6..month-0]
 
@@ -504,12 +504,12 @@ else if (currentRole == "AdminIT")
     private bool isReturning = false;
     private BAEntity? modalBA = null;
 
-    // Approver stats
-    private (int Pending, int Total, int ApprovedAlokasi, int ApprovedPeminjaman) approverStat;
-    private List<BAEntity> approverQueue = new();
+    // Reviewer stats
+    private (int Pending, int Total, int ApprovedAlokasi, int ApprovedPeminjaman) reviewerStat;
+    private List<BAEntity> reviewerQueue = new();
 
     // AdminIT stats
-    private (int Total, int AdminIT, int AdminGudang, int Approver) userStats;
+    private (int Total, int AdminIT, int AdminGudang, int Reviewer) userStats;
     private AdminITStats itStats = new();
 
     private sealed class AdminITStats
@@ -542,8 +542,8 @@ else if (currentRole == "AdminIT")
         }
         else if (currentRole == "AdminGudangBarang")
             await LoadGudangDataAsync();
-        else if (currentRole == "Approver")
-            await LoadApproverDataAsync();
+        else if (currentRole == "Reviewer")
+            await LoadReviewerDataAsync();
 
         isLoading = false;
     }
@@ -566,27 +566,27 @@ else if (currentRole == "AdminIT")
                 new[] { stat.Approved, stat.Progress, stat.Rejected, stat.Draft },
                 new[] { "#22C55E", "#3B82F6", "#EF4444", "#94A3B8" });
         }
-        else if (currentRole == "Approver")
+        else if (currentRole == "Reviewer")
         {
-            var approverTrendLabels = GetLast6MonthLabels();
+            var reviewerTrendLabels = GetLast6MonthLabels();
 
-            await JS.InvokeVoidAsync("chartInterop.createLineChart", "approverTrendChart",
-                approverTrendLabels,
+            await JS.InvokeVoidAsync("chartInterop.createLineChart", "reviewerTrendChart",
+                reviewerTrendLabels,
                 new[]
                 {
-                    new { label = "Disetujui", data = approverTrendApproved, color = "#22C55E" }
+                    new { label = "Disetujui", data = reviewerTrendApproved, color = "#22C55E" }
                 });
 
-            await JS.InvokeVoidAsync("chartInterop.createDonutChart", "approverDonut",
+            await JS.InvokeVoidAsync("chartInterop.createDonutChart", "reviewerDonut",
                 new[] { "Alokasi", "Peminjaman" },
-                new[] { approverStat.ApprovedAlokasi, approverStat.ApprovedPeminjaman },
+                new[] { reviewerStat.ApprovedAlokasi, reviewerStat.ApprovedPeminjaman },
                 new[] { "#3B82F6", "#8B5CF6" });
         }
         else if (currentRole == "AdminIT")
         {
             await JS.InvokeVoidAsync("chartInterop.createDonutChart", "adminITDonut",
-                new[] { "Admin IT", "Admin Gudang & Barang", "Approver" },
-                new[] { userStats.AdminIT, userStats.AdminGudang, userStats.Approver },
+                new[] { "Admin IT", "Admin Gudang & Barang", "Reviewer" },
+                new[] { userStats.AdminIT, userStats.AdminGudang, userStats.Reviewer },
                 new[] { "#64748B", "#22C55E", "#3B82F6" });
         }
     }
@@ -617,30 +617,30 @@ else if (currentRole == "AdminIT")
             .ToList();
     }
 
-    private async Task LoadApproverDataAsync()
+    private async Task LoadReviewerDataAsync()
     {
         var myQueue = await DbCtx.Set<BAEntity>()
             .Include(b => b.Pj)
             .Where(b => b.MengetahuiId == currentUserId)
             .ToListAsync();
 
-        approverStat.Pending = myQueue.Count(b => b.Status == "WaitingApproval");
+        reviewerStat.Pending = myQueue.Count(b => b.Status == "WaitingApproval");
         var approvedBA = myQueue.Where(b => b.Status == "Approved" || b.Status == "Archived").ToList();
-        approverStat.Total = approvedBA.Count;
-        approverStat.ApprovedAlokasi = approvedBA.Count(b => b.Jenis == "Alokasi");
-        approverStat.ApprovedPeminjaman = approvedBA.Count(b => b.Jenis == "Peminjaman");
+        reviewerStat.Total = approvedBA.Count;
+        reviewerStat.ApprovedAlokasi = approvedBA.Count(b => b.Jenis == "Alokasi");
+        reviewerStat.ApprovedPeminjaman = approvedBA.Count(b => b.Jenis == "Peminjaman");
 
-        approverQueue = myQueue
+        reviewerQueue = myQueue
             .Where(b => b.Status == "WaitingApproval")
             .OrderBy(b => b.SubmittedAt)
             .ToList();
 
-        approverTrendApproved.Clear();
+        reviewerTrendApproved.Clear();
         for (int i = 5; i >= 0; i--)
         {
             var month = DateTime.Now.AddMonths(-i);
             var count = approvedBA.Count(b => b.ApprovedAt?.Month == month.Month && b.ApprovedAt?.Year == month.Year);
-            approverTrendApproved.Add(count);
+            reviewerTrendApproved.Add(count);
         }
     }
 
@@ -650,7 +650,7 @@ else if (currentRole == "AdminIT")
         userStats.Total = allUsers.Count(u => !u.IsDeleted);
         userStats.AdminIT = allUsers.Count(u => u.Role == "AdminIT" && !u.IsDeleted);
         userStats.AdminGudang = allUsers.Count(u => u.Role == "AdminGudangBarang" && !u.IsDeleted);
-        userStats.Approver = allUsers.Count(u => u.Role == "Approver" && !u.IsDeleted);
+        userStats.Reviewer = allUsers.Count(u => u.Role == "Reviewer" && !u.IsDeleted);
     }
 
     private string[] GetLast6MonthLabels()
@@ -674,7 +674,7 @@ else if (currentRole == "AdminIT")
         return result;
     }
 
-    private int[] GetApproverMonthlyData(bool approved)
+    private int[] GetReviewerMonthlyData(bool approved)
     {
         var status = approved ? "Approved" : "Rejected";
         var result = new int[6];
@@ -772,18 +772,18 @@ else if (currentRole == "AdminIT")
         }
     }
 
-    // Approver sort
+    // Reviewer sort
     private string sortAppCol = "Tanggal Submit";
     private bool sortAppAsc = true;
-    private void SortApprover(string col) { if (sortAppCol == col) sortAppAsc = !sortAppAsc; else { sortAppCol = col; sortAppAsc = true; } }
-    private string GetApproverSortIcon(string col) => sortAppCol != col ? "bi-arrow-down-up" : sortAppAsc ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
-    private IEnumerable<BAEntity> SortedApproverQueue => sortAppCol switch
+    private void SortReviewer(string col) { if (sortAppCol == col) sortAppAsc = !sortAppAsc; else { sortAppCol = col; sortAppAsc = true; } }
+    private string GetReviewerSortIcon(string col) => sortAppCol != col ? "bi-arrow-down-up" : sortAppAsc ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
+    private IEnumerable<BAEntity> SortedReviewerQueue => sortAppCol switch
     {
-        "No. Surat" => sortAppAsc ? approverQueue.OrderBy(b => b.NomorSurat) : approverQueue.OrderByDescending(b => b.NomorSurat),
-        "Jenis BA" => sortAppAsc ? approverQueue.OrderBy(b => b.Jenis) : approverQueue.OrderByDescending(b => b.Jenis),
-        "Penanggung Jawab" => sortAppAsc ? approverQueue.OrderBy(b => b.Pj?.Nama) : approverQueue.OrderByDescending(b => b.Pj?.Nama),
-        "Tanggal Submit" => sortAppAsc ? approverQueue.OrderBy(b => b.SubmittedAt) : approverQueue.OrderByDescending(b => b.SubmittedAt),
-        _ => approverQueue
+        "No. Surat" => sortAppAsc ? reviewerQueue.OrderBy(b => b.NomorSurat) : reviewerQueue.OrderByDescending(b => b.NomorSurat),
+        "Jenis BA" => sortAppAsc ? reviewerQueue.OrderBy(b => b.Jenis) : reviewerQueue.OrderByDescending(b => b.Jenis),
+        "Penanggung Jawab" => sortAppAsc ? reviewerQueue.OrderBy(b => b.Pj?.Nama) : reviewerQueue.OrderByDescending(b => b.Pj?.Nama),
+        "Tanggal Submit" => sortAppAsc ? reviewerQueue.OrderBy(b => b.SubmittedAt) : reviewerQueue.OrderByDescending(b => b.SubmittedAt),
+        _ => reviewerQueue
     };
 
 }

@@ -1,4 +1,4 @@
-@page "/editor/{Id:int}"
+﻿@page "/editor/{Id:int}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
@@ -147,7 +147,7 @@
                                 <td style="padding:7px 0;font-weight:600;">@ba.Menyerahkan?.Nama</td>
                             </tr>
                             <tr>
-                                <td style="padding:7px 0;color:var(--text-secondary);">Approver</td>
+                                <td style="padding:7px 0;color:var(--text-secondary);">Reviewer</td>
                                 <td style="padding:7px 0;font-weight:600;">@ba.Mengetahui?.Nama</td>
                             </tr>
                         }
@@ -466,8 +466,8 @@
                         trackedBa.Id
                     );
 
-                    var baseUrlApprover = Navigation.BaseUri.TrimEnd('/');
-                    var barangListApprover = trackedBa.Perangkat
+                    var baseUrlReviewer = Navigation.BaseUri.TrimEnd('/');
+                    var barangListReviewer = trackedBa.Perangkat
                         .Select(p => {
                             string nama = p.Barang?.NamaBarang ?? "Perangkat";
                             string detail = $"{p.Jumlah} {p.Satuan}";
@@ -480,11 +480,11 @@
                     {
                         await EmailService.SendApprovalRequestAsync(
                             trackedBa.Mengetahui.Email,
-                            trackedBa.Mengetahui.Nama ?? "Approver",
-                            baseUrlApprover,
+                            trackedBa.Mengetahui.Nama ?? "Reviewer",
+                            baseUrlReviewer,
                             trackedBa.Id,
                             trackedBa.Jenis ?? "Berita Acara",
-                            barangListApprover
+                            barangListReviewer
                         );
                     }
                     Navigation.NavigateTo("/progress");

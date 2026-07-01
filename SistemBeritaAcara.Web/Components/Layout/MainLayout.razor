@@ -1,4 +1,4 @@
-@using Microsoft.AspNetCore.Components.Authorization
+﻿@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
 @using System.Security.Claims
@@ -123,7 +123,7 @@ else
                         <span>Archive</span>
                     </NavLink>
                 }
-                else if (currentRole == "Approver")
+                else if (currentRole == "Reviewer")
                 {
                     <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
                         <i class="bi bi-speedometer2"></i>
@@ -311,7 +311,7 @@ else
             {
                 "AdminIT"            => "Admin IT",
                 "AdminGudangBarang"  => "Admin Gudang & Barang",
-                "Approver"           => "Approver",
+                "Reviewer"           => "Reviewer",
                 _                    => currentRole
             };
 
@@ -334,7 +334,7 @@ else
                 .CountAsync(ba => ba.CreatedBy == _currentUserId &&
                     (ba.Status == "WaitingPJSign" || ba.Status == "WaitingApproval"));
         }
-        else if (currentRole == "Approver")
+        else if (currentRole == "Reviewer")
         {
             progressCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
                 .CountAsync(ba => ba.MengetahuiId == _currentUserId && ba.Status == "WaitingApproval");

@@ -1,4 +1,4 @@
-@page "/tambah-pengguna"
+﻿@page "/tambah-pengguna"
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using PegawaiEntity = SistemBeritaAcara.Core.Entities.Pegawai
@@ -77,7 +77,7 @@
                     @{
                         var roles = new[] {
                             new { Value = "AdminGudangBarang", Text = "Admin Gudang & Barang", Icon = "bi-box-seam", Desc = "Kelola & buat Berita Acara" },
-                            new { Value = "Approver", Text = "Approver", Icon = "bi-person-check", Desc = "Menyetujui Berita Acara" }
+                            new { Value = "Reviewer", Text = "Reviewer", Icon = "bi-person-check", Desc = "Menyetujui Berita Acara" }
                         };
                         foreach (var r in roles)
                         {
@@ -252,7 +252,7 @@
             savedRole = selectedRole switch
             {
                 "AdminGudangBarang" => "Admin Gudang & Barang",
-                "Approver" => "Approver",
+                "Reviewer" => "Reviewer",
                 _ => selectedRole
             };
             formSaved = true;

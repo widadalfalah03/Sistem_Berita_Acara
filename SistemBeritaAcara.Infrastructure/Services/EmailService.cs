@@ -1,4 +1,4 @@
-using MailKit.Net.Smtp;
+﻿using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Configuration;
 using MimeKit;
@@ -131,8 +131,8 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, $"Notifikasi Keamanan: Tanda Tangan Digunakan ({nomorSurat})", body);
     }
 
-    // ── Email #5: Permintaan Approval ke Approver ─────────────────────────────
-    public async Task SendApprovalRequestAsync(string toEmail, string approverName, string baseUrl, int baId, string jenisBA, List<string> barangList)
+    // ── Email #5: Permintaan Approval ke Reviewer ─────────────────────────────
+    public async Task SendApprovalRequestAsync(string toEmail, string reviewerName, string baseUrl, int baId, string jenisBA, List<string> barangList)
     {
         var returnUrl = Uri.EscapeDataString($"/berita-acara/{baId}");
         var loginLink = $"{baseUrl}/login?returnUrl={returnUrl}";
@@ -140,7 +140,7 @@ public class EmailService(IConfiguration config) : IEmailService
 
         string body = $"""
             <h2 style="color: #0f172a;">Dokumen Berita Acara Menunggu Persetujuan Anda</h2>
-            <p>Yth. <strong>{approverName}</strong>,</p>
+            <p>Yth. <strong>{reviewerName}</strong>,</p>
             <p>Penanggung Jawab telah menandatangani Berita Acara <strong>{jenisBA}</strong> dan dokumen tersebut kini menunggu persetujuan Anda.</p>
 
             {barangTable}
@@ -149,7 +149,7 @@ public class EmailService(IConfiguration config) : IEmailService
                 <a href="{loginLink}" style="background-color: #0284c7; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #0369a1;">Login &amp; Review Dokumen</a>
             </div>
 
-            <p style="font-size: 13px; color: #64748b;"><em>Anda akan diarahkan ke halaman login. Setelah berhasil login sebagai Approver, sistem akan otomatis membuka dokumen yang perlu ditinjau.</em></p>
+            <p style="font-size: 13px; color: #64748b;"><em>Anda akan diarahkan ke halaman login. Setelah berhasil login sebagai Reviewer, sistem akan otomatis membuka dokumen yang perlu ditinjau.</em></p>
             <br>
             <p>Salam hangat,<br><strong>Sistem Informasi Berita Acara</strong></p>
             """;
@@ -228,7 +228,7 @@ public class EmailService(IConfiguration config) : IEmailService
         string body = $"""
             <h2 style="color: {statusColor};">{baLabel} {statusText}</h2>
             <p>Yth. <strong>{recipientName}</strong>,</p>
-            <p>{baLabel} telah <strong style="color:{statusColor};">{statusText}</strong> oleh Approver.</p>
+            <p>{baLabel} telah <strong style="color:{statusColor};">{statusText}</strong> oleh Reviewer.</p>
             {alasanSection}
             {barangTable}
             {actionButtons}
