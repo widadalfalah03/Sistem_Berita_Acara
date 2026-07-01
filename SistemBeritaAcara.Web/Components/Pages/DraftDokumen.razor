@@ -205,7 +205,7 @@ else
         drafts = await DbContext.Set<BeritaAcaraEntity>()
             .AsNoTracking()
             .Include(b => b.Pj)
-            .Where(b => b.CreatedBy == currentUserId && b.Status == "Draft")
+            .Where(b => b.CreatedBy == currentUserId && (b.Status == "Draft" || b.Status == "Rejected"))
             .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
         isLoading = false;
