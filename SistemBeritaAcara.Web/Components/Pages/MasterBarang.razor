@@ -62,9 +62,6 @@
             <input type="text" placeholder="Cari nama barang..."
                    @bind="search" @bind:event="oninput" />
         </div>
-        <div style="font-size:13px;color:var(--text-secondary);">
-            Menampilkan @((currentPage - 1) * pageSize + 1)–@Math.Min(currentPage * pageSize, TotalFilteredItems) dari @TotalFilteredItems barang
-        </div>
     </div>
     <button @onclick="OpenTambah"
             style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:none;background:var(--primary);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;"
@@ -125,15 +122,16 @@ else
             </table>
         </div>
 
-        @if (TotalFilteredItems > pageSize)
-        {
-            <SistemBeritaAcara.Web.Components.Shared.Pagination
-                CurrentPage="@currentPage"
-                TotalItems="@TotalFilteredItems"
-                PageSize="@pageSize"
-                CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
-        }
     </div>
+
+    @if (TotalFilteredItems > 0)
+    {
+        <SistemBeritaAcara.Web.Components.Shared.Pagination
+            CurrentPage="@currentPage"
+            TotalItems="@TotalFilteredItems"
+            PageSize="@pageSize"
+            CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+    }
 }
 
 <!-- ── Modal Tambah / Edit ── -->
