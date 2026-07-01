@@ -420,9 +420,9 @@ else
 
 
             await NotificationService.SendToRoleAsync("Approver", "WAITING_APPROVAL",
-                $"Draft BA telah ditandatangani PJ ({ba.Pj?.Nama}) dan menunggu approval Anda.", ba.Id);
+                $"Berita Acara {ba.Jenis} telah ditandatangani PJ ({ba.Pj?.Nama}) dan menunggu approval Anda.", ba.Id);
             await NotificationService.SendToRoleAsync("AdminGudangBarang", "PJ_SIGNED",
-                $"Draft BA telah ditandatangani PJ ({ba.Pj?.Nama}).", ba.Id);
+                $"Berita Acara {ba.Jenis} telah ditandatangani PJ ({ba.Pj?.Nama}).", ba.Id);
 
             // Email notifikasi ke Approver
             if (approverUser != null && !string.IsNullOrEmpty(approverUser.Email))

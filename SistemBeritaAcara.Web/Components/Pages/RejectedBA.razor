@@ -11,16 +11,59 @@
 
 <PageTitle>Rejected — Sistem Berita Acara</PageTitle>
 
-<!-- Tab bar — sama seperti Inbox -->
-<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-    <button @onclick='() => SwitchTab("revisi")'
-            style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:@(activeTab=="revisi" ? "600" : "500");font-family:inherit;transition:all .15s;@(activeTab=="revisi" ? "background:var(--primary);color:white;" : "background:transparent;color:var(--text-secondary);")">
-        Revisi @(revisiBA.Count > 0 ? $"({revisiBA.Count})" : "")
-    </button>
-    <button @onclick='() => SwitchTab("riwayat")'
-            style="padding:8px 18px;border-radius:var(--radius-full);border:none;cursor:pointer;font-size:14px;font-weight:@(activeTab=="riwayat" ? "600" : "500");font-family:inherit;transition:all .15s;@(activeTab=="riwayat" ? "background:var(--primary);color:white;" : "background:transparent;color:var(--text-secondary);")">
-        Riwayat
-    </button>
+<style>
+    .folder-tabs-wrapper {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: -1px;
+        position: relative;
+        z-index: 10;
+    }
+    .folder-tabs {
+        display: flex;
+        gap: 4px;
+    }
+    .folder-tab {
+        padding: 10px 22px;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: inherit;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid var(--border);
+        background: #F3F4F6;
+        color: var(--text-secondary);
+        position: relative;
+    }
+    .folder-tab.active {
+        background: var(--surface);
+        color: var(--primary);
+        font-weight: 700;
+        border-bottom-color: var(--surface);
+        z-index: 2;
+    }
+    .folder-tab.inactive {
+        border-bottom-color: var(--border);
+        z-index: 1;
+    }
+    .folder-tab:not(.active):hover {
+        background: #E5E7EB;
+    }
+</style>
+
+<!-- Tab bar -->
+<div class="folder-tabs-wrapper">
+    <div class="folder-tabs">
+        <button class="folder-tab @(activeTab == "revisi" ? "active" : "inactive")" @onclick='() => SwitchTab("revisi")'>
+            Revisi @(revisiBA.Count > 0 ? $"({revisiBA.Count})" : "")
+        </button>
+        <button class="folder-tab @(activeTab == "riwayat" ? "active" : "inactive")" @onclick='() => SwitchTab("riwayat")'>
+            Riwayat
+        </button>
+    </div>
 </div>
 
 @if (isLoading)
@@ -33,7 +76,7 @@ else
 
     @if (!currentList.Any())
     {
-        <div class="card" style="text-align:center;padding:60px;">
+        <div class="card" style="text-align:center;padding:60px;border-radius:0 var(--radius-lg) var(--radius-lg) var(--radius-lg);position:relative;z-index:1;">
             @if (activeTab == "revisi")
             {
                 <i class="bi bi-check-circle" style="font-size:48px;color:var(--success,#22C55E);display:block;margin-bottom:16px;"></i>
@@ -52,62 +95,64 @@ else
     {
         var paginated = currentList.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
 
-        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
-            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, currentList.Count) dari @currentList.Count dokumen
-        </div>
+        <div style="background:var(--surface);border-radius:0 var(--radius-lg) var(--radius-lg) var(--radius-lg);border:1px solid var(--border);padding:16px;margin-bottom:24px;position:relative;z-index:1;">
+            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+                Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, currentList.Count) dari @currentList.Count dokumen
+            </div>
 
-        <div style="display:flex;flex-direction:column;gap:12px;">
-            @foreach (var ba in paginated)
-            {
-                <div class="rejected-item">
-                    <div class="rejected-item-top">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <span class="pill pill-rejected" style="font-size:11px;letter-spacing:.03em;">Rejected</span>
-                            <span style="font-size:15px;font-weight:600;color:var(--text-primary);">Berita Acara @ba.Jenis</span>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                @foreach (var ba in paginated)
+                {
+                    <div class="rejected-item">
+                        <div class="rejected-item-top">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span class="pill pill-rejected" style="font-size:11px;letter-spacing:.03em;">Rejected</span>
+                                <span style="font-size:15px;font-weight:600;color:var(--text-primary);">Berita Acara @ba.Jenis</span>
+                            </div>
+                            <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
+                                @(ba.ApprovedAt?.ToString("dd MMM yyyy, HH:mm") ?? ba.CreatedAt.ToString("dd MMM yyyy"))
+                            </span>
                         </div>
-                        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
-                            @(ba.ApprovedAt?.ToString("dd MMM yyyy, HH:mm") ?? ba.CreatedAt.ToString("dd MMM yyyy"))
-                        </span>
-                    </div>
 
-                    <div class="rejected-item-meta">
-                        <div class="rejected-meta-item">
-                            <i class="bi bi-person"></i>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Penanggung Jawab</div>
-                                <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Pj?.Nama ?? "—")</div>
+                        <div class="rejected-item-meta">
+                            <div class="rejected-meta-item">
+                                <i class="bi bi-person"></i>
+                                <div>
+                                    <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Penanggung Jawab</div>
+                                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Pj?.Nama ?? "—")</div>
+                                </div>
+                            </div>
+                            <div class="rejected-meta-item">
+                                <i class="bi bi-person-check"></i>
+                                <div>
+                                    <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Approver</div>
+                                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Mengetahui?.Nama ?? "—")</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="rejected-meta-item">
-                            <i class="bi bi-person-check"></i>
-                            <div>
-                                <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Approver</div>
-                                <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Mengetahui?.Nama ?? "—")</div>
-                            </div>
-                        </div>
-                    </div>
 
-                    @if (!string.IsNullOrEmpty(ba.AlasanReject))
-                    {
-                        <div class="rejected-item-reason">
-                            <i class="bi bi-chat-square-text" style="flex-shrink:0;margin-top:1px;color:var(--danger);"></i>
-                            <span>@ba.AlasanReject</span>
-                        </div>
-                    }
-
-                    <div class="rejected-item-actions">
-                        <NavLink href="@($"/berita-acara/{ba.Id}")" class="btn btn-sm btn-outline">
-                            <i class="bi bi-eye"></i> Lihat Detail
-                        </NavLink>
-                        @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
+                        @if (!string.IsNullOrEmpty(ba.AlasanReject))
                         {
-                            <NavLink href="@($"/buat-ba?edit={ba.Id}")" class="btn btn-sm btn-primary">
-                                <i class="bi bi-arrow-counterclockwise"></i> Revisi
-                            </NavLink>
+                            <div class="rejected-item-reason">
+                                <i class="bi bi-chat-square-text" style="flex-shrink:0;margin-top:1px;color:var(--danger);"></i>
+                                <span>@ba.AlasanReject</span>
+                            </div>
                         }
+
+                        <div class="rejected-item-actions">
+                            <NavLink href="@($"/berita-acara/{ba.Id}")" class="btn btn-sm btn-outline">
+                                <i class="bi bi-eye"></i> Lihat Detail
+                            </NavLink>
+                            @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
+                            {
+                                <NavLink href="@($"/buat-ba?edit={ba.Id}")" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Revisi
+                                </NavLink>
+                            }
+                        </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
         </div>
 
         @if (currentList.Count > pageSize)

@@ -88,61 +88,6 @@ public class DueDateCheckerJob(
             }
         }
 
-        // ── 2. Sudah LEWAT jatuh tempo (overdue) ──────────────────────────────
-        // Kirim pengingat sekali sehari untuk yang sudah overdue
-        var overdue = await db.BeritaAcara
-            .Where(ba => ba.Status == "Approved"
-                && ba.Jenis == "Peminjaman"
-                && ba.TanggalKembali < today
-                && !ba.IsReturned)
-            .Include(ba => ba.Creator)
-            .Include(ba => ba.Pj)
-            .Include(ba => ba.Perangkat).ThenInclude(p => p.Barang)
-            .ToListAsync();
-
-        foreach (var ba in overdue)
-        {
-            string tglStr = ba.TanggalKembali!.Value.ToString("dd/MM/yyyy");
-            string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
-            string pjNama = ba.Pj?.Nama ?? "–";
-            var barangList = GetBarangList(ba);
-
-            // Notifikasi Inbox ke Admin Gudang
-            string msgInbox = $"🚨 Peminjaman {nomorSurat} (PJ: {pjNama}) telah melewati batas pengembalian ({tglStr}). Segera tindak lanjuti!";
-            await notificationService.SendAsync(ba.CreatedBy, "DUE_OVERDUE", msgInbox, ba.Id);
-
-            // Email ke Admin Gudang
-            if (!string.IsNullOrEmpty(ba.Creator?.Email))
-            {
-                await emailService.SendDueDateReminderAsync(
-                    ba.Creator.Email,
-                    ba.Creator.Nama ?? "Admin",
-                    nomorSurat,
-                    pjNama,
-                    tglStr,
-                    daysUntilDue: -1,
-                    isForPj: false,
-                    baId: ba.Id,
-                    baseUrl: BaseUrl,
-                    barangList: barangList);
-            }
-
-            // Email ke PJ
-            if (!string.IsNullOrEmpty(ba.Pj?.Email))
-            {
-                await emailService.SendDueDateReminderAsync(
-                    ba.Pj.Email,
-                    pjNama,
-                    nomorSurat,
-                    pjNama,
-                    tglStr,
-                    daysUntilDue: -1,
-                    isForPj: true,
-                    baId: ba.Id,
-                    baseUrl: BaseUrl,
-                    barangList: barangList);
-            }
-        }
 
         // ── 3. Jatuh tempo BESOK (H-1) ─────────────────────────────────────────
         var tomorrow = today.AddDays(1);
