@@ -12,51 +12,60 @@
 <PageTitle>Inbox — Sistem Berita Acara</PageTitle>
 
 <style>
-    .folder-tabs-wrapper {
+    .notif-header-wrapper {
         display: flex;
-        align-items: flex-end;
+        align-items: center;
         justify-content: space-between;
-        margin-bottom: -1px;
+        margin-bottom: 24px;
         position: relative;
         z-index: 10;
+        height: 48px;
     }
-    .folder-tabs {
-        display: flex;
-        gap: 4px;
+    .segmented-control {
+        display: inline-flex;
+        background: transparent;
+        gap: 8px;
     }
-    .folder-tab {
-        padding: 10px 22px;
+    .segment-btn {
+        padding: 8px 24px;
         font-size: 14px;
         font-weight: 500;
-        font-family: inherit;
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 1px solid var(--border);
-        background: #F3F4F6;
+        border: none;
+        background: transparent;
         color: var(--text-secondary);
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
-    }
-    .folder-tab.active {
-        background: var(--surface);
-        color: var(--primary);
-        font-weight: 700;
-        border-bottom-color: var(--surface);
         z-index: 2;
     }
-    .folder-tab.inactive {
-        border-bottom-color: var(--border);
-        z-index: 1;
+    @@keyframes fadeSlideIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
     }
-    .folder-tab:not(.active):hover {
-        background: #E5E7EB;
+    .tab-content-wrapper {
+        animation: fadeSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .segment-btn.active {
+        color: #ffffff;
+        font-weight: 600;
+        background: var(--primary);
+        box-shadow: 0 4px 12px rgba(37,99,235,0.2);
+    }
+    .segment-btn:not(.active):hover {
+        background: #f1f5f9;
+        color: var(--text-primary);
     }
     
     .action-buttons {
         display: flex;
         gap: 10px;
-        margin-bottom: 12px;
+        min-height: 38px;
+        animation: fadeBtn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    @@keyframes fadeBtn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
     .action-btn-circle {
         width: 38px;
@@ -84,18 +93,18 @@
     }
 </style>
 
-<!-- Tab bar -->
-<div class="folder-tabs-wrapper">
-    <div class="folder-tabs">
-        <button class="folder-tab @(activeTab == "unread" ? "active" : "inactive")" @onclick="SetTabUnread">
+<!-- Tab bar & Actions -->
+<div class="notif-header-wrapper">
+    <div class="segmented-control">
+        <button class="segment-btn @(activeTab == "unread" ? "active" : "")" @onclick="SetTabUnread">
             Belum dibaca @(UnreadCount > 0 ? $"({UnreadCount})" : "")
         </button>
-        <button class="folder-tab @(activeTab == "all" ? "active" : "inactive")" @onclick="SetTabAll">
+        <button class="segment-btn @(activeTab == "all" ? "active" : "")" @onclick="SetTabAll">
             Semua
         </button>
     </div>
     
-    <div class="action-buttons">
+    <div class="action-buttons" @key="activeTab">
         @if (activeTab == "unread" && UnreadCount > 0)
         {
             <button class="action-btn-circle btn-read" @onclick="() => markAllReadConfirm = true" title="Tandai sudah dibaca">
@@ -164,13 +173,14 @@
     </div>
 }
 
-@if (isLoading)
-{
-    <div class="loading-spinner"><div class="spinner"></div><span>Memuat notifikasi...</span></div>
+<div class="tab-content-wrapper" @key="activeTab">
+    @if (isLoading)
+    {
+        <div class="loading-spinner"><div class="spinner"></div><span>Memuat notifikasi...</span></div>
 }
 else if (!DisplayedNotifications.Any())
 {
-    <div style="text-align:center;padding:60px;background:var(--surface);border-radius:0 var(--radius-lg) var(--radius-lg) var(--radius-lg);border:1px solid var(--border);position:relative;z-index:1;">
+    <div style="text-align:center;padding:60px;background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);position:relative;z-index:1;">
         <i class="bi bi-bell-slash" style="font-size:48px;color:var(--text-muted);display:block;margin-bottom:16px;"></i>
         <div style="font-size:18px;font-weight:700;margin-bottom:8px;">
             @(activeTab == "unread" ? "Tidak ada notifikasi yang belum dibaca" : "Tidak ada notifikasi")
@@ -180,7 +190,7 @@ else if (!DisplayedNotifications.Any())
 }
 else
 {
-    <div class="notif-container-card" style="background:var(--surface);border-radius:0 var(--radius-lg) var(--radius-lg) var(--radius-lg);border:1px solid var(--border);padding:8px 0;margin-bottom:24px;position:relative;z-index:1;">
+    <div class="notif-container-card" style="background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:8px 0;margin-bottom:24px;position:relative;z-index:1;">
         @foreach (var n in DisplayedNotifications)
         {
             <div class="notif-item @(n.IsRead ? "" : "unread")"
@@ -212,6 +222,7 @@ else
             CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
     }
 }
+</div>
 
 @code {
     private List<Notification> notifications = new();

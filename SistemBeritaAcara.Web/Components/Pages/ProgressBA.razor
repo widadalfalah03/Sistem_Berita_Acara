@@ -27,9 +27,6 @@ else if (currentRole == "AdminGudangBarang")
     }
     else
     {
-        <div style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">
-            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, baList.Count) dari @baList.Count dokumen
-        </div>
         <div class="card">
             <div class="table-responsive">
             <table class="data-table">
@@ -78,16 +75,16 @@ else if (currentRole == "AdminGudangBarang")
                 </tbody>
             </table>
             </div>
-            
-            @if (baList.Count > 0)
-            {
-                <SistemBeritaAcara.Web.Components.Shared.Pagination
-                    CurrentPage="@currentPage"
-                    TotalItems="@baList.Count"
-                    PageSize="@pageSize"
-                    CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
-            }
         </div>
+        
+        @if (baList.Count > 0)
+        {
+            <SistemBeritaAcara.Web.Components.Shared.Pagination
+                CurrentPage="@currentPage"
+                TotalItems="@baList.Count"
+                PageSize="@pageSize"
+                CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+        }
     }
 }
 else if (currentRole == "Reviewer")
@@ -102,9 +99,6 @@ else if (currentRole == "Reviewer")
     }
     else
     {
-        <div style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">
-            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, baList.Count) dari @baList.Count dokumen
-        </div>
         <div class="card">
             @foreach (var ba in PaginatedBaList)
             {
@@ -129,16 +123,16 @@ else if (currentRole == "Reviewer")
                     </div>
                 </NavLink>
             }
-            
-            @if (baList.Count > 0)
-            {
-                <SistemBeritaAcara.Web.Components.Shared.Pagination
-                    CurrentPage="@currentPage"
-                    TotalItems="@baList.Count"
-                    PageSize="@pageSize"
-                    CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
-            }
         </div>
+        
+        @if (baList.Count > 0)
+        {
+            <SistemBeritaAcara.Web.Components.Shared.Pagination
+                CurrentPage="@currentPage"
+                TotalItems="@baList.Count"
+                PageSize="@pageSize"
+                CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+        }
     }
 }
 

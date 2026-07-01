@@ -1,4 +1,4 @@
-﻿@page "/pengguna"
+@page "/pengguna"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
@@ -90,9 +90,6 @@ else
             <div class="toggle-switch @(showInactive ? "active" : "")" @onclick="() => showInactive = !showInactive"></div>
             <span>Tampilkan Non-Aktif</span>
         </label>
-        <div style="font-size:13px; color:var(--text-secondary); margin-left:auto;">
-            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, TotalFilteredItems) dari @TotalFilteredItems pengguna
-        </div>
     </div>
 
     <div class="card">
@@ -152,17 +149,17 @@ else
                 </tbody>
             </table>
             </div>
-            
-            @if (TotalFilteredItems > 0)
-            {
-                <SistemBeritaAcara.Web.Components.Shared.Pagination
-                    CurrentPage="@currentPage"
-                    TotalItems="@TotalFilteredItems"
-                    PageSize="@pageSize"
-                    CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
-            }
         }
     </div>
+
+    @if (TotalFilteredItems > 0)
+    {
+        <SistemBeritaAcara.Web.Components.Shared.Pagination
+            CurrentPage="@currentPage"
+            TotalItems="@TotalFilteredItems"
+            PageSize="@pageSize"
+            CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+    }
 }
 
 @code {
