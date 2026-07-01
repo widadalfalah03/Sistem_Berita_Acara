@@ -1,4 +1,4 @@
-﻿using MailKit.Net.Smtp;
+using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Configuration;
 using MimeKit;
@@ -60,7 +60,7 @@ public class EmailService(IConfiguration config) : IEmailService
                 <a href="{link}" style="background-color: #0284c7; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #0369a1;">Akses Dokumen &amp; Tanda Tangan</a>
             </div>
             
-            <p style="font-size: 13px; color: #64748b;"><em>Catatan: Akses ini bersifat privat dan token akan otomatis kedaluwarsa dalam waktu 7 hari demi keamanan data.</em></p>
+            <p style="font-size: 13px; color: #64748b;"><em>Catatan: Akses ini bersifat privat. Berita Acara ini akan otomatis disetujui (auto-approve) oleh sistem jika Anda tidak menandatanganinya dalam waktu 1x24 jam. Token akan otomatis kedaluwarsa setelah itu.</em></p>
             <br>
             <p>Salam hangat,<br><strong>Administrator IT Pertamina Patra Niaga</strong></p>
             """;
