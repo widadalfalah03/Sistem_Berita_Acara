@@ -1,4 +1,4 @@
-@page "/edit-pengguna/{Id:int}"
+﻿@page "/edit-pengguna/{Id:int}"
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -105,7 +105,7 @@ else
                         <label class="form-label">Role</label>
                         <select class="form-control form-select" value="@editRole" @onchange="OnRoleChanged">
                             <option value="AdminGudangBarang">Admin Gudang & Barang</option>
-                            <option value="Approver">Approver</option>
+                            <option value="Reviewer">Reviewer</option>
                         </select>
                     </div>
                 </div>
@@ -220,7 +220,7 @@ else
     {
         "AdminIT" => "Admin IT",
         "AdminGudangBarang" => "Admin Gudang & Barang",
-        "Approver" => "Approver",
+        "Reviewer" => "Reviewer",
         _ => role
     };
 
@@ -228,7 +228,7 @@ else
     {
         "AdminIT" => "pill-admin-it",
         "AdminGudangBarang" => "pill-admin-gudang",
-        "Approver" => "pill-approver",
+        "Reviewer" => "pill-reviewer",
         _ => "pill-draft"
     };
 }

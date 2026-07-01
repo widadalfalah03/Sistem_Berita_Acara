@@ -1,4 +1,4 @@
-@page "/pengguna"
+﻿@page "/pengguna"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
@@ -51,8 +51,8 @@ else
         <div class="stat-card">
             <div class="stat-card-icon progress"><i class="bi bi-person-check"></i></div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Approver</div>
-                <div class="stat-card-value blue">@stats.Approver</div>
+                <div class="stat-card-label">Reviewer</div>
+                <div class="stat-card-value blue">@stats.Reviewer</div>
             </div>
         </div>
     </div>
@@ -73,7 +73,7 @@ else
             {
                 <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
                 <div style="position:absolute;top:100%;left:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:180px;margin-top:4px;overflow:hidden;">
-                    @foreach (var role in new[] { "", "AdminIT", "AdminGudangBarang", "Approver" })
+                    @foreach (var role in new[] { "", "AdminIT", "AdminGudangBarang", "Reviewer" })
                     {
                         var label = string.IsNullOrEmpty(role) ? "Semua Role" : GetRoleLabel(role);
                         <div @onclick="@(() => { roleFilter = role; showRoleDropdown = false; })"
@@ -172,7 +172,7 @@ else
     private bool showInactive = false;
     private bool showRoleDropdown = false;
     private string errorMsg = string.Empty;
-    private (int Total, int AdminIT, int AdminGudang, int Approver) stats;
+    private (int Total, int AdminIT, int AdminGudang, int Reviewer) stats;
 
     private string sortColumn = "Nama";
     private bool sortAscending = true;
@@ -255,7 +255,7 @@ else
         stats.Total = allUsers.Count(u => u.EmailConfirmed && !u.IsDeleted);
         stats.AdminIT = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminIT" && !u.IsDeleted);
         stats.AdminGudang = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminGudangBarang" && !u.IsDeleted);
-        stats.Approver = allUsers.Count(u => u.EmailConfirmed && u.Role == "Approver" && !u.IsDeleted);
+        stats.Reviewer = allUsers.Count(u => u.EmailConfirmed && u.Role == "Reviewer" && !u.IsDeleted);
 
         isLoading = false;
     }
@@ -264,7 +264,7 @@ else
     {
         "AdminIT" => "pill-admin-it",
         "AdminGudangBarang" => "pill-admin-gudang",
-        "Approver" => "pill-approver",
+        "Reviewer" => "pill-reviewer",
         _ => "pill-draft"
     };
 
@@ -272,7 +272,7 @@ else
     {
         "AdminIT" => "Admin IT",
         "AdminGudangBarang" => "Admin Gudang & Barang",
-        "Approver" => "Approver",
+        "Reviewer" => "Reviewer",
         _ => role
     };
 }

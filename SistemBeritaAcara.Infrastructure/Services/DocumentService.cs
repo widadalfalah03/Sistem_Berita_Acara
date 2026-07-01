@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -86,11 +86,11 @@ public class DocumentService : IDocumentService
                     : "-")
                 : string.Empty;
 
-            // Jabatan approver â€” prefer Pegawai.Jabatan (loaded via DB if ApplicationUser.Jabatan is null)
-            string jabatanApprover;
+            // Jabatan reviewer â€” prefer Pegawai.Jabatan (loaded via DB if ApplicationUser.Jabatan is null)
+            string jabatanReviewer;
             if (!string.IsNullOrWhiteSpace(ba.Mengetahui?.Jabatan))
             {
-                jabatanApprover = ba.Mengetahui.Jabatan;
+                jabatanReviewer = ba.Mengetahui.Jabatan;
             }
             else if (ba.MengetahuiId > 0)
             {
@@ -99,17 +99,17 @@ public class DocumentService : IDocumentService
                     .Where(x => x.u.Id == ba.MengetahuiId)
                     .Select(x => new { x.u.Jabatan, PegawaiJabatan = x.p.Jabatan })
                     .FirstOrDefault();
-                jabatanApprover = mengetahuiUser?.Jabatan
+                jabatanReviewer = mengetahuiUser?.Jabatan
                                ?? mengetahuiUser?.PegawaiJabatan
                                ?? "-";
             }
             else
             {
-                jabatanApprover = "-";
+                jabatanReviewer = "-";
             }
 
-            // Tujuan BA: approver's jabatan (where the BA is addressed to)
-            var tujuanStr = !string.IsNullOrWhiteSpace(jabatanApprover) ? jabatanApprover : "-";
+            // Tujuan BA: reviewer's jabatan (where the BA is addressed to)
+            var tujuanStr = !string.IsNullOrWhiteSpace(jabatanReviewer) ? jabatanReviewer : "-";
 
             var replacements = new Dictionary<string, string>
             {
@@ -129,7 +129,7 @@ public class DocumentService : IDocumentService
                 { "{{NoTelpPJ}}", ba.PjNoTelp ?? ba.Pj?.NoTelp ?? "-" },
                 { "{{Menyerahkan}}", ba.Menyerahkan?.Nama ?? "-" },
                 { "{{Reviewer}}", ba.Mengetahui?.Nama ?? "-" },
-                { "{{JabatanReviewer}}", jabatanApprover },
+                { "{{JabatanReviewer}}", jabatanReviewer },
                 { "{{NamaPengguna}}", ba.PengunaAlihDaya ?? "-" },
                 { "{{TujuanBA}}", tujuanStr },
                 { "{{JenisPerangkat}}", jenisPerangkatStr },
@@ -444,7 +444,7 @@ public class DocumentService : IDocumentService
         return ba.DocxPath!;
     }
 
-    public async Task<string> EmbedTtdPreviewApproverAsync(int baId, string ttdPath)
+    public async Task<string> EmbedTtdPreviewReviewerAsync(int baId, string ttdPath)
     {
         var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
         string physicalPath = GetPhysicalPath(ba.DocxPath!);

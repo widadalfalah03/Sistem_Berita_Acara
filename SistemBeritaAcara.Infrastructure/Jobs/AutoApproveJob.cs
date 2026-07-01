@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SistemBeritaAcara.Core.Entities;
@@ -50,7 +50,7 @@ public class AutoApproveJob(
                 ba.TtdPjPath = "images/auto_approve_stamp.png";
                 ba.PjSignedAt = DateTime.Now;
                 ba.Status = "WaitingApproval";
-                ba.SubmittedAt = DateTime.Now; // Waktu pengiriman ke Approver
+                ba.SubmittedAt = DateTime.Now; // Waktu pengiriman ke Reviewer
 
                 // 2. Generate ulang dokumen dari template (DocxPath bisa null jika belum pernah dibuat)
                 //    dan simpan path-nya ke ba.DocxPath
@@ -88,11 +88,11 @@ public class AutoApproveJob(
                     }
                 }
 
-                // 5. Kirim notifikasi ke Approver (inbox)
+                // 5. Kirim notifikasi ke Reviewer (inbox)
                 string msgInbox = $"Dokumen {ba.NomorSurat ?? $"BA-{ba.Id}"} telah disetujui otomatis (PJ melewati batas 2 menit / TESTING) dan membutuhkan otorisasi Anda.";
                 await notificationService.SendAsync(ba.MengetahuiId ?? 0, "APPROVAL_REQUIRED", msgInbox, ba.Id);
 
-                // 6. Kirim email ke Approver
+                // 6. Kirim email ke Reviewer
                 if (!string.IsNullOrEmpty(ba.Mengetahui?.Email))
                 {
                     var barangList = ba.Perangkat
@@ -108,7 +108,7 @@ public class AutoApproveJob(
 
                     await emailService.SendApprovalRequestAsync(
                         ba.Mengetahui.Email,
-                        ba.Mengetahui.Nama ?? "Approver",
+                        ba.Mengetahui.Nama ?? "Reviewer",
                         BaseUrl,
                         ba.Id,
                         ba.Jenis ?? "Berita Acara",
@@ -116,7 +116,7 @@ public class AutoApproveJob(
                     );
                 }
 
-                logger.LogInformation($"[AutoApproveJob] BA {ba.Id} ({ba.NomorSurat}) berhasil di-auto-approve dan notifikasi dikirim ke Approver.");
+                logger.LogInformation($"[AutoApproveJob] BA {ba.Id} ({ba.NomorSurat}) berhasil di-auto-approve dan notifikasi dikirim ke Reviewer.");
             }
             catch (Exception ex)
             {

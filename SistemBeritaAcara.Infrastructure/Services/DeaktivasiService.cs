@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SistemBeritaAcara.Core.Interfaces;
 using SistemBeritaAcara.Infrastructure.Data;
 
@@ -29,7 +29,7 @@ public class DeaktivasiService(AppDbContext db, INotificationService notificatio
             if (pendingBAs.Count > 0)
             {
                 string msg = $"Ada {pendingBAs.Count} BA menunggu approval dari akun yang dinonaktifkan ({user.Nama}).";
-                await notificationService.SendToRoleAsync("AdminIT", "APPROVER_DEACTIVATED", msg);
+                await notificationService.SendToRoleAsync("AdminIT", "REVIEWER_DEACTIVATED", msg);
             }
         }
 

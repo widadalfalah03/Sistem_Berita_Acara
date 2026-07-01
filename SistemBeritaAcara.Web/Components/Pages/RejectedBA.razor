@@ -1,4 +1,4 @@
-@page "/rejected"
+﻿@page "/rejected"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -81,7 +81,7 @@ else
                         <div class="rejected-meta-item">
                             <i class="bi bi-person-check"></i>
                             <div>
-                                <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Approver</div>
+                                <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Reviewer</div>
                                 <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Mengetahui?.Nama ?? "—")</div>
                             </div>
                         </div>
@@ -154,7 +154,7 @@ else
         IQueryable<BeritaAcaraEntity> revisiQuery = baseQuery.Where(b => b.Status == "Rejected");
         if (currentRole == "AdminGudangBarang")
             revisiQuery = revisiQuery.Where(b => b.CreatedBy == currentUserId);
-        else if (currentRole == "Approver")
+        else if (currentRole == "Reviewer")
             revisiQuery = revisiQuery.Where(b => b.MengetahuiId == currentUserId);
 
         revisiBA = await revisiQuery.OrderByDescending(b => b.ApprovedAt).ToListAsync();
@@ -167,7 +167,7 @@ else
 
         if (currentRole == "AdminGudangBarang")
             notifQuery = notifQuery.Where(n => n.BeritaAcara!.CreatedBy == currentUserId);
-        else if (currentRole == "Approver")
+        else if (currentRole == "Reviewer")
             notifQuery = notifQuery.Where(n => n.BeritaAcara!.MengetahuiId == currentUserId);
 
         var historyList = await notifQuery.OrderByDescending(n => n.CreatedAt).ToListAsync();

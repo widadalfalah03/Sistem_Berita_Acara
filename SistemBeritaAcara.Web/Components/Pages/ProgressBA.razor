@@ -1,4 +1,4 @@
-@page "/progress"
+﻿@page "/progress"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -38,7 +38,7 @@ else if (currentRole == "AdminGudangBarang")
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Dokumen <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis BA"))">Jenis Berita Acara <i class="bi @GetSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Waktu Submit <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Approver"))">Approver <i class="bi @GetSortIcon("Approver")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Reviewer"))">Reviewer <i class="bi @GetSortIcon("Reviewer")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                         <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
                     </tr>
                 </thead>
@@ -57,7 +57,7 @@ else if (currentRole == "AdminGudangBarang")
                             </td>
                             <td>
                                 <div class="cell-main">@ba.Mengetahui?.Nama</div>
-                                <div class="cell-sub">Approver</div>
+                                <div class="cell-sub">Reviewer</div>
                             </td>
                             <td>
                                 @if (ba.Status == "WaitingPJSign")
@@ -90,7 +90,7 @@ else if (currentRole == "AdminGudangBarang")
         </div>
     }
 }
-else if (currentRole == "Approver")
+else if (currentRole == "Reviewer")
 {
     @if (!baList.Any())
     {
@@ -183,7 +183,7 @@ else if (currentRole == "Approver")
             {
                 "Jenis BA" => sortAscending ? baList.OrderBy(b => b.Jenis) : baList.OrderByDescending(b => b.Jenis),
                 "Tanggal Submit" => sortAscending ? baList.OrderBy(b => b.SubmittedAt) : baList.OrderByDescending(b => b.SubmittedAt),
-                "Approver" => sortAscending ? baList.OrderBy(b => b.Mengetahui?.Nama) : baList.OrderByDescending(b => b.Mengetahui?.Nama),
+                "Reviewer" => sortAscending ? baList.OrderBy(b => b.Mengetahui?.Nama) : baList.OrderByDescending(b => b.Mengetahui?.Nama),
                 "Status" => sortAscending ? baList.OrderBy(b => b.Status) : baList.OrderByDescending(b => b.Status),
                 _ => baList.AsEnumerable()
             };
@@ -207,7 +207,7 @@ else if (currentRole == "Approver")
                 .OrderByDescending(b => b.SubmittedAt)
                 .ToListAsync();
         }
-        else if (currentRole == "Approver")
+        else if (currentRole == "Reviewer")
         {
             baList = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Pj)

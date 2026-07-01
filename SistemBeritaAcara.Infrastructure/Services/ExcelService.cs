@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Core.Interfaces;
@@ -197,7 +197,7 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
             worksheet.Cell(1, 3).Value = "Jenis";
             worksheet.Cell(1, 4).Value = "PJ";
             worksheet.Cell(1, 5).Value = "Yang Menyerahkan";
-            worksheet.Cell(1, 6).Value = "Approver";
+            worksheet.Cell(1, 6).Value = "Reviewer";
             worksheet.Cell(1, 7).Value = "Status";
             worksheet.Cell(1, 8).Value = "Tanggal Kembali";
         }
