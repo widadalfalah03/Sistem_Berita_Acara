@@ -15,6 +15,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
     public DbSet<BuktiFoto> BuktiFoto => Set<BuktiFoto>();
     public DbSet<ApprovalToken> ApprovalToken => Set<ApprovalToken>();
     public DbSet<Notification> Notification => Set<Notification>();
+    public DbSet<BeritaAcaraHistory> BeritaAcaraHistory => Set<BeritaAcaraHistory>();
     public DbSet<BACounter> BACounter => Set<BACounter>();
     public DbSet<PegawaiImportLog> PegawaiImportLog => Set<PegawaiImportLog>();
     public DbSet<BarangImportLog> BarangImportLog => Set<BarangImportLog>();
@@ -126,6 +127,23 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
                 .WithMany(ba => ba.Notifications)
                 .HasForeignKey(n => n.BaId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<BeritaAcaraHistory>(e =>
+        {
+            e.HasKey(h => h.Id);
+            e.Property(h => h.AlasanReject).HasMaxLength(500).IsRequired();
+            e.Property(h => h.BaJenis).HasMaxLength(20).IsRequired();
+            e.Property(h => h.BaNomorSurat).HasMaxLength(50);
+            e.Property(h => h.RejectedAt).HasDefaultValueSql("GETDATE()");
+            e.HasOne(h => h.BeritaAcara)
+                .WithMany()
+                .HasForeignKey(h => h.BaId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(h => h.RejectedByUser)
+                .WithMany()
+                .HasForeignKey(h => h.RejectedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<BACounter>(e =>

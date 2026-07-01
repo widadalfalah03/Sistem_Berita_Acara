@@ -36,7 +36,7 @@ public class DocumentService : IDocumentService
         Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures"));
     }
 
-    private string GetTemplatePath(string jenis, string? pengunaAlihDaya)
+    private string GetTemplatePath(string jenis)
     {
         string jenisUpper = (jenis ?? "ALOKASI").ToUpper();
         if (jenisUpper == "LAINNYA")
@@ -44,18 +44,17 @@ public class DocumentService : IDocumentService
             return Path.Combine(_templatesDir, "Template_BA_LAINNYA.docx");
         }
 
-        string roleSuffix = string.IsNullOrWhiteSpace(pengunaAlihDaya) ? "Pekerja" : "TAD";
         if (jenisUpper != "ALOKASI" && jenisUpper != "PEMINJAMAN" && jenisUpper != "PENARIKAN")
         {
             jenisUpper = "ALOKASI";
         }
-        var fileName = $"Template_BA_{jenisUpper}_{roleSuffix}.docx";
-        return Path.Combine(_templatesDir, fileName);
+        
+        return Path.Combine(_templatesDir, $"Template_BA_{jenisUpper}.docx");
     }
 
     public async Task<string> GenerateDocxAsync(BeritaAcara ba)
     {
-        var templatePath = GetTemplatePath(ba.Jenis ?? "Alokasi", ba.PengunaAlihDaya);
+        var templatePath = GetTemplatePath(ba.Jenis ?? "Alokasi");
         if (!File.Exists(templatePath))
         {
             throw new FileNotFoundException($"Template DOCX tidak ditemukan: {Path.GetFileName(templatePath)}. Pastikan file ada di wwwroot/files/templates/");
@@ -138,13 +137,20 @@ public class DocumentService : IDocumentService
                 { "{{TanggalKembali}}", tanggalKembaliStr },
             };
 
+            if (!string.IsNullOrWhiteSpace(ba.PengunaAlihDaya))
+            {
+                replacements.Add("Nama Penanggung Jawab", "Nama Pengguna/Penanggung Jawab");
+            }
+
             if (ba.DasarAlokasi == "Nota Dinas")
             {
                 replacements.Add("Tiket di My SSC NO.", "Nota Dinas NO.");
                 replacements.Add("Tiket di My SSC No.", "Nota Dinas No.");
             }
 
-            // Ganti placeholder – gunakan paragraph-level replacement agar
+            int namaPjCount = 0;
+
+            // Ganti placeholder â€“ gunakan paragraph-level replacement agar
             // placeholder yang terpecah oleh spellcheck Word (proofErr) ikut terganti.
             foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>().ToList())
             {
@@ -152,6 +158,7 @@ public class DocumentService : IDocumentService
                 {
                     var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
                     if (fullText.Contains("Catatan: Perangkat IT ini dialokasikan") ||
+                        fullText.Contains("Catatan: Perangkat IT ini ditarik") ||
                         fullText.Contains("Tiket di My SSC") ||
                         fullText.Contains("Nota Dinas"))
                     {
@@ -159,7 +166,7 @@ public class DocumentService : IDocumentService
                         continue;
                     }
                 }
-                NormalizeParagraphPlaceholders(para, replacements);
+                NormalizeParagraphPlaceholders(para, replacements, ref namaPjCount, ba);
             }
 
             // Sembunyikan teks placeholder tanda tangan ({{SIG_...}}) dengan warna putih
@@ -703,7 +710,7 @@ public class DocumentService : IDocumentService
         if (!File.Exists(path)) throw new FileNotFoundException("File DOCX tidak ditemukan.", path);
     }
 
-    private static void NormalizeParagraphPlaceholders(Paragraph para, Dictionary<string, string> replacements)
+    private static void NormalizeParagraphPlaceholders(Paragraph para, Dictionary<string, string> replacements, ref int namaPjCount, BeritaAcara ba)
     {
         var runs = para.Elements<Run>().ToList();
         if (runs.Count == 0) return;
@@ -720,7 +727,23 @@ public class DocumentService : IDocumentService
         if (!hasReplacement) return;
 
         foreach (var r in replacements)
-            combined = combined.Replace(r.Key, r.Value);
+        {
+            if (r.Key == "{{NamaPJ}}" && combined.Contains("{{NamaPJ}}"))
+            {
+                namaPjCount++;
+                string replacementValue = r.Value;
+                // Only modify the FIRST occurrence (the header) if TAD is active
+                if (namaPjCount == 1 && !string.IsNullOrWhiteSpace(ba.PengunaAlihDaya))
+                {
+                    replacementValue = $"{ba.PengunaAlihDaya} / {ba.Pj?.Nama ?? "-"}";
+                }
+                combined = combined.Replace(r.Key, replacementValue);
+            }
+            else
+            {
+                combined = combined.Replace(r.Key, r.Value);
+            }
+        }
 
         var firstText = textNodes[0].TextNode;
         firstText.Text = combined;
