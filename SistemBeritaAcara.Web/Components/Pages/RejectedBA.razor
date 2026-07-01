@@ -145,7 +145,7 @@ else
                             </NavLink>
                             @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
                             {
-                                <button class="btn btn-sm btn-primary" @onclick="() => ConvertToDraft(ba.Id)" disabled="@isConverting">
+                                <button class="btn btn-sm btn-primary" @onclick="() => ReviseBA(ba.Id)">
                                     <i class="bi bi-arrow-counterclockwise"></i> Revisi
                                 </button>
                             }
@@ -234,21 +234,8 @@ else
         isLoading = false;
     }
 
-    private bool isConverting = false;
-
-    private async Task ConvertToDraft(int baId)
+    private void ReviseBA(int baId)
     {
-        if (isConverting) return;
-        isConverting = true;
-        
-        var ba = await DbContext.Set<BeritaAcaraEntity>().FirstOrDefaultAsync(b => b.Id == baId);
-        if (ba != null && ba.Status == "Rejected" && currentRole == "AdminGudangBarang")
-        {
-            ba.Status = "Draft";
-            await DbContext.SaveChangesAsync();
-            Navigation.NavigateTo("/draft");
-        }
-        
-        isConverting = false;
+        Navigation.NavigateTo($"/buat-ba?edit={baId}");
     }
 }
