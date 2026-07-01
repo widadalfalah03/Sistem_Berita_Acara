@@ -14,8 +14,10 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject SistemBeritaAcara.Web.Services.BaUpdateService BaUpdateService
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IAsyncDisposable
 
 <PageTitle>Detail Berita Acara — Sistem Berita Acara</PageTitle>
 
@@ -517,6 +519,7 @@ else
                 await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, true, ba.Id, baseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
 
             actionIsError = false; actionMessage = "Berita Acara berhasil disetujui!";
+            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
             await LoadAsync();
         }
         catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}"; }
@@ -587,6 +590,7 @@ else
             showRejectModal = false;
             rejectReason = string.Empty;
             actionIsError = false; actionMessage = "Berita Acara telah ditolak.";
+            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
             await LoadAsync();
         }
         catch (Exception ex) { rejectError = $"Gagal: {ex.Message}"; }
@@ -647,7 +651,11 @@ else
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
+        {
             await JSRuntime.InvokeVoidAsync("appLoading.hide");
+            // Fire-and-forget: sambungkan SignalR di latar belakang
+            _ = ConnectSignalRAsync();
+        }
 
         var docPath = !string.IsNullOrEmpty(ba?.DocxFinalPath) ? ba.DocxFinalPath : ba?.DocxPath;
         if (!string.IsNullOrEmpty(docPath))
@@ -665,6 +673,47 @@ else
                     Console.Error.WriteLine("Error invoking pdfViewer: " + ex.Message);
                 }
             }
+        }
+    }
+
+    private HubConnection? _hubConnection;
+
+    private async Task ConnectSignalRAsync()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/ba"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            // Saat ada perubahan detail BA ini, reload
+            _hubConnection.On("BaDetailUpdated", async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadAsync();
+                    StateHasChanged();
+                });
+            });
+
+            await _hubConnection.StartAsync();
+            // Masuk ke group khusus BA ini agar hanya notif yang relevan
+            if (ba is not null)
+                await _hubConnection.InvokeAsync("JoinBaGroup", ba.Id);
+        }
+        catch
+        {
+            // SignalR gagal — halaman tetap berjalan normal
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.StopAsync();
+            await _hubConnection.DisposeAsync();
         }
     }
 }
