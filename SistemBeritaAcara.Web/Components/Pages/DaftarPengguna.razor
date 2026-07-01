@@ -5,7 +5,7 @@
 @using SistemBeritaAcara.Infrastructure.Data
 @inject AppDbContext DbCtx
 @inject NavigationManager Navigation
-@rendermode InteractiveServer
+
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
 
 @if (isLoading)

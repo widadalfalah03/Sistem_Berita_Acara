@@ -183,7 +183,7 @@ app.MapPost("/account/login", async (
         return Results.Redirect("/login?error=locked");
 
     return Results.Redirect("/login?error=invalid");
-});
+}).DisableAntiforgery();
 
 app.MapPost("/account/logout", async (
     HttpContext ctx,
@@ -191,7 +191,7 @@ app.MapPost("/account/logout", async (
 {
     await signInManager.SignOutAsync();
     return Results.Redirect("/login");
-});
+}).DisableAntiforgery();
 
 // ── ONLYOFFICE Callback Endpoint ──
 app.MapPost("/api/onlyoffice/callback/{baId:int}", async (

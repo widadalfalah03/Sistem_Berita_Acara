@@ -1,4 +1,4 @@
-ï»¿@page "/tambah-pengguna"
+@page "/tambah-pengguna"
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using PegawaiEntity = SistemBeritaAcara.Core.Entities.Pegawai
@@ -7,10 +7,10 @@
 @inject NavigationManager Navigation
 @inject SistemBeritaAcara.Core.Interfaces.IEmailService EmailService
 @inject IConfiguration Config
-@rendermode InteractiveServer
+
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
 
-<PageTitle>Tambah Pengguna â€” Sistem Berita Acara</PageTitle>
+<PageTitle>Tambah Pengguna — Sistem Berita Acara</PageTitle>
 
 <div class="add-user-card">
     <h2>Tambah Pengguna</h2>
@@ -42,7 +42,7 @@
                     <div class="user-result-avatar">@p.Nama[0]</div>
                     <div style="flex:1;">
                         <div class="user-result-name">@p.Nama</div>
-                        <div class="user-result-nip">No. Pekerja: @p.NoPekerja Â· @p.FungsiDirektorat</div>
+                        <div class="user-result-nip">No. Pekerja: @p.NoPekerja · @p.FungsiDirektorat</div>
                     </div>
                     @if (existingUserIds.Contains(p.Id))
                     {
@@ -169,7 +169,7 @@
     {
         searchQuery = e.Value?.ToString() ?? string.Empty;
 
-        // Batalkan debounce sebelumnya â€” JANGAN Dispose di sini karena
+        // Batalkan debounce sebelumnya — JANGAN Dispose di sini karena
         // finally block dari search lama masih bisa berjalan dan akan throw
         // ObjectDisposedException saat mengakses cts.IsCancellationRequested.
         _searchCts?.Cancel();
@@ -202,7 +202,7 @@
         }
         catch (TaskCanceledException)
         {
-            // Pencarian dibatalkan karena ada keystroke baru â€” biarkan OnSearch berikutnya
+            // Pencarian dibatalkan karena ada keystroke baru — biarkan OnSearch berikutnya
             // yang menangani state. Tidak perlu update apapun di sini.
         }
     }
