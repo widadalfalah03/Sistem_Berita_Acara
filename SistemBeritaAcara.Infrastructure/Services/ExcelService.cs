@@ -281,7 +281,7 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
         using var workbook = new XLWorkbook();
         var sheet = workbook.AddWorksheet("Data Pegawai");
 
-        string[] headers = ["No. Pekerja", "Nama", "Jabatan", "Fungsi/Direktorat", "Email", "Cost Center", "No. Telp"];
+        string[] headers = ["Nama", "No. Pekerja", "Jabatan", "Fungsi/Direktorat", "Email", "Cost Center"];
         for (int i = 0; i < headers.Length; i++)
         {
             var cell = sheet.Cell(1, i + 1);
@@ -295,13 +295,12 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
         int row = 2;
         foreach (var p in data)
         {
-            sheet.Cell(row, 1).Value = p.NoPekerja;
-            sheet.Cell(row, 2).Value = p.Nama;
+            sheet.Cell(row, 1).Value = p.Nama;
+            sheet.Cell(row, 2).Value = p.NoPekerja;
             sheet.Cell(row, 3).Value = p.Jabatan ?? string.Empty;
             sheet.Cell(row, 4).Value = p.FungsiDirektorat ?? string.Empty;
             sheet.Cell(row, 5).Value = p.Email ?? string.Empty;
             sheet.Cell(row, 6).Value = p.CostCenter ?? string.Empty;
-            sheet.Cell(row, 7).Value = p.NoTelp ?? string.Empty;
             if (row % 2 == 0)
                 sheet.Row(row).Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
             row++;
