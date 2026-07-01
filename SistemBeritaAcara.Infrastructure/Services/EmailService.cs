@@ -117,20 +117,6 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, "Permintaan Reset Password - Sistem Berita Acara", body);
     }
 
-    public async Task SendTtdUsedNotificationAsync(string toEmail, string pegawaiNama, string nomorSurat)
-    {
-        string body = $"""
-            <h2 style="color: #16a34a;">Notifikasi Penggunaan Tanda Tangan</h2>
-            <p>Yth. <strong>{pegawaiNama}</strong>,</p>
-            <p>Tanda tangan digital Anda telah berhasil di-embed pada dokumen Berita Acara dengan nomor surat: <strong>{nomorSurat}</strong>.</p>
-            <p>Jika Anda merasa tidak melakukan proses pengajuan atau persetujuan dokumen ini, segera hubungi Admin IT.</p>
-            <br>
-            <p>Hormat kami,<br><strong>Tim IT PT Pertamina Patra Niaga</strong></p>
-            """;
-
-        await SendEmailAsync(toEmail, $"Notifikasi Keamanan: Tanda Tangan Digunakan ({nomorSurat})", body);
-    }
-
     // ── Email #5: Permintaan Approval ke Approver ─────────────────────────────
     public async Task SendApprovalRequestAsync(string toEmail, string approverName, string baseUrl, int baId, string jenisBA, List<string> barangList)
     {

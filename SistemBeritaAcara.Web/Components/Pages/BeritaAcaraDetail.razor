@@ -153,7 +153,10 @@ else
                 <div>
                     <h1 class="page-title" style="word-break:break-word;">@(ba.NomorSurat ?? "Draft BA")</h1>
                     <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
-                        <span class="pill @GetStatusPill(ba.Status)">@GetStatusLabel(ba.Status)</span>
+                        @if (From != "archive" && ba.Status != "Archived")
+                        {
+                            <span class="pill @GetStatusPill(ba.Status)">@GetStatusLabel(ba.Status)</span>
+                        }
                         <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
                     </div>
                 </div>
@@ -175,9 +178,8 @@ else
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tiket SSC</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ?? "-")</td></tr>
                         @if (ba.Jenis == "Peminjaman")
                         {
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tgl Kembali</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TanggalKembali?.ToString("dd MMMM yyyy") ?? "-")</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal Kembali</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TanggalKembali?.ToString("dd MMMM yyyy") ?? "-")</td></tr>
                         }
-                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Dibuat Oleh</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.Creator?.Nama</td></tr>
                     </table>
                 </div>
             </div>
@@ -189,9 +191,9 @@ else
                     <div class="card-header"><h3>Pihak Terkait</h3></div>
                     <div class="card-body">
                         <table style="width:100%;border-collapse:collapse;">
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">PJ (Menerima)</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Pj?.Nama</td></tr>
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Menyerahkan</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Menyerahkan?.Nama</td></tr>
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Approver</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Mengetahui?.Nama</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">Yang Menyerahkan</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Menyerahkan?.Nama</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Yang Mengetahui</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Mengetahui?.Nama</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Yang Menerima</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Pj?.Nama</td></tr>
                         </table>
                     </div>
                 </div>
@@ -207,15 +209,15 @@ else
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th style="cursor:pointer;" @onclick="@(() => SortTable("Perangkat"))">Perangkat <i class="bi @GetSortIcon("Perangkat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                            <th style="cursor:pointer;" @onclick="@(() => SortTable("Jumlah"))">Jumlah <i class="bi @GetSortIcon("Jumlah")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                            <th style="cursor:pointer;" @onclick="@(() => SortTable("Satuan"))">Satuan <i class="bi @GetSortIcon("Satuan")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                            <th style="cursor:pointer;" @onclick="@(() => SortTable("No. Serial"))">No. Serial <i class="bi @GetSortIcon("No. Serial")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                            <th style="cursor:pointer;" @onclick="@(() => SortTable("Keterangan"))">Keterangan <i class="bi @GetSortIcon("Keterangan")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                            <th>Perangkat</th>
+                            <th>Jumlah</th>
+                            <th>Satuan</th>
+                            <th>No. Serial</th>
+                            <th>Keterangan</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var p in SortedPerangkat)
+                        @foreach (var p in ba.Perangkat)
                         {
                             <tr>
                                 <td class="fw-semibold">@p.Barang?.NamaBarang</td>
@@ -231,7 +233,7 @@ else
                 
                 <!-- MOBILE LIST -->
                 <div class="perangkat-mobile-list" style="padding:16px;">
-                    @foreach (var p in SortedPerangkat)
+                    @foreach (var p in ba.Perangkat)
                     {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
                             <div>
@@ -335,33 +337,7 @@ else
     private string approverActionSubLabel = string.Empty;
     private long pdfVersion = DateTime.UtcNow.Ticks;
 
-    private string sortColumn = "Perangkat";
-    private bool sortAscending = true;
 
-    private void SortTable(string column)
-    {
-        if (sortColumn == column) sortAscending = !sortAscending;
-        else { sortColumn = column; sortAscending = true; }
-    }
-
-    private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
-
-    private IEnumerable<PerangkatBA> SortedPerangkat
-    {
-        get
-        {
-            if (ba?.Perangkat == null) return Enumerable.Empty<PerangkatBA>();
-            return sortColumn switch
-            {
-                "Perangkat" => sortAscending ? ba.Perangkat.OrderBy(p => p.Barang?.NamaBarang) : ba.Perangkat.OrderByDescending(p => p.Barang?.NamaBarang),
-                "Jumlah" => sortAscending ? ba.Perangkat.OrderBy(p => p.Jumlah) : ba.Perangkat.OrderByDescending(p => p.Jumlah),
-                "Satuan" => sortAscending ? ba.Perangkat.OrderBy(p => p.Satuan) : ba.Perangkat.OrderByDescending(p => p.Satuan),
-                "No. Serial" => sortAscending ? ba.Perangkat.OrderBy(p => p.NoSerial) : ba.Perangkat.OrderByDescending(p => p.NoSerial),
-                "Keterangan" => sortAscending ? ba.Perangkat.OrderBy(p => p.Keterangan) : ba.Perangkat.OrderByDescending(p => p.Keterangan),
-                _ => ba.Perangkat
-            };
-        }
-    }
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -411,7 +387,7 @@ else
                     return $"{nama} — {detail}";
                 }).ToList();
             await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis, barangListMagic);
-            await NotificationService.SendToRoleAsync("AdminGudangBarang", "WAITING_PJ_SIGN", $"BA {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
+            await NotificationService.SendToRoleAsync("AdminGudangBarang", "WAITING_PJ_SIGN", $"Berita Acara {ba.Jenis} {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
             actionIsError = false; actionMessage = "Magic link berhasil dikirim ke email PJ.";
             await LoadAsync();
         }
@@ -518,7 +494,7 @@ else
                 ba.ExcelExported = true;
                 await DbContext.SaveChangesAsync();
             }
-            await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"BA {ba.NomorSurat} telah disetujui.", ba.Id);
+            await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah disetujui.", ba.Id);
 
             // Email ke Admin Gudang & Barang (creator)
             var creatorUser = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
@@ -567,8 +543,9 @@ else
             ba.WasRejected = true;
             ba.ApprovedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
-            var label = ba.NomorSurat ?? "Draft";
-            await NotificationService.SendAsync(ba.CreatedBy, "BA_REJECTED", $"BA {label} ditolak: {rejectReason}", ba.Id);
+            var label = ba.NomorSurat ?? "";
+            var text = $"Berita Acara {ba.Jenis} {label} ditolak: {rejectReason}".Replace("  ", " ").Trim();
+            await NotificationService.SendAsync(ba.CreatedBy, "BA_REJECTED", text, ba.Id);
 
             var baseUrlReject = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangListReject = ba.Perangkat
