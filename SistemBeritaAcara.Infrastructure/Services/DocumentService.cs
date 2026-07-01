@@ -250,7 +250,7 @@ public class DocumentService : IDocumentService
 
                 if (ba.BuktiFotos != null && ba.BuktiFotos.Any())
                 {
-                    uint imgId = 100U;
+                    uint imgId = (uint)new Random().Next(2000, 200000);
                     var containerPara = new Paragraph();
                     containerPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
                     foreach (var foto in ba.BuktiFotos)
@@ -283,7 +283,8 @@ public class DocumentService : IDocumentService
                             }
                         }
 
-                        var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId++);
+                        var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId);
+                        imgId += 2;
                         containerPara.Append(new Run(drawing));
                         containerPara.Append(new Run(new Text("  ")));
                     }
@@ -292,11 +293,24 @@ public class DocumentService : IDocumentService
             }
             else if (ba.Jenis != "Lainnya" && ba.BuktiFotos != null && ba.BuktiFotos.Any())
             {
-                mainPart.Document.Body!.Append(new Paragraph(new Run(new Break { Type = BreakValues.Page })));
-                mainPart.Document.Body!.Append(new Paragraph(new Run(new Text("Bukti Foto Serah Terima")))
+                var sectPr = mainPart.Document.Body!.Elements<SectionProperties>().LastOrDefault();
+
+                var p1 = new Paragraph(new Run(new Text("")));
+                var p2 = new Paragraph(new Run(new Text("Bukti Foto Serah Terima")))
                 {
                     ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center })
-                });
+                };
+
+                if (sectPr != null)
+                {
+                    mainPart.Document.Body!.InsertBefore(p1, sectPr);
+                    mainPart.Document.Body!.InsertBefore(p2, sectPr);
+                }
+                else
+                {
+                    mainPart.Document.Body!.Append(p1);
+                    mainPart.Document.Body!.Append(p2);
+                }
 
                 uint imgId = 200U;
                 var containerPara = new Paragraph();
@@ -331,11 +345,20 @@ public class DocumentService : IDocumentService
                         }
                     }
 
-                    var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId++);
+                    var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId);
+                    imgId += 2;
                     containerPara.Append(new Run(drawing));
                     containerPara.Append(new Run(new Text("  ")));
                 }
-                mainPart.Document.Body!.Append(containerPara);
+
+                if (sectPr != null)
+                {
+                    mainPart.Document.Body!.InsertBefore(containerPara, sectPr);
+                }
+                else
+                {
+                    mainPart.Document.Body!.Append(containerPara);
+                }
             }
 
             mainPart.Document.Save();
@@ -501,18 +524,20 @@ public class DocumentService : IDocumentService
                 }
             }
 
+            uint randomId = (uint)new Random().Next(1000, 100000);
+
             var drawing = new Drawing(
                 new DW.Inline(
                     new DW.Extent { Cx = cx, Cy = cy },
                     new DW.EffectExtent { LeftEdge = 0L, TopEdge = 0L, RightEdge = 0L, BottomEdge = 0L },
-                    new DW.DocProperties { Id = 500U, Name = "signature" },
+                    new DW.DocProperties { Id = randomId, Name = "signature" },
                     new DW.NonVisualGraphicFrameDrawingProperties(
                         new A.GraphicFrameLocks { NoChangeAspect = true }),
                     new A.Graphic(
                         new A.GraphicData(
                             new PIC.Picture(
                                 new PIC.NonVisualPictureProperties(
-                                    new PIC.NonVisualDrawingProperties { Id = 0U, Name = "sig.png" },
+                                    new PIC.NonVisualDrawingProperties { Id = randomId + 1, Name = "sig.png" },
                                     new PIC.NonVisualPictureDrawingProperties()),
                                 new PIC.BlipFill(
                                     new A.Blip { Embed = imgId },
@@ -746,7 +771,7 @@ public class DocumentService : IDocumentService
     {
         var picture = new PIC.Picture(
             new PIC.NonVisualPictureProperties(
-                new PIC.NonVisualDrawingProperties { Id = (UInt32Value)id, Name = name },
+                new PIC.NonVisualDrawingProperties { Id = (UInt32Value)(id + 1), Name = name },
                 new PIC.NonVisualPictureDrawingProperties()),
             new PIC.BlipFill(
                 new A.Blip { Embed = relationshipId },
