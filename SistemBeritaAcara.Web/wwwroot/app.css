@@ -1578,7 +1578,7 @@ a:hover { color: var(--primary-hover); }
     font-weight: 500;
 }
 
-/* ── Approver Queue ────────────────────────────────────────────── */
+/* ── Reviewer Queue ────────────────────────────────────────────── */
 .queue-item {
     padding: 16px 20px;
     border-left: 3px solid var(--primary);
@@ -1595,7 +1595,7 @@ a:hover { color: var(--primary-hover); }
 .queue-person { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
 .queue-time { float: right; font-size: 13px; color: var(--text-muted); }
 
-/* ── Review Panel (Approver Detail) ────────────────────────────── */
+/* ── Review Panel (Reviewer Detail) ────────────────────────────── */
 .review-layout {
     display: grid;
     grid-template-columns: 1fr 380px;
@@ -3171,7 +3171,7 @@ input[type="password"]::-ms-clear {
     }
 }
 
-/* -- Review Layout (Approver) ---------------------------------- */
+/* -- Review Layout (Reviewer) ---------------------------------- */
 .review-layout {
     display: grid;
     grid-template-columns: 1fr 360px;
@@ -3413,7 +3413,7 @@ input[type="password"]::-ms-clear {
 .user-result-name { font-size: 15px; font-weight: 700; }
 .user-result-nip { font-size: 12px; color: var(--text-muted); }
 
-/* -- Queue Item (Approver) ------------------------------------ */
+/* -- Queue Item (Reviewer) ------------------------------------ */
 .queue-item {
     display: block;
     padding: 16px 20px;
@@ -4361,7 +4361,6 @@ select option { background: var(--surface); color: var(--text-primary); }
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(4px);
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -4417,6 +4416,8 @@ select option { background: var(--surface); color: var(--text-primary); }
 .loan-modal-body {
     padding: 20px 24px;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    will-change: transform;
     flex: 1;
     display: flex;
     flex-direction: column;

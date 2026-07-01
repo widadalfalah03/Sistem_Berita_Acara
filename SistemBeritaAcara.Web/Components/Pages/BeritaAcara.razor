@@ -244,7 +244,7 @@
                         <InputRadioGroup TValue="string" Value="@model.DasarAlokasi" ValueExpression="@(() => model.DasarAlokasi)" ValueChanged="@((string val) => { model.DasarAlokasi = val; TriggerAutoSave(); })">
                             <div style="margin-bottom: 8px; display: flex; gap: 16px;">
                                 <label style="display:flex; align-items:center; gap:4px;">
-                                    <InputRadio Value="@("Tiket SSC")" /> Tiket SSC
+                                    <InputRadio Value="@("No. Tiket My SSC")" /> No. Tiket My SSC
                                 </label>
                                 <label style="display:flex; align-items:center; gap:4px;">
                                     <InputRadio Value="@("Nota Dinas")" /> Nota Dinas
@@ -1420,7 +1420,7 @@
         public int? MenyerahkanId { get; set; }
         public int? MengetahuiId { get; set; }
         public string? TiketSscNo { get; set; }
-        public string DasarAlokasi { get; set; } = "Tiket SSC";
+        public string DasarAlokasi { get; set; } = "No. Tiket My SSC";
         public DateTime Tanggal { get; set; } = DateTime.Today;
         public DateTime? TanggalKembali { get; set; }
         public List<PerangkatRow> Perangkat { get; set; } = new();

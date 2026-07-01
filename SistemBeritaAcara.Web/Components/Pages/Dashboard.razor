@@ -12,6 +12,53 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
+<style>
+    .jenis-item {
+        position: relative;
+    }
+    .custom-chart-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: 8px;
+        background: rgba(0, 0, 0, 0.85);
+        color: white;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 100;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .custom-chart-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 5px;
+        border-style: solid;
+        border-color: rgba(0, 0, 0, 0.85) transparent transparent transparent;
+    }
+    .jenis-item:hover .custom-chart-tooltip {
+        opacity: 1;
+    }
+    .tooltip-color-box {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        display: inline-block;
+    }
+</style>
+
 <PageTitle>Dashboard — Sistem Berita Acara</PageTitle>
 
 @if (isLoading)
@@ -97,33 +144,49 @@ else if (currentRole == "AdminGudangBarang")
                 var pctPenarikan = total > 0 ? (int)Math.Round((double)jenisData.Penarikan / total * 100) : 0;
                 var pctLainnya = total > 0 ? (int)Math.Round((double)jenisData.Lainnya / total * 100) : 0;
             }
-              <div class="jenis-item" title="Alokasi: @jenisData.Alokasi">
+              <div class="jenis-item">
                   <div class="jenis-label">
                       <span class="jenis-name">Alokasi</span>
                       <span class="jenis-pct">@pctAlokasi%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill alokasi" style="width:@pctAlokasi%"></div></div>
+                  <div class="custom-chart-tooltip">
+                      <span class="tooltip-color-box" style="background:var(--primary);"></span>
+                      Alokasi: @jenisData.Alokasi
+                  </div>
               </div>
-              <div class="jenis-item" title="Peminjaman: @jenisData.Peminjaman">
+              <div class="jenis-item">
                   <div class="jenis-label">
                       <span class="jenis-name">Peminjaman</span>
                       <span class="jenis-pct">@pctPeminjaman%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill peminjaman" style="width:@pctPeminjaman%"></div></div>
+                  <div class="custom-chart-tooltip">
+                      <span class="tooltip-color-box" style="background:var(--success);"></span>
+                      Peminjaman: @jenisData.Peminjaman
+                  </div>
               </div>
-              <div class="jenis-item" title="Penarikan: @jenisData.Penarikan">
+              <div class="jenis-item">
                   <div class="jenis-label">
                       <span class="jenis-name">Penarikan</span>
                       <span class="jenis-pct">@pctPenarikan%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill penarikan" style="width:@pctPenarikan%; background: #F59E0B"></div></div>
+                  <div class="custom-chart-tooltip">
+                      <span class="tooltip-color-box" style="background:#F59E0B;"></span>
+                      Penarikan: @jenisData.Penarikan
+                  </div>
               </div>
-              <div class="jenis-item" title="Lainnya: @jenisData.Lainnya">
+              <div class="jenis-item">
                   <div class="jenis-label">
                       <span class="jenis-name">Lainnya</span>
                       <span class="jenis-pct">@pctLainnya%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill lainnya" style="width:@pctLainnya%; background: #64748B"></div></div>
+                  <div class="custom-chart-tooltip">
+                      <span class="tooltip-color-box" style="background:#64748B;"></span>
+                      Lainnya: @jenisData.Lainnya
+                  </div>
               </div>
         </div>
 
@@ -204,52 +267,20 @@ else if (currentRole == "AdminGudangBarang")
                             <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;width:35%;">No. Surat</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@(modalBA.NomorSurat ?? "Belum dibuat")</td></tr>
                             <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">Tanggal Terbit</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@modalBA.Tanggal.ToString("dd MMMM yyyy")</td></tr>
                             <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">Tanggal Kembali</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;color:@(mDaysLeft < 0 ? "var(--danger)" : "var(--text-primary)");">@(modalBA.TanggalKembali?.ToString("dd MMMM yyyy") ?? "-")</td></tr>
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">No. Tiket SSC</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@(modalBA.TiketSscNo ?? "-")</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">No. Tiket My SSC</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@(modalBA.TiketSscNo ?? "-")</td></tr>
                             <tr>
-                                <td style="padding:8px 0;color:var(--text-secondary);font-size:13px;vertical-align:top;">Penanggung Jawab</td>
-                                <td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">
-                                    <div>@modalBA.Pj?.Nama</div>
-                                    <div style="font-weight:normal;font-size:12px;color:var(--text-secondary);margin-top:2px;">No. Telp: @(string.IsNullOrEmpty(modalBA.PjNoTelp) ? "-" : modalBA.PjNoTelp)</div>
-                                </td>
+                                <td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">Penanggung Jawab</td>
+                                <td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@modalBA.Pj?.Nama</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">No. Telp</td>
+                                <td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@(string.IsNullOrEmpty(modalBA.PjNoTelp) ? "-" : modalBA.PjNoTelp)</td>
                             </tr>
                         </table>
                     </div>
-                    <div class="loan-info-block">
-                        <div class="loan-info-label">Tanggal Kembali</div>
-                        <div class="loan-info-value" style="color:@(mDaysLeft < 0 ? "var(--danger)" : "var(--text-primary)");font-weight:700;">
-                            @modalBA.TanggalKembali?.ToString("dd MMMM yyyy")
-                        </div>
-                    </div>
-                    <div class="loan-info-block">
-                        <div class="loan-info-label">@(modalBA.DasarAlokasi)</div>
-                        <div class="loan-info-value">@(modalBA.TiketSscNo ?? "—")</div>
-                    </div>
                 </div>
 
-                <div class="loan-info-grid">
-                    <div class="loan-info-block">
-                        <div class="loan-info-label"><i class="bi bi-person-fill" style="color:var(--primary);"></i> Penanggung Jawab</div>
-                        <div class="loan-info-value">@modalBA.Pj?.Nama</div>
-                        <div class="loan-info-sub">@modalBA.Pj?.Jabatan · @modalBA.Pj?.FungsiDirektorat</div>
-                    </div>
-                    <div class="loan-info-block">
-                        <div class="loan-info-label"><i class="bi bi-person-badge-fill" style="color:var(--warning);"></i> Yang Menyerahkan</div>
-                        <div class="loan-info-value">@modalBA.Menyerahkan?.Nama</div>
-                        <div class="loan-info-sub">@modalBA.Menyerahkan?.FungsiDirektorat</div>
-                    </div>
-                    <div class="loan-info-block">
-                        <div class="loan-info-label"><i class="bi bi-person-check-fill" style="color:var(--success);"></i> Yang Mengetahui</div>
-                        <div class="loan-info-value">@modalBA.Mengetahui?.Nama</div>
-                        <div class="loan-info-sub">@modalBA.Mengetahui?.Jabatan</div>
-                    </div>
-                    @if (!string.IsNullOrEmpty(modalBA.PjNoTelp))
-                    {
-                        <div class="loan-info-block">
-                            <div class="loan-info-label"><i class="bi bi-telephone-fill" style="color:var(--primary);"></i> No. Telp PJ</div>
-                            <div class="loan-info-value">@modalBA.PjNoTelp</div>
-                        </div>
-                    }
-                </div>
+
 
                 <!-- Daftar Perangkat -->
                 @if (modalBA.Perangkat.Any())

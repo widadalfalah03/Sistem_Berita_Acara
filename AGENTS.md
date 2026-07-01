@@ -16,7 +16,7 @@ Web            → Blazor Server app, Razor pages, endpoints (refs Core + Infras
 
 - **DB**: SQL Server Express (`localhost\SQLEXPRESS`, database `SistemBeritaAcara`)
 - **ORM**: EF Core 10 — schema created via `db.Database.EnsureCreated()` (no migrations)
-- **Identity**: ASP.NET Core Identity with `int` key. 3 roles: `AdminIT`, `AdminGudangBarang`, `Approver`
+- **Identity**: ASP.NET Core Identity with `int` key. 3 roles: `AdminIT`, `AdminGudangBarang`, `Reviewer`
 - **Background jobs**: Hangfire (SQL Server storage), dashboard at `/hangfire`
 - **DOCX generation**: `DocumentFormat.OpenXml` — templates live in `Web/wwwroot/files/templates/`
 - **DOCX→PDF**: `FreeSpire.Doc`

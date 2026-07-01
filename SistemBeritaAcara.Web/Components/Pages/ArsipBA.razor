@@ -1,4 +1,4 @@
-﻿@page "/archive"
+@page "/archive"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -42,7 +42,7 @@
 
         <!-- Nama Pihak (popover) -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;position:relative;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Nama Pihak</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Pihak Terkait</div>
             <button @onclick="ToggleNamePopover"
                     style="display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);cursor:pointer;text-align:left;box-sizing:border-box;">
                 <span style="font-size:13px;color:@(HasNameFilter ? "var(--text-primary)" : "var(--text-muted)");flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -59,25 +59,25 @@
 
                     <div style="margin-bottom:12px;">
                         <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
-                            <i class="bi bi-person-badge" style="margin-right:4px;"></i> Yang Menyerahkan
+                            Yang Menyerahkan
                         </label>
-                        <input type="text" placeholder="Nama..." @bind="menyerahkanSearch" @bind:event="oninput"
+                        <input type="text" placeholder="" @bind="menyerahkanSearch" @bind:event="oninput"
                                style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
                     </div>
 
                     <div style="margin-bottom:12px;">
                         <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
-                            <i class="bi bi-person" style="margin-right:4px;"></i> Penanggung Jawab
+                            Yang Mengetahui
                         </label>
-                        <input type="text" placeholder="Nama PJ..." @bind="pjSearch" @bind:event="oninput"
+                        <input type="text" placeholder="" @bind="mengetahuiSearch" @bind:event="oninput"
                                style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
                     </div>
 
                     <div>
                         <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
-                            <i class="bi bi-person-check" style="margin-right:4px;"></i> Yang Mengetahui
+                            Yang Menerima
                         </label>
-                        <input type="text" placeholder="Nama reviewer..." @bind="mengetahuiSearch" @bind:event="oninput"
+                        <input type="text" placeholder="" @bind="pjSearch" @bind:event="oninput"
                                style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
                     </div>
 
@@ -104,7 +104,7 @@
 
         <!-- Jenis BA -->
         <div style="padding:10px 14px;position:relative;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Jenis BA</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Jenis Berita Acara</div>
             <div @onclick="() => showJenisDropdown = !showJenisDropdown"
                  style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);cursor:pointer;min-width:150px;white-space:nowrap;">
                 <span style="font-size:13px;color:var(--text-primary);">@(string.IsNullOrEmpty(jenisFilter) ? "Semua Jenis" : jenisFilter)</span>
