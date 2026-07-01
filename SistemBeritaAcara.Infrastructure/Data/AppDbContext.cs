@@ -67,7 +67,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
             e.Property(ba => ba.Jenis).HasMaxLength(20).IsRequired();
             e.Property(ba => ba.JenisCustom).HasMaxLength(50);
             e.Property(ba => ba.TiketSscNo).HasMaxLength(50);
-            e.Property(ba => ba.DasarAlokasi).HasMaxLength(30).HasDefaultValue("Tiket SSC");
+            e.Property(ba => ba.DasarAlokasi).HasMaxLength(30).HasDefaultValue("No. Tiket My SSC");
             e.Property(ba => ba.Status).HasMaxLength(30).HasDefaultValue("Draft");
             e.Property(ba => ba.AlasanReject).HasMaxLength(500);
             e.Property(ba => ba.TtdPjPath).HasMaxLength(500);

@@ -1,19 +1,22 @@
-<div class="pagination-container" style="gap:6px;">
-    <button class="page-btn" disabled="@(!HasPreviousPage)" @onclick="OnPreviousPage">
-        <i class="bi bi-chevron-left" style="font-size:12px;"></i>
-    </button>
-
-    @foreach (var p in GetPageNumbers())
-    {
-        <button class="page-btn @(p == CurrentPage ? "active" : "")" @onclick="() => OnPageClicked(p)">
-            @p
+@if (TotalPages > 1)
+{
+    <div class="pagination-container" style="gap:6px;">
+        <button class="page-btn" disabled="@(!HasPreviousPage)" @onclick="OnPreviousPage">
+            <i class="bi bi-chevron-left" style="font-size:12px;"></i>
         </button>
-    }
 
-    <button class="page-btn" disabled="@(!HasNextPage)" @onclick="OnNextPage">
-        <i class="bi bi-chevron-right" style="font-size:12px;"></i>
-    </button>
-</div>
+        @foreach (var p in GetPageNumbers())
+        {
+            <button class="page-btn @(p == CurrentPage ? "active" : "")" @onclick="() => OnPageClicked(p)">
+                @p
+            </button>
+        }
+
+        <button class="page-btn" disabled="@(!HasNextPage)" @onclick="OnNextPage">
+            <i class="bi bi-chevron-right" style="font-size:12px;"></i>
+        </button>
+    </div>
+}
 
 @code {
     [Parameter] public int CurrentPage { get; set; } = 1;

@@ -10,7 +10,7 @@ product — design serves the workflow, not the brand.
 ## Users
 - **Admin Gudang & Barang** — creates BA, fills details, uploads photos, submits for PJ signature
 - **Penanggung Jawab (PJ)** — reviews the submitted BA, signs digitally via magic link
-- **Approver / Manager** — reviews signed BA, approves or rejects with reason
+- **Reviewer / Manager** — reviews signed BA, approves or rejects with reason
 - **Admin IT** — manages user accounts and master data
 
 ## Context

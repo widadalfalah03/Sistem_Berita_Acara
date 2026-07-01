@@ -15,7 +15,7 @@ public class BeritaAcara
     public int? MenyerahkanId { get; set; }
     public int? MengetahuiId { get; set; }
     public string? TiketSscNo { get; set; }
-    public string DasarAlokasi { get; set; } = "Tiket SSC";
+    public string DasarAlokasi { get; set; } = "No. Tiket My SSC";
     public DateOnly? TanggalKembali { get; set; }
     public string Status { get; set; } = "Draft";
     public string? AlasanReject { get; set; }
