@@ -73,25 +73,18 @@ else
         </div>
     }
 
-    <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;">
-        <!-- Header / Toolbar -->
-        <div style="padding:8px 16px;border-bottom:1px solid var(--border);background:var(--bg-secondary);display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-size:13px; color:var(--text-secondary);">
-                Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, drafts.Count) dari @drafts.Count
-            </div>
-            <div>
-                <button class="action-btn-circle btn-delete" title="Hapus Semua" @onclick="() => deleteAllConfirm = true">
-                    <i class="bi bi-trash3"></i>
-                </button>
-            </div>
-        </div>
-        
+    <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
+        <button class="action-btn-circle btn-delete" title="Hapus Semua" @onclick="() => deleteAllConfirm = true">
+            <i class="bi bi-trash3"></i>
+        </button>
+    </div>
+
+    <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:24px;">
         <!-- List Items -->
         <div>
             @foreach (var ba in PaginatedDrafts)
             {
                 <div class="draft-row" @onclick="@(() => EditDraft(ba.Id))">
-                    <div style="color:#d93025;font-weight:600;font-size:14px;width:60px;flex-shrink:0;">Draft</div>
                     <div style="flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
                         <span style="font-weight:600;">Berita Acara @ba.Jenis</span>
                         <span style="color:var(--text-secondary);">-</span>
@@ -109,17 +102,16 @@ else
             }
         </div>
         
-        @if (drafts.Count > pageSize)
-        {
-            <div style="padding:12px;border-top:1px solid var(--border-light);">
-                <SistemBeritaAcara.Web.Components.Shared.Pagination
-                    CurrentPage="@currentPage"
-                    TotalItems="@drafts.Count"
-                    PageSize="@pageSize"
-                    CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
-            </div>
-        }
     </div>
+
+    @if (drafts.Count > 0)
+    {
+        <SistemBeritaAcara.Web.Components.Shared.Pagination
+            CurrentPage="@currentPage"
+            TotalItems="@drafts.Count"
+            PageSize="@pageSize"
+            CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+    }
 }
 
 <!-- Confirm delete all modal -->
