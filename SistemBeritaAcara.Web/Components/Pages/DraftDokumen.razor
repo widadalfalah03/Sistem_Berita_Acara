@@ -26,7 +26,7 @@
         color: var(--text-secondary);
     }
     .action-btn-circle:hover {
-        background: var(--surface-hover, #f3f4f6);
+        background: var(--surface-hover, var(--border-light));
     }
     .action-btn-circle.btn-delete:hover {
         color: var(--danger);
@@ -42,7 +42,7 @@
         transition: background 0.15s;
     }
     .draft-row:hover {
-        background: #f9fafb;
+        background: var(--bg-secondary);
     }
     .draft-row:last-child {
         border-bottom: none;
@@ -75,7 +75,7 @@ else
 
     <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;">
         <!-- Header / Toolbar -->
-        <div style="padding:8px 16px;border-bottom:1px solid var(--border);background:#f9fafb;display:flex;justify-content:space-between;align-items:center;">
+        <div style="padding:8px 16px;border-bottom:1px solid var(--border);background:var(--bg-secondary);display:flex;justify-content:space-between;align-items:center;">
             <div style="font-size:13px; color:var(--text-secondary);">
                 Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, drafts.Count) dari @drafts.Count
             </div>

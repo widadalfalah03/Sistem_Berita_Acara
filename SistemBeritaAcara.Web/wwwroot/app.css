@@ -21,7 +21,9 @@
     --warning-light: #FFFBEB;
 
     /* Neutral */
-    --bg: #EEF2FF;
+    --bg: #F4F6FA;
+    --bg-secondary: #f9fafb;
+    --bg-overlay: rgba(255, 255, 255, 0.93);
     --surface: #FFFFFF;
     --border: #E2E8F0;
     --border-light: #F1F5F9;
@@ -74,6 +76,8 @@
     --warning-light: rgba(245, 158, 11, 0.15);
 
     --bg: #030b25;
+    --bg-secondary: #0d2242;
+    --bg-overlay: rgba(3, 11, 37, 0.93);
     --surface: #0a1930;
     --border: #1a2a47;
     --border-light: #111d38;
@@ -609,7 +613,7 @@ a:hover { color: var(--primary-hover); }
 /* Role badges */
 .pill-admin-it { background: #FFFBEB; color: #D97706; }
 .pill-admin-gudang { background: #F0FDF4; color: #16A34A; }
-.pill-approver { background: #FEF2F2; color: #DC2626; }
+.pill-reviewer { background: #FEF2F2; color: #DC2626; }
 
 /* Status dot badges */
 .status-dot {
@@ -3707,7 +3711,7 @@ input[type="password"]::-ms-clear {
 /* -- Icon Pill variants --------------------------------------- */
 .pill-admin-it { background: #F3E8FF; color: #7C3AED; }
 .pill-admin-gudang { background: #ECFDF5; color: #059669; }
-.pill-approver { background: #FFF7ED; color: #EA580C; }
+.pill-reviewer { background: #FFF7ED; color: #EA580C; }
 
 /* -- Status dot ----------------------------------------------- */
 .status-dot {
