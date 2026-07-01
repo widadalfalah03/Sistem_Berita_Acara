@@ -331,6 +331,7 @@ else
     private string actionMessage = string.Empty;
     private bool actionIsError = false;
     private string currentRole = string.Empty;
+    private int currentUserId;
     private bool isProcessing = false;
     private bool isReviewerAction = false;
     private string reviewerActionLabel = string.Empty;
@@ -347,6 +348,7 @@ else
         var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
         if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
         currentRole = appUser.Role;
+        currentUserId = appUser.Id;
 
         ba = await DbContext.Set<BeritaAcaraEntity>()
             .Include(x => x.Pj)
@@ -548,7 +550,7 @@ else
             var history = new SistemBeritaAcara.Core.Entities.BeritaAcaraHistory
             {
                 BaId = ba.Id,
-                RejectedByUserId = _currentUserId,
+                RejectedByUserId = currentUserId,
                 AlasanReject = rejectReason,
                 RejectedAt = DateTime.Now,
                 BaJenis = ba.Jenis,
