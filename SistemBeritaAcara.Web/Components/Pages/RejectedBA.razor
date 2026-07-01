@@ -12,60 +12,57 @@
 <PageTitle>Rejected — Sistem Berita Acara</PageTitle>
 
 <style>
-    .folder-tabs-wrapper {
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        margin-bottom: -1px;
+    .segmented-control {
+        display: inline-flex;
+        background: transparent;
+        gap: 8px;
+        margin-bottom: 24px;
         position: relative;
         z-index: 10;
     }
-    .folder-tabs {
-        display: flex;
-        gap: 4px;
-    }
-    .folder-tab {
-        padding: 10px 22px;
+    .segment-btn {
+        padding: 8px 24px;
         font-size: 14px;
         font-weight: 500;
-        font-family: inherit;
-        border-top-left-radius: 12px;
-        border-top-right-radius: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 1px solid var(--border);
-        background: var(--bg-secondary);
+        border: none;
+        background: transparent;
         color: var(--text-secondary);
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
-    }
-    .folder-tab.active {
-        background: var(--surface);
-        color: var(--primary);
-        font-weight: 700;
-        border-bottom-color: var(--surface);
         z-index: 2;
     }
-    .folder-tab.inactive {
-        border-bottom-color: var(--border);
-        z-index: 1;
+    @@keyframes fadeSlideIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
     }
-    .folder-tab:not(.active):hover {
-        background: var(--border-light);
+    .tab-content-wrapper {
+        animation: fadeSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .segment-btn.active {
+        color: #ffffff;
+        font-weight: 600;
+        background: var(--primary);
+        box-shadow: 0 4px 12px rgba(37,99,235,0.2);
+    }
+    .segment-btn:not(.active):hover {
+        background: #f1f5f9;
+        color: var(--text-primary);
     }
 </style>
 
 <!-- Tab bar -->
-<div class="folder-tabs-wrapper">
-    <div class="folder-tabs">
-        <button class="folder-tab @(activeTab == "revisi" ? "active" : "inactive")" @onclick='() => SwitchTab("revisi")'>
-            Revisi @(revisiBA.Count > 0 ? $"({revisiBA.Count})" : "")
-        </button>
-        <button class="folder-tab @(activeTab == "riwayat" ? "active" : "inactive")" @onclick='() => SwitchTab("riwayat")'>
-            Riwayat
-        </button>
-    </div>
+<div class="segmented-control">
+    <button class="segment-btn @(activeTab == "revisi" ? "active" : "")" @onclick='() => SwitchTab("revisi")'>
+        Revisi @(revisiBA.Count > 0 ? $"({revisiBA.Count})" : "")
+    </button>
+    <button class="segment-btn @(activeTab == "riwayat" ? "active" : "")" @onclick='() => SwitchTab("riwayat")'>
+        Riwayat
+    </button>
 </div>
 
+<div class="tab-content-wrapper" @key="activeTab">
 @if (isLoading)
 {
     <div class="loading-spinner"><div class="spinner"></div><span>Memuat data...</span></div>
@@ -76,7 +73,7 @@ else
 
     @if (!currentList.Any())
     {
-        <div class="card" style="text-align:center;padding:60px;border-radius:0 var(--radius-lg) var(--radius-lg) var(--radius-lg);position:relative;z-index:1;">
+        <div class="card" style="text-align:center;padding:60px;border-radius:var(--radius-lg);position:relative;z-index:1;">
             @if (activeTab == "revisi")
             {
                 <i class="bi bi-check-circle" style="font-size:48px;color:var(--success,#22C55E);display:block;margin-bottom:16px;"></i>
@@ -95,67 +92,49 @@ else
     {
         var paginated = currentList.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
 
-        <div style="background:var(--surface);border-radius:0 var(--radius-lg) var(--radius-lg) var(--radius-lg);border:1px solid var(--border);padding:16px;margin-bottom:24px;position:relative;z-index:1;">
-            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
-                Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, currentList.Count) dari @currentList.Count dokumen
-            </div>
-
-            <div style="display:flex;flex-direction:column;gap:12px;">
-                @foreach (var ba in paginated)
-                {
-                    <div class="rejected-item">
-                        <div class="rejected-item-top">
-                            <div style="display:flex;align-items:center;gap:10px;">
-                                <span class="pill pill-rejected" style="font-size:11px;letter-spacing:.03em;">Rejected</span>
-                                <span style="font-size:15px;font-weight:600;color:var(--text-primary);">Berita Acara @ba.Jenis</span>
-                            </div>
-                            <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">
-                                @(ba.ApprovedAt?.ToString("dd MMM yyyy, HH:mm") ?? ba.CreatedAt.ToString("dd MMM yyyy"))
-                            </span>
-                        </div>
-
-                        <div class="rejected-item-meta">
-                            <div class="rejected-meta-item">
-                                <i class="bi bi-person"></i>
-                                <div>
-                                    <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Penanggung Jawab</div>
-                                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Pj?.Nama ?? "—")</div>
-                                </div>
-                            </div>
-                            <div class="rejected-meta-item">
-                                <i class="bi bi-person-check"></i>
-                                <div>
-                                    <div style="font-size:11px;color:var(--text-muted);line-height:1.2;">Reviewer</div>
-                                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@(ba.Mengetahui?.Nama ?? "—")</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        @if (!string.IsNullOrEmpty(ba.AlasanReject))
+        <div class="card" style="margin-bottom:24px;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Jenis Berita Acara</th>
+                            <th>Reviewer</th>
+                            <th>Alasan</th>
+                            <th style="text-align:right;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ba in paginated)
                         {
-                            <div class="rejected-item-reason">
-                                <i class="bi bi-chat-square-text" style="flex-shrink:0;margin-top:1px;color:var(--danger);"></i>
-                                <span>@ba.AlasanReject</span>
-                            </div>
+                            <tr style="cursor:pointer; transition: background 0.2s;" class="hover-row" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}"))">
+                                <td>
+                                    <span style="font-weight:600;">@ba.Jenis</span>
+                                </td>
+                                <td>
+                                    <div class="cell-main">@(ba.Mengetahui?.Nama ?? "-")</div>
+                                </td>
+                                <td>
+                                    <span style="color:var(--danger);font-size:13px;">
+                                        @(string.IsNullOrEmpty(ba.AlasanReject) ? "Menunggu revisi" : ba.AlasanReject)
+                                    </span>
+                                </td>
+                                <td style="text-align:right;" @onclick:stopPropagation>
+                                    @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
+                                    {
+                                        <button class="btn btn-sm btn-primary" style="padding:4px 12px;font-size:12px;display:inline-flex;align-items:center;gap:4px;" @onclick="() => ReviseBA(ba.Id)" title="Revisi">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Revisi
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
                         }
+                    </tbody>
+                </table>
 
-                        <div class="rejected-item-actions">
-                            <NavLink href="@($"/berita-acara/{ba.Id}")" class="btn btn-sm btn-outline">
-                                <i class="bi bi-eye"></i> Lihat Detail
-                            </NavLink>
-                            @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
-                            {
-                                <button class="btn btn-sm btn-primary" @onclick="() => ReviseBA(ba.Id)">
-                                    <i class="bi bi-arrow-counterclockwise"></i> Revisi
-                                </button>
-                            }
-                        </div>
-                    </div>
-                }
             </div>
         </div>
 
-        @if (currentList.Count > pageSize)
+        @if (currentList.Count > 0)
         {
             <SistemBeritaAcara.Web.Components.Shared.Pagination
                 CurrentPage="@currentPage"
@@ -165,6 +144,7 @@ else
         }
     }
 }
+</div>
 
 @code {
     private List<BeritaAcaraEntity> revisiBA = new();
