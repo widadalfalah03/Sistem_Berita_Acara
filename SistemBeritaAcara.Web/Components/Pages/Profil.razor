@@ -1,4 +1,4 @@
-﻿@page "/profil"
+@page "/profil"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
@@ -11,7 +11,19 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<PageTitle>Profil — Sistem Berita Acara</PageTitle>
+<PageTitle>Profil Anda — Pertamina Patra Niaga</PageTitle>
+
+<style>
+    .profile-pic-container:hover .profile-hover-overlay {
+        opacity: 1 !important;
+    }
+    .profile-img-hover {
+        transition: transform 0.3s ease;
+    }
+    .profile-pic-container:hover .profile-img-hover {
+        transform: scale(1.1);
+    }
+</style>
 
 @if (isLoading)
 {
@@ -37,7 +49,31 @@ else
         </div>
     }
 
-    <!-- First-login reminder banner -->
+    <!-- Cropper Modal -->
+    @if (showCropperModal)
+    {
+        <div class="modal-backdrop" style="display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);background:rgba(0,0,0,0.6);z-index:9999;position:fixed;inset:0;">
+            <div class="modal-content" style="width: 100%; max-width: 500px; background: var(--bg); border-radius: var(--radius); overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); animation: modalEnter 0.3s ease-out;">
+                <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 700;">Sesuaikan Foto Profil</h3>
+                    <button class="btn-icon" @onclick="CloseCropperModal" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-secondary);"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <div style="padding: 20px; height: 400px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
+                    <div id="cropper-container" style="width: 100%; max-height: 100%; text-align: center;">
+                        <!-- Blazor ignores JS-injected children here -->
+                    </div>
+                </div>
+                <div style="padding: 20px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px; background: var(--bg-secondary);">
+                    <button class="btn btn-primary" @onclick="ConfirmCrop" disabled="@isSavingPic" style="min-width: 120px;">
+                        @if (isSavingPic) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
+                        else { <span><i class="bi bi-crop" style="margin-right: 6px;"></i> Terapkan</span> }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Modal TTD Digital (Reviewer & Admin) -->
     @if (string.IsNullOrEmpty(currentUser.TtdPath) && currentUser.Role != "AdminIT")
     {
         <div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:var(--radius);padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;">
@@ -57,40 +93,32 @@ else
             <!-- Informasi Akun -->
             <div class="form-section" style="margin-bottom:0;">
                 <!-- Profile pic + name row -->
-                <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;padding:20px;background:var(--bg);border-radius:var(--radius);flex-wrap:wrap;">
-                    <div style="position:relative;">
-                        <div style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:3px solid var(--primary-light);">
+                <div style="display:flex;align-items:center;gap:24px;margin-bottom:24px;padding:24px;background:linear-gradient(135deg, rgba(var(--primary-rgb), 0.05), rgba(var(--primary-rgb), 0.01));border: 1px solid rgba(var(--primary-rgb), 0.1);border-radius:var(--radius);flex-wrap:wrap;box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                    <div class="profile-pic-container" style="position:relative; width: 110px; height: 110px; border-radius: 50%; padding: 4px; background: linear-gradient(135deg, var(--primary), var(--primary-light));">
+                        <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;border: 3px solid var(--bg);">
                             @if (!string.IsNullOrEmpty(currentUser.ProfilePicPath))
                             {
-                                <img src="/@currentUser.ProfilePicPath" alt="Foto Profil" style="width:100%;height:100%;object-fit:cover;" />
+                                <img src="/@currentUser.ProfilePicPath" alt="Foto Profil" style="width:100%;height:100%;object-fit:cover;" class="profile-img-hover" />
                             }
                             else
                             {
-                                <span style="font-size:28px;font-weight:800;color:white;">@GetInitials(currentUser.Nama)</span>
+                                <span style="font-size:36px;font-weight:800;color:var(--primary);">@GetInitials(currentUser.Nama)</span>
                             }
+                            
+                            <!-- Hover Overlay -->
+                            <label for="pic-upload-custom" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);color:white;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity 0.2s ease;font-size:12px;font-weight:600;" class="profile-hover-overlay">
+                                <i class="bi bi-camera-fill" style="font-size: 20px; margin-bottom: 4px;"></i>
+                                Ubah
+                            </label>
+                            <input type="file" id="pic-upload-custom" accept="image/*" style="display:none;" onchange="window.cropperInterop.handleFileSelect(this, 'cropper-container')" />
+                            <button id="hidden-show-modal" @onclick="() => showCropperModal = true" style="display:none;"></button>
                         </div>
-                        <label for="pic-upload" style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white;font-size:11px;">
-                            <i class="bi bi-camera-fill"></i>
-                        </label>
-                        <InputFile id="pic-upload" OnChange="OnProfilePicSelected" accept="image/*" style="display:none;" />
                     </div>
                     <div>
-                        <div style="font-size:20px;font-weight:800;color:var(--text-primary);">@currentUser.Nama</div>
-                        <div style="margin-top:4px;">
-                            <span class="pill @GetRolePill(currentUser.Role)" style="font-size:12px;">@GetRoleLabel(currentUser.Role)</span>
+                        <div style="font-size:26px;font-weight:800;color:var(--text-primary);letter-spacing:-0.5px;">@currentUser.Nama</div>
+                        <div style="margin-top:8px;display:flex;align-items:center;gap:12px;">
+                            <span class="pill @GetRolePill(currentUser.Role)" style="font-size:13px;padding: 6px 14px;box-shadow:0 2px 6px rgba(0,0,0,0.05);">@GetRoleLabel(currentUser.Role)</span>
                         </div>
-                        @if (profilePicFile is not null)
-                        {
-                            <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
-                                <span style="font-size:13px;color:var(--text-secondary);">
-                                    <i class="bi bi-image"></i> @profilePicFile.Name
-                                </span>
-                                <button class="btn btn-primary btn-sm" @onclick="SaveProfilePicAsync" disabled="@isSavingPic" style="padding:5px 12px;font-size:12px;">
-                                    @if (isSavingPic) { <span class="spinner" style="width:12px;height:12px;border-width:2px;"></span> }
-                                    else { <span>Simpan Foto</span> }
-                                </button>
-                            </div>
-                        }
                     </div>
                 </div>
 
@@ -377,41 +405,56 @@ else
     }
 
     // ── Profile Picture ──
+    private bool showCropperModal = false;
 
-    private void OnProfilePicSelected(InputFileChangeEventArgs e) => profilePicFile = e.File;
-
-    private async Task SaveProfilePicAsync()
+    private async Task ConfirmCrop()
     {
-        if (profilePicFile is null) return;
         isSavingPic = true;
         globalMessage = string.Empty;
-        try
+        try 
         {
-            var ext = Path.GetExtension(profilePicFile.Name);
-            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "profiles");
-            Directory.CreateDirectory(folder);
-
-            // Delete old picture if exists to prevent accumulating files
-            if (!string.IsNullOrEmpty(currentUser!.ProfilePicPath))
+            var croppedBase64 = await JS.InvokeAsync<string>("cropperInterop.getCroppedBase64");
+            if (!string.IsNullOrEmpty(croppedBase64))
             {
-                var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.ProfilePicPath.Replace("/", "\\"));
-                if (File.Exists(oldPath)) File.Delete(oldPath);
-            }
+                var base64Data = croppedBase64.Split(',')[1];
+                var bytes = Convert.FromBase64String(base64Data);
+                
+                var ext = ".jpg"; 
+                var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "profiles");
+                Directory.CreateDirectory(folder);
 
-            var fname = $"profile-{currentUser.Id}-{DateTime.UtcNow.Ticks}{ext}";
-            var fpath = Path.Combine(folder, fname);
-            await using (var fs = File.Create(fpath))
-            {
-                await profilePicFile.OpenReadStream(5_000_000).CopyToAsync(fs);
+                if (!string.IsNullOrEmpty(currentUser!.ProfilePicPath))
+                {
+                    var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.ProfilePicPath.Replace("/", "\\"));
+                    if (File.Exists(oldPath)) File.Delete(oldPath);
+                }
+
+                var fname = $"profile-{currentUser.Id}-{DateTime.UtcNow.Ticks}{ext}";
+                var fpath = Path.Combine(folder, fname);
+                await File.WriteAllBytesAsync(fpath, bytes);
+
+                currentUser.ProfilePicPath = $"files/profiles/{fname}";
+                await UserManager.UpdateAsync(currentUser);
+                
+                globalMessage = "Foto profil berhasil diperbarui!";
+                Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
             }
-            currentUser.ProfilePicPath = $"files/profiles/{fname}";
-            await UserManager.UpdateAsync(currentUser);
-            globalMessage = "Foto profil berhasil disimpan!";
-            profilePicFile = null;
-            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+        } 
+        catch (Exception ex) 
+        {
+            globalMessage = $"Gagal memotong gambar: {ex.Message}";
         }
-        catch (Exception ex) { globalMessage = $"Gagal menyimpan foto profil: {ex.Message}"; }
-        finally { isSavingPic = false; }
+        finally 
+        {
+            isSavingPic = false;
+            CloseCropperModal();
+        }
+    }
+
+    private void CloseCropperModal()
+    {
+        showCropperModal = false;
+        _ = JS.InvokeVoidAsync("cropperInterop.destroyCropper");
     }
 
 

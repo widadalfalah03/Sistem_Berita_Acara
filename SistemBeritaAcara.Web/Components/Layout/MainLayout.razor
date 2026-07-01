@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
 @using System.Security.Claims
@@ -8,6 +8,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inherits LayoutComponentBase
+@implements IAsyncDisposable
 
 @if (isLoginPage)
 {
@@ -273,6 +274,7 @@ else
     private int progressCount;
     private bool isLoginPage;
     private int _currentUserId;
+    private Microsoft.AspNetCore.SignalR.Client.HubConnection? _hubConnection;
 
     [Inject] private AppDbContext DbContext { get; set; } = null!;
 
@@ -323,6 +325,44 @@ else
     {
         if (!firstRender || isLoginPage || _currentUserId == 0) return;
 
+        // Load badge counts (tetap cepat — query DB lokal)
+        await RefreshCountsAsync();
+        StateHasChanged();
+
+        // Fire-and-forget SignalR — tidak memblokir, koneksi terjadi di latar belakang
+        _ = ConnectSignalRAsync();
+    }
+
+    private async Task ConnectSignalRAsync()
+    {
+        if (isLoginPage) return;
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/ba"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On("BaListUpdated", async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await RefreshCountsAsync();
+                    StateHasChanged();
+                });
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch
+        {
+            // SignalR gagal connect — badge tetap muncul, hanya tidak real-time
+        }
+    }
+
+    private async Task RefreshCountsAsync()
+    {
+        if (_currentUserId == 0) return;
         unreadCount = await DbContext.Notification
             .CountAsync(n => n.UserId == _currentUserId && !n.IsRead);
 
@@ -339,8 +379,6 @@ else
             progressCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
                 .CountAsync(ba => ba.MengetahuiId == _currentUserId && ba.Status == "WaitingApproval");
         }
-
-        StateHasChanged();
     }
 
     private static string GetInitials(string name)
@@ -369,5 +407,14 @@ else
             var u when u.Contains("/data-barang") => "Data Barang",
             _ => "Sistem Berita Acara"
         };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.StopAsync();
+            await _hubConnection.DisposeAsync();
+        }
     }
 }
