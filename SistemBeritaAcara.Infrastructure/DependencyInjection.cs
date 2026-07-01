@@ -59,6 +59,13 @@ public static class DependencyInjection
 
         services.AddHangfireServer();
 
+        services.AddHttpClient("Gotenberg", (sp, client) =>
+        {
+            var url = config["Gotenberg:ServerUrl"] ?? "http://localhost:3000";
+            client.BaseAddress = new Uri(url.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(120);
+        });
+
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IBACounterService, BACounterService>();

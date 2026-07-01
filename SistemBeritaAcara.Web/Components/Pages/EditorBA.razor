@@ -1,4 +1,4 @@
-﻿@page "/editor/{Id:int}"
+@page "/editor/{Id:int}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
@@ -154,7 +154,7 @@
                         @if (ba.TiketSscNo is not null)
                         {
                             <tr>
-                                <td style="padding:7px 0;color:var(--text-secondary);">Tiket SSC</td>
+                                <td style="padding:7px 0;color:var(--text-secondary);">@(ba.DasarAlokasi)</td>
                                 <td style="padding:7px 0;font-weight:600;">@ba.TiketSscNo</td>
                             </tr>
                         }
@@ -462,7 +462,7 @@
                     await NotificationService.SendAsync(
                         trackedBa.MengetahuiId.Value,
                         "WAITING_APPROVAL",
-                        $"BA {trackedBa.NomorSurat ?? "Draft"} telah direvisi dan membutuhkan persetujuan Anda.",
+                        $"Berita Acara {trackedBa.Jenis} {(trackedBa.NomorSurat ?? "")} telah direvisi dan membutuhkan persetujuan Anda.".Replace("  ", " ").Trim(),
                         trackedBa.Id
                     );
 
@@ -529,7 +529,7 @@
                     await NotificationService.SendAsync(
                         _currentUserId,
                         "WAITING_PJ_SIGN",
-                        $"Draft BA telah diajukan. Menunggu tanda tangan PJ ({trackedBa.Pj.Nama}).",
+                        $"Berita Acara {trackedBa.Jenis} telah diajukan. Menunggu tanda tangan PJ ({trackedBa.Pj.Nama}).",
                         trackedBa.Id
                     );
                     Navigation.NavigateTo("/progress");
