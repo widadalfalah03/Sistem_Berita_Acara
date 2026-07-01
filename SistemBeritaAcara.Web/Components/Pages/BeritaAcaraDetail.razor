@@ -543,6 +543,22 @@ else
             ba.WasRejected = true;
             ba.ApprovedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
+
+            // Catat ke tabel history permanen agar tidak hilang saat Inbox dihapus
+            var history = new SistemBeritaAcara.Core.Entities.BeritaAcaraHistory
+            {
+                BaId = ba.Id,
+                RejectedByUserId = _currentUserId,
+                AlasanReject = rejectReason,
+                RejectedAt = DateTime.Now,
+                BaJenis = ba.Jenis,
+                BaNomorSurat = ba.NomorSurat,
+                BaCreatedBy = ba.CreatedBy,
+                BaMengetahuiId = ba.MengetahuiId,
+            };
+            DbContext.BeritaAcaraHistory.Add(history);
+            await DbContext.SaveChangesAsync();
+
             var label = ba.NomorSurat ?? "";
             var text = $"Berita Acara {ba.Jenis} {label} ditolak: {rejectReason}".Replace("  ", " ").Trim();
             await NotificationService.SendAsync(ba.CreatedBy, "BA_REJECTED", text, ba.Id);

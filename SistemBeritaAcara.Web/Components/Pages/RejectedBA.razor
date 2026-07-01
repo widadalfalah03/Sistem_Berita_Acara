@@ -1,4 +1,4 @@
-﻿@page "/rejected"
+@page "/rejected"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -204,31 +204,31 @@ else
 
         revisiBA = await revisiQuery.OrderByDescending(b => b.ApprovedAt).ToListAsync();
 
-        // Riwayat: Ambil dari Notification agar setiap kali ditolak tercatat sebagai satu baris riwayat terpisah
-        IQueryable<SistemBeritaAcara.Core.Entities.Notification> notifQuery = DbContext.Notification
-            .Include(n => n.BeritaAcara).ThenInclude(b => b!.Pj)
-            .Include(n => n.BeritaAcara).ThenInclude(b => b!.Mengetahui)
-            .Where(n => n.Tipe == "BA_REJECTED" && n.BaId != null);
+        // Riwayat: Ambil dari tabel BeritaAcaraHistory (permanen, tidak terpengaruh penghapusan Inbox)
+        IQueryable<SistemBeritaAcara.Core.Entities.BeritaAcaraHistory> historyQuery = DbContext.BeritaAcaraHistory
+            .Include(h => h.BeritaAcara).ThenInclude(ba => ba.Pj)
+            .Include(h => h.BeritaAcara).ThenInclude(ba => ba.Mengetahui)
+            .Include(h => h.RejectedByUser);
 
         if (currentRole == "AdminGudangBarang")
-            notifQuery = notifQuery.Where(n => n.BeritaAcara!.CreatedBy == currentUserId);
+            historyQuery = historyQuery.Where(h => h.BaCreatedBy == currentUserId);
         else if (currentRole == "Reviewer")
-            notifQuery = notifQuery.Where(n => n.BeritaAcara!.MengetahuiId == currentUserId);
+            historyQuery = historyQuery.Where(h => h.BaMengetahuiId == currentUserId);
 
-        var historyList = await notifQuery.OrderByDescending(n => n.CreatedAt).ToListAsync();
-        
-        riwayatBA = historyList.Select(n => new BeritaAcaraEntity
+        var historyList = await historyQuery.OrderByDescending(h => h.RejectedAt).ToListAsync();
+
+        riwayatBA = historyList.Select(h => new BeritaAcaraEntity
         {
-            Id = n.BaId ?? 0,
-            NomorSurat = n.BeritaAcara?.NomorSurat,
-            Jenis = n.BeritaAcara?.Jenis ?? "-",
-            AlasanReject = n.Message.Contains("ditolak: ") ? n.Message[(n.Message.IndexOf("ditolak: ") + 9)..] : n.Message,
-            ApprovedAt = n.CreatedAt,
+            Id = h.BaId,
+            NomorSurat = h.BaNomorSurat,
+            Jenis = h.BaJenis,
+            AlasanReject = h.AlasanReject,
+            ApprovedAt = h.RejectedAt,
             Status = "Rejected",
-            CreatedBy = n.BeritaAcara?.CreatedBy ?? 0,
-            MengetahuiId = n.BeritaAcara?.MengetahuiId,
-            Pj = n.BeritaAcara?.Pj,
-            Mengetahui = n.BeritaAcara?.Mengetahui
+            CreatedBy = h.BaCreatedBy,
+            MengetahuiId = h.BaMengetahuiId,
+            Pj = h.BeritaAcara?.Pj,
+            Mengetahui = h.BeritaAcara?.Mengetahui,
         }).ToList();
 
         isLoading = false;
