@@ -1,4 +1,4 @@
-﻿@page "/dashboard"
+@page "/dashboard"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -195,7 +195,7 @@ else if (currentRole == "AdminGudangBarang")
                         </div>
                     </div>
                     <div class="loan-info-block">
-                        <div class="loan-info-label">No. Tiket SSC</div>
+                        <div class="loan-info-label">@(modalBA.DasarAlokasi)</div>
                         <div class="loan-info-value">@(modalBA.TiketSscNo ?? "—")</div>
                     </div>
                 </div>
