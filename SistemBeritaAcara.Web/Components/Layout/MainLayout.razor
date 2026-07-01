@@ -369,7 +369,7 @@ else
         if (currentRole == "AdminGudangBarang")
         {
             draftCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
-                .CountAsync(ba => ba.CreatedBy == _currentUserId && ba.Status == "Draft");
+                .CountAsync(ba => ba.CreatedBy == _currentUserId && (ba.Status == "Draft" || ba.Status == "Rejected"));
             progressCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
                 .CountAsync(ba => ba.CreatedBy == _currentUserId &&
                     (ba.Status == "WaitingPJSign" || ba.Status == "WaitingApproval"));

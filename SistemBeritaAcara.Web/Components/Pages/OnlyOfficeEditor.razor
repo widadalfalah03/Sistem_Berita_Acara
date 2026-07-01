@@ -109,7 +109,7 @@ else
         ba = await DbContext.Set<BeritaAcaraEntity>()
             .Include(b => b.Pj).Include(b => b.Menyerahkan).Include(b => b.Mengetahui)
             .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
-            .FirstOrDefaultAsync(b => b.Id == Id && b.Status == "Draft" && b.CreatedBy == _currentUserId);
+            .FirstOrDefaultAsync(b => b.Id == Id && (b.Status == "Draft" || b.Status == "Rejected") && b.CreatedBy == _currentUserId);
 
         if (ba != null && string.IsNullOrEmpty(ba.DocxPath))
         {
