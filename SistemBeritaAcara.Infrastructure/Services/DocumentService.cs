@@ -7,6 +7,7 @@ using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using A = DocumentFormat.OpenXml.Drawing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Core.Interfaces;
 using SistemBeritaAcara.Infrastructure.Data;
@@ -19,11 +20,14 @@ public class DocumentService : IDocumentService
     private readonly ILogger<DocumentService> _logger;
     private readonly string _outputRoot;
     private readonly string _templatesDir;
+    private readonly IConfiguration _config;
+    private static readonly HttpClient _httpClient = new HttpClient();
 
-    public DocumentService(AppDbContext db, ILogger<DocumentService> logger)
+    public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IConfiguration config)
     {
         _db = db;
         _logger = logger;
+        _config = config;
         _outputRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
         _templatesDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "templates");
         Directory.CreateDirectory(_outputRoot);
@@ -251,8 +255,6 @@ public class DocumentService : IDocumentService
                 if (ba.BuktiFotos != null && ba.BuktiFotos.Any())
                 {
                     uint imgId = 100U;
-                    var containerPara = new Paragraph();
-                    containerPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
                     foreach (var foto in ba.BuktiFotos)
                     {
                         var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
@@ -269,25 +271,25 @@ public class DocumentService : IDocumentService
                         using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
 
                         var dims = GetImageDimensions(fotoPhysical);
-                        long cx = 2700000L;
-                        long cy = 1980000L;
+                        long cx = 5486400L;
+                        long cy = 4000000L;
                         if (dims.width > 0 && dims.height > 0)
                         {
                             double imgRatio = (double)dims.width / dims.height;
                             if (imgRatio > 1.0) { // Landscape
-                                cx = 2700000L;
-                                cy = (long)(2700000L / imgRatio);
+                                cx = 5486400L;
+                                cy = (long)(5486400L / imgRatio);
                             } else { // Portrait or Square
-                                cy = 2700000L;
-                                cx = (long)(2700000L * imgRatio);
+                                cy = 5486400L;
+                                cx = (long)(5486400L * imgRatio);
                             }
                         }
 
                         var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId++);
+                        var containerPara = new Paragraph(new ParagraphProperties(new Justification { Val = JustificationValues.Center }));
                         containerPara.Append(new Run(drawing));
-                        containerPara.Append(new Run(new Text("  ")));
+                        mainPart.Document.Body!.Append(containerPara);
                     }
-                    mainPart.Document.Body!.Append(containerPara);
                 }
             }
             else if (ba.Jenis != "Lainnya" && ba.BuktiFotos != null && ba.BuktiFotos.Any())
@@ -299,8 +301,6 @@ public class DocumentService : IDocumentService
                 });
 
                 uint imgId = 200U;
-                var containerPara = new Paragraph();
-                containerPara.ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center });
                 foreach (var foto in ba.BuktiFotos)
                 {
                     var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
@@ -317,25 +317,25 @@ public class DocumentService : IDocumentService
                     using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
 
                     var dims = GetImageDimensions(fotoPhysical);
-                    long cx = 2700000L;
-                    long cy = 1980000L;
+                    long cx = 5486400L;
+                    long cy = 4000000L;
                     if (dims.width > 0 && dims.height > 0)
                     {
                         double imgRatio = (double)dims.width / dims.height;
                         if (imgRatio > 1.0) { // Landscape
-                            cx = 2700000L;
-                            cy = (long)(2700000L / imgRatio);
+                            cx = 5486400L;
+                            cy = (long)(5486400L / imgRatio);
                         } else { // Portrait or Square
-                            cy = 2700000L;
-                            cx = (long)(2700000L * imgRatio);
+                            cy = 5486400L;
+                            cx = (long)(5486400L * imgRatio);
                         }
                     }
 
                     var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId++);
+                    var containerPara = new Paragraph(new ParagraphProperties(new Justification { Val = JustificationValues.Center }));
                     containerPara.Append(new Run(drawing));
-                    containerPara.Append(new Run(new Text("  ")));
+                    mainPart.Document.Body!.Append(containerPara);
                 }
-                mainPart.Document.Body!.Append(containerPara);
             }
 
             mainPart.Document.Save();
@@ -347,7 +347,7 @@ public class DocumentService : IDocumentService
         try
         {
             string pdfPhysicalPath = physicalPath.Replace(".docx", ".pdf");
-            await Task.Run(() => ConvertDocxToPdfInternal(physicalPath, pdfPhysicalPath));
+            await ConvertDocxToPdfInternalAsync(physicalPath, pdfPhysicalPath);
         }
         catch (Exception ex)
         {
@@ -392,7 +392,7 @@ public class DocumentService : IDocumentService
         // Regenerasi PDF agar preview diperbarui
         try
         {
-            await Task.Run(() => ConvertDocxToPdfInternal(physicalPath, physicalPath.Replace(".docx", ".pdf")));
+            await ConvertDocxToPdfInternalAsync(physicalPath, physicalPath.Replace(".docx", ".pdf"));
         }
         catch (Exception ex)
         {
@@ -586,7 +586,7 @@ public class DocumentService : IDocumentService
         // circuit thread Blazor Server selama konversi berlangsung.
         try
         {
-            await Task.Run(() => ConvertDocxToPdfInternal(docPath, docPath.Replace(".docx", ".pdf")));
+            await ConvertDocxToPdfInternalAsync(docPath, docPath.Replace(".docx", ".pdf"));
         }
         catch (Exception ex)
         {
@@ -596,43 +596,42 @@ public class DocumentService : IDocumentService
 
     public async Task ConvertDocxToPdfAsync(string docxPhysicalPath)
     {
-        await Task.Run(() => ConvertDocxToPdfInternal(docxPhysicalPath, docxPhysicalPath.Replace(".docx", ".pdf")));
+        await ConvertDocxToPdfInternalAsync(docxPhysicalPath, docxPhysicalPath.Replace(".docx", ".pdf"));
     }
 
-    // Spire.Doc LoadFromFile pada Windows bisa menahan lock file setelah Close().
-    // Solusi: load dari SALINAN temp sehingga file asli (DOCX) tetap bebas untuk ditulis.
-    private static void ConvertDocxToPdfInternal(string docxPath, string pdfPath)
+    private async Task ConvertDocxToPdfInternalAsync(string docxPath, string pdfPath)
     {
-        string uniqueId = Guid.NewGuid().ToString("N");
-        // Temp file harus berekstensi .docx agar Spire.Doc bisa mendeteksi format file
-        var tempPath = Path.Combine(Path.GetDirectoryName(docxPath)!, $"_tmp_{uniqueId}_{Path.GetFileName(docxPath)}");
-        var tempPdfPath = Path.Combine(Path.GetDirectoryName(pdfPath)!, $"_tmp_{uniqueId}_{Path.GetFileName(pdfPath)}");
-        File.Copy(docxPath, tempPath, overwrite: true);
+        var gotenbergUrl = _config["Gotenberg:ServerUrl"];
+        if (string.IsNullOrEmpty(gotenbergUrl))
+        {
+            _logger.LogWarning("Gotenberg:ServerUrl is not configured. PDF conversion skipped.");
+            return;
+        }
+
         try
         {
-            var doc = new Spire.Doc.Document();
-            doc.LoadFromFile(tempPath);
-            doc.SaveToFile(tempPdfPath, Spire.Doc.FileFormat.PDF);
-            doc.Close();
+            using var request = new MultipartFormDataContent();
+            using var fileStream = File.OpenRead(docxPath);
+            using var streamContent = new StreamContent(fileStream);
+            request.Add(streamContent, "files", Path.GetFileName(docxPath));
 
-            // Pindahkan file temp PDF ke PDF tujuan dengan retry jika ada sisa lock
-            for (int attempt = 0; attempt < 10; attempt++)
+            var endpoint = $"{gotenbergUrl.TrimEnd('/')}/forms/libreoffice/convert";
+            var response = await _httpClient.PostAsync(endpoint, request);
+            
+            if (response.IsSuccessStatusCode)
             {
-                try
-                {
-                    File.Move(tempPdfPath, pdfPath, overwrite: true);
-                    break;
-                }
-                catch (IOException) when (attempt < 9)
-                {
-                    System.Threading.Thread.Sleep(300);
-                }
+                using var fs = new FileStream(pdfPath, FileMode.Create, FileAccess.Write);
+                await response.Content.CopyToAsync(fs);
+            }
+            else
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Gotenberg conversion failed: {StatusCode} - {Error}", response.StatusCode, errorMsg);
             }
         }
-        finally
+        catch (Exception ex)
         {
-            try { File.Delete(tempPath); } catch { }
-            try { File.Delete(tempPdfPath); } catch { }
+            _logger.LogError(ex, "Exception occurred during Gotenberg PDF conversion.");
         }
     }
 
@@ -833,7 +832,7 @@ public class DocumentService : IDocumentService
         });
 
         // Convert ke PDF
-        await Task.Run(() => ConvertDocxToPdfInternal(fullPath, fullPath.Replace(".docx", ".pdf")));
+        await ConvertDocxToPdfInternalAsync(fullPath, fullPath.Replace(".docx", ".pdf"));
 
         return relPath;
     }
