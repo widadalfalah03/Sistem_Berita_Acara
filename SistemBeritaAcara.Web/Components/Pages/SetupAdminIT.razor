@@ -1,4 +1,4 @@
-@page "/setup"
+﻿@page "/setup"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @layout EmptyLayout
 @rendermode InteractiveServer
@@ -157,7 +157,7 @@
         try
         {
             // ── 1. Pastikan role AdminIT ada ─────────────────────────────
-            foreach (var role in new[] { "AdminIT", "AdminGudangBarang", "Approver" })
+            foreach (var role in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
             {
                 if (!await RoleManager.RoleExistsAsync(role))
                     await RoleManager.CreateAsync(new IdentityRole<int>(role));

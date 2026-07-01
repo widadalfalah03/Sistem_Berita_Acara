@@ -1,4 +1,4 @@
-@page "/profil"
+﻿@page "/profil"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
@@ -427,7 +427,7 @@ else
     {
         "AdminIT" => "Admin IT",
         "AdminGudangBarang" => "Admin Gudang & Barang",
-        "Approver" => "Approver",
+        "Reviewer" => "Reviewer",
         _ => role
     };
 
@@ -435,7 +435,7 @@ else
     {
         "AdminIT" => "pill-admin-it",
         "AdminGudangBarang" => "pill-admin-gudang",
-        "Approver" => "pill-approver",
+        "Reviewer" => "pill-reviewer",
         _ => "pill-draft"
     };
 }
