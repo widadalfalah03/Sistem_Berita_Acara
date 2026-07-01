@@ -628,10 +628,11 @@ else if (currentRole == "AdminIT")
         stat.Approved = myBA.Count(b => b.Status == "Approved" || b.Status == "Archived");
         stat.Rejected = myBA.Count(b => b.Status == "Rejected");
 
-        jenisData.Alokasi = myBA.Count(b => b.Jenis == "Alokasi");
-        jenisData.Peminjaman = myBA.Count(b => b.Jenis == "Peminjaman");
-        jenisData.Penarikan = myBA.Count(b => b.Jenis == "Penarikan");
-        jenisData.Lainnya = myBA.Count(b => b.Jenis != "Alokasi" && b.Jenis != "Peminjaman" && b.Jenis != "Penarikan");
+        var archivedBA = myBA.Where(b => b.Status == "Approved" || b.Status == "Archived").ToList();
+        jenisData.Alokasi = archivedBA.Count(b => b.Jenis == "Alokasi");
+        jenisData.Peminjaman = archivedBA.Count(b => b.Jenis == "Peminjaman");
+        jenisData.Penarikan = archivedBA.Count(b => b.Jenis == "Penarikan");
+        jenisData.Lainnya = archivedBA.Count(b => b.Jenis != "Alokasi" && b.Jenis != "Peminjaman" && b.Jenis != "Penarikan");
 
         activePeminjaman = myBA
             .Where(b => b.Jenis == "Peminjaman" && b.TanggalKembali.HasValue
