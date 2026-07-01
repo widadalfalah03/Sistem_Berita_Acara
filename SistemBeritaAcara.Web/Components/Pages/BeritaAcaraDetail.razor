@@ -175,7 +175,7 @@ else
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.Tanggal.ToString("dd MMMM yyyy")</td></tr>
                         @if (ba.Jenis != "Lainnya")
                         {
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">@(ba.DasarAlokasi)</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ?? "-")</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">No. Tiket My SSC/Nota Dinas</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ?? "-")</td></tr>
                         }
                         @if (ba.Jenis == "Peminjaman")
                         {

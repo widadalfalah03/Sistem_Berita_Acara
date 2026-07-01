@@ -149,7 +149,7 @@
                         <div class="form-group">
                             <label class="form-label">Nama Pengguna <span style="color:var(--danger)">*</span></label>
                             <input type="text" class="form-control"
-                                   placeholder="Masukkan nama pengguna TAD"
+                                   placeholder="Masukkan nama pengguna"
                                    value="@model.PengunaAlihDaya"
                                    @oninput="@(e => { model.PengunaAlihDaya = e.Value?.ToString(); TriggerAutoSave(); })" />
                         </div>
@@ -240,18 +240,8 @@
             {
                 <div class="form-row" style="margin-bottom:16px;">
                     <div class="form-group" style="flex:1;">
-                        <label class="form-label">Dasar Alokasi</label>
-                        <InputRadioGroup TValue="string" Value="@model.DasarAlokasi" ValueExpression="@(() => model.DasarAlokasi)" ValueChanged="@((string val) => { model.DasarAlokasi = val; TriggerAutoSave(); })">
-                            <div style="margin-bottom: 8px; display: flex; gap: 16px;">
-                                <label style="display:flex; align-items:center; gap:4px;">
-                                    <InputRadio Value="@("No. Tiket My SSC")" /> No. Tiket My SSC
-                                </label>
-                                <label style="display:flex; align-items:center; gap:4px;">
-                                    <InputRadio Value="@("Nota Dinas")" /> Nota Dinas
-                                </label>
-                            </div>
-                        </InputRadioGroup>
-                        <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="@(model.DasarAlokasi == "Nota Dinas" ? "Contoh: 123/ND/2026" : "Contoh: INC-20240001")" />
+                        <label class="form-label">No. Tiket My SSC/Nota Dinas</label>
+                        <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="Contoh: INC-20240001 atau No. Nota Dinas" />
                     </div>
                     <div style="flex:1;"></div>
                 </div>
@@ -1157,7 +1147,7 @@
         }
         else
         {
-            if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
+            if (model.PjId is null or 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
             if (model.TipePj == "TenagaAlihDaya" && string.IsNullOrWhiteSpace(model.PengunaAlihDaya)) { errorMessage = "Nama Pengguna TAD wajib diisi."; return; }
             if (!string.IsNullOrWhiteSpace(model.PjNoTelp) && (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15)) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
             if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
