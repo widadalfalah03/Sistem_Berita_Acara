@@ -136,18 +136,21 @@
                             <td style="padding:7px 0;color:var(--text-secondary);">Tanggal</td>
                             <td style="padding:7px 0;font-weight:600;">@ba.Tanggal.ToString("dd MMM yyyy")</td>
                         </tr>
-                        <tr>
-                            <td style="padding:7px 0;color:var(--text-secondary);">Penanggung Jawab</td>
-                            <td style="padding:7px 0;font-weight:600;">@ba.Pj?.Nama</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:7px 0;color:var(--text-secondary);">Yang Menyerahkan</td>
-                            <td style="padding:7px 0;font-weight:600;">@ba.Menyerahkan?.Nama</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:7px 0;color:var(--text-secondary);">Approver</td>
-                            <td style="padding:7px 0;font-weight:600;">@ba.Mengetahui?.Nama</td>
-                        </tr>
+                        @if (ba.Jenis != "Lainnya")
+                        {
+                            <tr>
+                                <td style="padding:7px 0;color:var(--text-secondary);">Penanggung Jawab</td>
+                                <td style="padding:7px 0;font-weight:600;">@ba.Pj?.Nama</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:7px 0;color:var(--text-secondary);">Yang Menyerahkan</td>
+                                <td style="padding:7px 0;font-weight:600;">@ba.Menyerahkan?.Nama</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:7px 0;color:var(--text-secondary);">Approver</td>
+                                <td style="padding:7px 0;font-weight:600;">@ba.Mengetahui?.Nama</td>
+                            </tr>
+                        }
                         @if (ba.TiketSscNo is not null)
                         {
                             <tr>
