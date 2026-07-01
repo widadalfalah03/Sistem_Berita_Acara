@@ -109,7 +109,10 @@ else
                             <th>Jenis Berita Acara</th>
                             <th>Reviewer</th>
                             <th>Alasan</th>
-                            <th style="text-align:right;">Aksi</th>
+                            @if (activeTab == "revisi")
+                            {
+                                <th style="text-align:right;">Aksi</th>
+                            }
                         </tr>
                     </thead>
                     <tbody>
@@ -127,14 +130,17 @@ else
                                         @(string.IsNullOrEmpty(ba.AlasanReject) ? "Menunggu revisi" : ba.AlasanReject)
                                     </span>
                                 </td>
-                                <td style="text-align:right;" @onclick:stopPropagation>
-                                    @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
-                                    {
-                                        <button class="btn btn-sm btn-primary" style="padding:4px 12px;font-size:12px;display:inline-flex;align-items:center;gap:4px;" @onclick="() => ReviseBA(ba.Id)" title="Revisi">
-                                            <i class="bi bi-arrow-counterclockwise"></i> Revisi
-                                        </button>
-                                    }
-                                </td>
+                                @if (activeTab == "revisi")
+                                {
+                                    <td style="text-align:right;" @onclick:stopPropagation>
+                                        @if (currentRole == "AdminGudangBarang")
+                                        {
+                                            <button class="btn btn-sm btn-primary" style="padding:4px 12px;font-size:12px;display:inline-flex;align-items:center;gap:4px;" @onclick="() => ReviseBA(ba.Id)" title="Revisi">
+                                                <i class="bi bi-arrow-counterclockwise"></i> Revisi
+                                            </button>
+                                        }
+                                    </td>
+                                }
                             </tr>
                         }
                     </tbody>

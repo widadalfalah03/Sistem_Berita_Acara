@@ -240,7 +240,7 @@
             {
                 <div class="form-row" style="margin-bottom:16px;">
                     <div class="form-group" style="flex:1;">
-                        <label class="form-label">No. Tiket My SSC/Nota Dinas</label>
+                        <label class="form-label">No. Tiket My SSC/Nota Dinas <span style="color:var(--danger)">*</span></label>
                         <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="Contoh: INC-20240001 atau No. Nota Dinas" />
                     </div>
                     <div style="flex:1;"></div>
@@ -1148,11 +1148,11 @@
         else
         {
             if (model.PjId is null or 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
-            if (model.TipePj == "TenagaAlihDaya" && string.IsNullOrWhiteSpace(model.PengunaAlihDaya)) { errorMessage = "Nama Pengguna TAD wajib diisi."; return; }
+            if (model.TipePj == "TenagaAlihDaya" && string.IsNullOrWhiteSpace(model.PengunaAlihDaya)) { errorMessage = "Nama Pengguna wajib diisi."; return; }
             if (!string.IsNullOrWhiteSpace(model.PjNoTelp) && (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15)) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
-            if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
-            if (model.MengetahuiId == 0 || !reviewers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Reviewer (Yang Mengetahui) yang valid (akun mungkin telah dinonaktifkan)."; return; }
+            if (model.MengetahuiId == 0 || !reviewers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Reviewer (Yang Mengetahui)"; return; }
 
+            if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC/Nota Dinas wajib diisi."; return; }
             if (model.Jenis == "Peminjaman" && !model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk Peminjaman."; return; }
             if (!model.Perangkat.Any(p => p.BarangId > 0)) { errorMessage = "Tambahkan minimal satu perangkat."; return; }
             if (model.Jenis == "Peminjaman" && model.TanggalKembali.HasValue && model.TanggalKembali.Value.Date < model.Tanggal.Date)

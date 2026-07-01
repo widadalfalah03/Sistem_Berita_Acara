@@ -22,16 +22,12 @@
 {
     <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
         <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
-        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">Menyiapkan dokumen...</div>
-        <div style="font-size:13px;color:var(--text-muted);">Sedang mengkonversi ke PDF, harap tunggu</div>
     </div>
 }
 @if (isSubmitting)
 {
     <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
         <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
-        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">Mengirim untuk persetujuan...</div>
-        <div style="font-size:13px;color:var(--text-muted);">Menyematkan tanda tangan dan mengirim notifikasi ke PJ</div>
     </div>
 }
 
@@ -102,11 +98,22 @@
 
         <!-- ── Area Dokumen / Editor ── -->
         <div class="pdf-preview-container" style="background:#E8EAF0;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.05);">
-            @if (!string.IsNullOrEmpty(ba.DocxPath))
+            @if (!string.IsNullOrEmpty(ba.DocxPath) && pdfExists)
             {
                 <iframe class="hide-on-mobile" @key="pdfVersion" src="/api/preview/pdf/@ba.Id?v=@pdfVersion#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
                 <div id="pdf-render-container-editor" class="show-on-mobile" style="width:100%;height:100%;overflow-y:auto;">
                     <!-- canvas di-inject ke sini oleh JS -->
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(ba.DocxPath) && !pdfExists)
+            {
+                <div style="text-align:center;padding:80px 40px;color:var(--text-muted);">
+                    <i class="bi bi-file-earmark-pdf" style="font-size:48px;display:block;margin-bottom:16px;color:var(--danger);"></i>
+                    <div style="font-size:15px;font-weight:600;margin-bottom:8px;color:var(--text-primary);">Pratinjau PDF tidak tersedia</div>
+                    <div style="font-size:13px;margin-bottom:20px;">Server konversi tidak dapat dijangkau. Dokumen berhasil disimpan dan dapat di-edit manual.</div>
+                    <NavLink href="@($"/onlyoffice-editor/{ba.Id}")" class="btn btn-outline" style="display:inline-flex;align-items:center;gap:8px;">
+                        <i class="bi bi-pencil"></i> Edit Manual
+                    </NavLink>
                 </div>
             }
             else
@@ -154,7 +161,7 @@
                         @if (ba.TiketSscNo is not null)
                         {
                             <tr>
-                                <td style="padding:7px 0;color:var(--text-secondary);">@(ba.DasarAlokasi)</td>
+                                <td style="padding:7px 0;color:var(--text-secondary);">No. Tiket My SSC</td>
                                 <td style="padding:7px 0;font-weight:600;">@ba.TiketSscNo</td>
                             </tr>
                         }
@@ -211,6 +218,7 @@
     // Digunakan sebagai @key pada iframe sehingga browser memuat ulang PDF
     // tepat satu kali setiap kali kita kembali dari ONLYOFFICE editor.
     private long pdfVersion = 0;
+    private bool pdfExists = false;
     private int _loadedId = 0; // Id terakhir yang sudah di-load
 
     protected override void OnInitialized()
@@ -271,6 +279,10 @@
                 try
                 {
                     // Perlu tracked entity untuk SaveChanges
+                    // Bersihkan tracking lama agar FindAsync tidak mengembalikan entitas stale
+                    // dari SubmitAsync sebelumnya yang mungkin tidak memiliki navigation properties.
+                    DbContext.ChangeTracker.Clear();
+
                     var trackedBa = await DbContext.Set<BeritaAcaraEntity>().FindAsync(Id);
                     if (trackedBa != null)
                     {
@@ -282,16 +294,19 @@
                             .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
                             .Include(b => b.BuktiFotos)
                             .FirstOrDefaultAsync(b => b.Id == Id);
-                    }
 
-                    // TTD Menyerahkan hanya untuk BA yang punya blok tanda tangan (bukan Lainnya)
-                    if (ba?.Jenis != "Lainnya")
-                    {
-                        var currentUser = await DbContext.Users.FindAsync(_currentUserId);
-                        if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
+                        // TTD Menyerahkan hanya untuk BA yang punya blok tanda tangan (bukan Lainnya).
+                        // Dipindah ke dalam blok ini agar hanya dipanggil setelah DOCX berhasil dibuat
+                        // dan DocxPath tersimpan ke DB — mencegah NRE di EmbedTtdMenyerahkanAsync
+                        // jika DocxPath masih null.
+                        if (ba?.Jenis != "Lainnya" && !string.IsNullOrEmpty(ba?.DocxPath))
                         {
-                            var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                            await DocumentService.EmbedTtdMenyerahkanAsync(Id, ttdPhysicalPath);
+                            var currentUser = await DbContext.Users.FindAsync(_currentUserId);
+                            if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
+                            {
+                                var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                                await DocumentService.EmbedTtdMenyerahkanAsync(Id, ttdPhysicalPath);
+                            }
                         }
                     }
                 }
@@ -324,6 +339,17 @@
             }
         }
 
+        // Cek apakah file PDF benar-benar ada di disk setelah proses generate/embed
+        if (!string.IsNullOrEmpty(ba?.DocxPath))
+        {
+            var pdfPhysicalPath = Path.Combine(
+                Directory.GetCurrentDirectory(), "wwwroot",
+                ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+            pdfExists = File.Exists(pdfPhysicalPath);
+            if (!pdfExists && string.IsNullOrEmpty(errorMessage))
+                errorMessage = "Pratinjau PDF tidak dapat ditampilkan — server konversi tidak tersedia atau gagal. Dokumen DOCX berhasil dibuat dan dapat di-edit manual.";
+        }
+
         // Naikkan versi agar iframe di-recreate oleh Blazor
         pdfVersion = DateTime.UtcNow.Ticks;
     }
@@ -340,6 +366,15 @@
             .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
             .Include(b => b.BuktiFotos)
             .FirstOrDefaultAsync(b => b.Id == Id && (b.Status == "Draft" || b.Status == "Rejected") && b.CreatedBy == _currentUserId);
+
+        // Re-check PDF existence
+        if (!string.IsNullOrEmpty(ba?.DocxPath))
+        {
+            var pdfPhysicalPath = Path.Combine(
+                Directory.GetCurrentDirectory(), "wwwroot",
+                ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+            pdfExists = File.Exists(pdfPhysicalPath);
+        }
 
         // Naikkan versi agar iframe di-recreate oleh Blazor (memuat PDF baru)
         pdfVersion = DateTime.UtcNow.Ticks;
