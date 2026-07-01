@@ -67,6 +67,15 @@
 {
     <div class="loading-spinner"><div class="spinner"></div><span>Memuat data...</span></div>
 }
+else if (loadError is not null)
+{
+    <div class="card" style="text-align:center;padding:60px;border-radius:var(--radius-lg);">
+        <i class="bi bi-exclamation-triangle" style="font-size:48px;color:var(--danger,#ef4444);display:block;margin-bottom:16px;"></i>
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Gagal memuat halaman</div>
+        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">@loadError</div>
+        <button class="btn btn-primary" @onclick="() => Navigation.NavigateTo(Navigation.Uri, true)">Muat Ulang</button>
+    </div>
+}
 else
 {
     var currentList = activeTab == "revisi" ? revisiBA : riwayatBA;
@@ -156,6 +165,7 @@ else
 
     private int currentPage = 1;
     private int pageSize = 10;
+    private string? loadError;
 
     private void SwitchTab(string tab)
     {
@@ -165,53 +175,62 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
-        currentRole = appUser!.Role;
-        currentUserId = appUser.Id;
-
-        var baseQuery = DbContext.Set<BeritaAcaraEntity>()
-            .AsNoTracking()
-            .Include(b => b.Mengetahui)
-            .Include(b => b.Pj);
-
-        // Revisi: BA yang masih Status == "Rejected" (belum direvisi)
-        IQueryable<BeritaAcaraEntity> revisiQuery = baseQuery.Where(b => b.Status == "Rejected");
-        if (currentRole == "AdminGudangBarang")
-            revisiQuery = revisiQuery.Where(b => b.CreatedBy == currentUserId);
-        else if (currentRole == "Reviewer")
-            revisiQuery = revisiQuery.Where(b => b.MengetahuiId == currentUserId);
-
-        revisiBA = await revisiQuery.OrderByDescending(b => b.ApprovedAt).ToListAsync();
-
-        // Riwayat: Ambil dari tabel BeritaAcaraHistory (permanen, tidak terpengaruh penghapusan Inbox)
-        IQueryable<SistemBeritaAcara.Core.Entities.BeritaAcaraHistory> historyQuery = DbContext.BeritaAcaraHistory
-            .Include(h => h.BeritaAcara).ThenInclude(ba => ba.Pj)
-            .Include(h => h.BeritaAcara).ThenInclude(ba => ba.Mengetahui)
-            .Include(h => h.RejectedByUser);
-
-        if (currentRole == "AdminGudangBarang")
-            historyQuery = historyQuery.Where(h => h.BaCreatedBy == currentUserId);
-        else if (currentRole == "Reviewer")
-            historyQuery = historyQuery.Where(h => h.BaMengetahuiId == currentUserId);
-
-        var historyList = await historyQuery.OrderByDescending(h => h.RejectedAt).ToListAsync();
-
-        riwayatBA = historyList.Select(h => new BeritaAcaraEntity
+        try
         {
-            Id = h.BaId,
-            NomorSurat = h.BaNomorSurat,
-            Jenis = h.BaJenis,
-            AlasanReject = h.AlasanReject,
-            ApprovedAt = h.RejectedAt,
-            Status = "Rejected",
-            CreatedBy = h.BaCreatedBy,
-            MengetahuiId = h.BaMengetahuiId,
-            Pj = h.BeritaAcara?.Pj,
-            Mengetahui = h.BeritaAcara?.Mengetahui,
-        }).ToList();
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var appUser = await UserManager.FindByEmailAsync(auth.User.Identity?.Name ?? "");
+            if (appUser is null) { isLoading = false; return; }
+            currentRole = appUser.Role;
+            currentUserId = appUser.Id;
 
-        isLoading = false;
+            var baseQuery = DbContext.Set<BeritaAcaraEntity>()
+                .AsNoTracking()
+                .Include(b => b.Mengetahui)
+                .Include(b => b.Pj);
+
+            // Revisi: BA yang masih Status == "Rejected" (belum direvisi)
+            IQueryable<BeritaAcaraEntity> revisiQuery = baseQuery.Where(b => b.Status == "Rejected");
+            if (currentRole == "AdminGudangBarang")
+                revisiQuery = revisiQuery.Where(b => b.CreatedBy == currentUserId);
+            else if (currentRole == "Reviewer")
+                revisiQuery = revisiQuery.Where(b => b.MengetahuiId == currentUserId);
+
+            revisiBA = await revisiQuery.OrderByDescending(b => b.ApprovedAt).ToListAsync();
+
+            // Riwayat: Ambil dari tabel BeritaAcaraHistory (permanen, tidak terpengaruh penghapusan Inbox)
+            IQueryable<SistemBeritaAcara.Core.Entities.BeritaAcaraHistory> historyQuery = DbContext.BeritaAcaraHistory
+                .Include(h => h.BeritaAcara).ThenInclude(ba => ba.Pj)
+                .Include(h => h.BeritaAcara).ThenInclude(ba => ba.Mengetahui)
+                .Include(h => h.RejectedByUser);
+
+            if (currentRole == "AdminGudangBarang")
+                historyQuery = historyQuery.Where(h => h.BaCreatedBy == currentUserId);
+            else if (currentRole == "Reviewer")
+                historyQuery = historyQuery.Where(h => h.BaMengetahuiId == currentUserId);
+
+            var historyList = await historyQuery.OrderByDescending(h => h.RejectedAt).ToListAsync();
+
+            riwayatBA = historyList.Select(h => new BeritaAcaraEntity
+            {
+                Id = h.BaId,
+                NomorSurat = h.BaNomorSurat,
+                Jenis = h.BaJenis,
+                AlasanReject = h.AlasanReject,
+                ApprovedAt = h.RejectedAt,
+                Status = "Rejected",
+                CreatedBy = h.BaCreatedBy,
+                MengetahuiId = h.BaMengetahuiId,
+                Pj = h.BeritaAcara?.Pj,
+                Mengetahui = h.BeritaAcara?.Mengetahui,
+            }).ToList();
+
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+            isLoading = false;
+        }
     }
 
     private void ReviseBA(int baId)
