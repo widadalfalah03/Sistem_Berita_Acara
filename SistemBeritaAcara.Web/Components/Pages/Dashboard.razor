@@ -97,28 +97,28 @@ else if (currentRole == "AdminGudangBarang")
                 var pctPenarikan = total > 0 ? (int)Math.Round((double)jenisData.Penarikan / total * 100) : 0;
                 var pctLainnya = total > 0 ? (int)Math.Round((double)jenisData.Lainnya / total * 100) : 0;
             }
-              <div class="jenis-item">
+              <div class="jenis-item" title="Alokasi: @jenisData.Alokasi">
                   <div class="jenis-label">
                       <span class="jenis-name">Alokasi</span>
                       <span class="jenis-pct">@pctAlokasi%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill alokasi" style="width:@pctAlokasi%"></div></div>
               </div>
-              <div class="jenis-item">
+              <div class="jenis-item" title="Peminjaman: @jenisData.Peminjaman">
                   <div class="jenis-label">
                       <span class="jenis-name">Peminjaman</span>
                       <span class="jenis-pct">@pctPeminjaman%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill peminjaman" style="width:@pctPeminjaman%"></div></div>
               </div>
-              <div class="jenis-item">
+              <div class="jenis-item" title="Penarikan: @jenisData.Penarikan">
                   <div class="jenis-label">
                       <span class="jenis-name">Penarikan</span>
                       <span class="jenis-pct">@pctPenarikan%</span>
                   </div>
                   <div class="jenis-bar"><div class="jenis-fill penarikan" style="width:@pctPenarikan%; background: #F59E0B"></div></div>
               </div>
-              <div class="jenis-item">
+              <div class="jenis-item" title="Lainnya: @jenisData.Lainnya">
                   <div class="jenis-label">
                       <span class="jenis-name">Lainnya</span>
                       <span class="jenis-pct">@pctLainnya%</span>
@@ -344,7 +344,7 @@ else if (currentRole == "Reviewer")
                 <div class="stat-card-desc">Semua waktu</div>
             </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" title="@reviewerStat.ApprovedAlokasi Berita Acara Selesai">
             <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Alokasi</div>
@@ -352,7 +352,7 @@ else if (currentRole == "Reviewer")
                 <div class="stat-card-desc">Berita Acara Alokasi</div>
             </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" title="@reviewerStat.ApprovedPeminjaman Berita Acara Selesai">
             <div class="stat-card-icon approved"><i class="bi bi-arrow-left-right"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Peminjaman</div>
@@ -360,7 +360,7 @@ else if (currentRole == "Reviewer")
                 <div class="stat-card-desc">Berita Acara Peminjaman</div>
             </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" title="@reviewerStat.ApprovedPenarikan Berita Acara Selesai">
             <div class="stat-card-icon" style="background:#FEF3C7;color:#D97706;"><i class="bi bi-box-arrow-down"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Penarikan</div>
@@ -368,7 +368,7 @@ else if (currentRole == "Reviewer")
                 <div class="stat-card-desc">Berita Acara Penarikan</div>
             </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" title="@reviewerStat.ApprovedLainnya Berita Acara Selesai">
             <div class="stat-card-icon" style="background:#F1F5F9;color:#475569;"><i class="bi bi-file-earmark-plus"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Lainnya</div>

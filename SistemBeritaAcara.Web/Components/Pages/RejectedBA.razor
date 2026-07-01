@@ -121,7 +121,7 @@ else
                                 <td style="text-align:right;" @onclick:stopPropagation>
                                     @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
                                     {
-                                        <button class="btn btn-sm btn-primary" style="padding:4px 12px;font-size:12px;display:inline-flex;align-items:center;gap:4px;" @onclick="() => ConvertToDraft(ba.Id)" disabled="@isConverting" title="Revisi">
+                                        <button class="btn btn-sm btn-primary" style="padding:4px 12px;font-size:12px;display:inline-flex;align-items:center;gap:4px;" @onclick="() => ReviseBA(ba.Id)" title="Revisi">
                                             <i class="bi bi-arrow-counterclockwise"></i> Revisi
                                         </button>
                                     }
@@ -130,6 +130,7 @@ else
                         }
                     </tbody>
                 </table>
+
             </div>
         </div>
 
@@ -213,21 +214,8 @@ else
         isLoading = false;
     }
 
-    private bool isConverting = false;
-
-    private async Task ConvertToDraft(int baId)
+    private void ReviseBA(int baId)
     {
-        if (isConverting) return;
-        isConverting = true;
-        
-        var ba = await DbContext.Set<BeritaAcaraEntity>().FirstOrDefaultAsync(b => b.Id == baId);
-        if (ba != null && ba.Status == "Rejected" && currentRole == "AdminGudangBarang")
-        {
-            ba.Status = "Draft";
-            await DbContext.SaveChangesAsync();
-            Navigation.NavigateTo("/draft");
-        }
-        
-        isConverting = false;
+        Navigation.NavigateTo($"/buat-ba?edit={baId}");
     }
 }

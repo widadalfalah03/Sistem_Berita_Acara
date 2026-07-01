@@ -1,4 +1,4 @@
-﻿@page "/pj/sign/{Token}"
+@page "/pj/sign/{Token}"
 @attribute [AllowAnonymous]
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.EntityFrameworkCore
@@ -10,6 +10,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject IConfiguration Configuration
+@inject SistemBeritaAcara.Web.Services.BaUpdateService BaUpdateService
 @layout EmptyLayout
 @rendermode InteractiveServer
 
@@ -292,7 +293,7 @@ else
         if (approvalToken is null) { isValidToken = false; isLoading = false; return; }
 
         ba = approvalToken.BeritaAcara;
-        isValidToken = ba is not null;
+        isValidToken = ba is not null && ba.Status == "WaitingPJSign";
         reviewerUser = ba?.Mengetahui;
 
         if (ba?.DocxPath != null)
@@ -423,6 +424,7 @@ else
                 $"Berita Acara {ba.Jenis} telah ditandatangani PJ ({ba.Pj?.Nama}) dan menunggu review Anda.", ba.Id);
             await NotificationService.SendToRoleAsync("AdminGudangBarang", "PJ_SIGNED",
                 $"Berita Acara {ba.Jenis} telah ditandatangani PJ ({ba.Pj?.Nama}).", ba.Id);
+            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
 
             // Email notifikasi ke Reviewer
             if (reviewerUser != null && !string.IsNullOrEmpty(reviewerUser.Email))
