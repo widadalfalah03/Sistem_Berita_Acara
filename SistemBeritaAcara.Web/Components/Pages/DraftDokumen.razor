@@ -11,6 +11,44 @@
 
 <PageTitle>Draft Dokumen — Sistem Berita Acara</PageTitle>
 
+<style>
+    .action-btn-circle {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--text-secondary);
+    }
+    .action-btn-circle:hover {
+        background: var(--surface-hover, #f3f4f6);
+    }
+    .action-btn-circle.btn-delete:hover {
+        color: var(--danger);
+        border-color: var(--danger);
+        background: var(--danger-light);
+    }
+    .draft-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border-light);
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .draft-row:hover {
+        background: #f9fafb;
+    }
+    .draft-row:last-child {
+        border-bottom: none;
+    }
+</style>
+
 @if (isLoading)
 {
     <div class="loading-spinner"><div class="spinner"></div><span>Memuat data...</span></div>
@@ -34,90 +72,52 @@ else
             @deleteMsg
         </div>
     }
-    <div style="display:flex;align-items:center;margin-bottom:12px;">
-        <div style="font-size:13px; color:var(--text-secondary);">
-            Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, drafts.Count) dari @drafts.Count dokumen
-        </div>
-        <div style="margin-left:auto;">
-            <button class="btn btn-outline-danger btn-sm" @onclick="() => deleteAllConfirm = true"
-                    style="display:flex;align-items:center;gap:6px;">
-                <i class="bi bi-trash3"></i> Hapus Semua
-            </button>
-        </div>
-    </div>
-    <div class="card">
-        <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal"))">Dokumen <i class="bi @GetSortIcon("Tanggal")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis Berita Acara"))">Jenis Berita Acara <i class="bi @GetSortIcon("Jenis Berita Acara")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    <th style="cursor:pointer;" @onclick="@(() => SortTable("Status / Keterangan"))">Status / Keterangan <i class="bi @GetSortIcon("Status / Keterangan")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var ba in SortedDrafts)
-                {
-                    var isRejected = ba.Status == "Rejected";
-                    <tr style="cursor:pointer; transition: background 0.2s; @(isRejected ? "background:var(--danger-light,#FEF2F2);" : "")" 
-                        class="hover-row" @onclick="@(() => EditDraft(ba.Id))">
-                        <td>
-                            <div style="display:flex;align-items:center;gap:10px;">
-                                <i class="bi @(isRejected ? "bi-file-earmark-x" : "bi-file-earmark-text")"
-                                   style="font-size:20px;color:@(isRejected ? "var(--danger)" : "var(--primary)");"></i>
-                                <div>
-                                    <div class="cell-main">Berita Acara @ba.Jenis</div>
-                                    <div class="cell-sub">Dibuat @ba.CreatedAt.ToString("dd MMM yyyy HH:mm")</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
-                        </td>
-                        <td>
-                            <div class="cell-main">@ba.Pj?.Nama</div>
-                            <div class="cell-sub">@ba.Pj?.FungsiDirektorat</div>
-                        </td>
-                        <td>
-                            @if (isRejected)
-                            {
-                                <span class="pill pill-rejected" style="font-size:11px;">Ditolak</span>
-                                @if (!string.IsNullOrEmpty(ba.AlasanReject))
-                                {
-                                    <div class="cell-sub" style="color:var(--danger);margin-top:2px;" title="@ba.AlasanReject">
-                                        @(ba.AlasanReject!.Length > 40 ? ba.AlasanReject[..40] + "…" : ba.AlasanReject)
-                                    </div>
-                                }
-                            }
-                            else
-                            {
-                                <span class="pill" style="font-size:11px;background:#F0F9FF;color:#0369A1;border:1px solid #BAE6FD;">Draft</span>
-                            }
-                        </td>
-                        <td>
-                            <div style="display:flex;gap:4px;" @onclick:stopPropagation>
-                                <button class="btn-icon" title="Hapus"
-                                        style="color:var(--danger);"
-                                        @onclick="() => ConfirmDelete(ba.Id)">
-                                    <i class="bi bi-trash3"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+
+    <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;">
+        <!-- Header / Toolbar -->
+        <div style="padding:8px 16px;border-bottom:1px solid var(--border);background:#f9fafb;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:13px; color:var(--text-secondary);">
+                Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, drafts.Count) dari @drafts.Count
+            </div>
+            <div>
+                <button class="action-btn-circle btn-delete" title="Hapus Semua" @onclick="() => deleteAllConfirm = true">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </div>
         </div>
         
-        @if (drafts.Count > 0)
+        <!-- List Items -->
+        <div>
+            @foreach (var ba in PaginatedDrafts)
+            {
+                <div class="draft-row" @onclick="@(() => EditDraft(ba.Id))">
+                    <div style="color:#d93025;font-weight:600;font-size:14px;width:60px;flex-shrink:0;">Draft</div>
+                    <div style="flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                        <span style="font-weight:600;">Berita Acara @ba.Jenis</span>
+                        <span style="color:var(--text-secondary);">-</span>
+                        <span style="color:var(--text-secondary);">@(ba.Pj?.Nama ?? "Tanpa Penanggung Jawab")@(string.IsNullOrEmpty(ba.TiketSscNo) ? "" : $" ({ba.TiketSscNo})")</span>
+                    </div>
+                    <div style="font-size:12px;font-weight:500;color:var(--text-secondary);flex-shrink:0;margin-right:16px;">
+                        @GetRelativeTime(ba.CreatedAt)
+                    </div>
+                    <div style="width:40px;text-align:right;flex-shrink:0;" @onclick:stopPropagation>
+                        <button class="btn-icon" style="color:var(--text-muted);" @onclick="() => ConfirmDelete(ba.Id)" title="Hapus">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+        
+        @if (drafts.Count > pageSize)
         {
-            <SistemBeritaAcara.Web.Components.Shared.Pagination
-                CurrentPage="@currentPage"
-                TotalItems="@drafts.Count"
-                PageSize="@pageSize"
-                CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+            <div style="padding:12px;border-top:1px solid var(--border-light);">
+                <SistemBeritaAcara.Web.Components.Shared.Pagination
+                    CurrentPage="@currentPage"
+                    TotalItems="@drafts.Count"
+                    PageSize="@pageSize"
+                    CurrentPageChanged="@(p => { currentPage = p; StateHasChanged(); })" />
+            </div>
         }
     </div>
 }
@@ -182,48 +182,15 @@ else
     private string deleteMsg = string.Empty;
     private int currentUserId;
 
-    private string sortColumn = "Tanggal";
-    private bool sortAscending = false;
-    
     private int currentPage = 1;
     private int pageSize = 10;
-
-    private void SortTable(string column)
-    {
-        if (sortColumn == column)
-        {
-            sortAscending = !sortAscending;
-        }
-        else
-        {
-            sortColumn = column;
-            sortAscending = true;
-        }
-        currentPage = 1;
-    }
 
     private void EditDraft(int id)
     {
         Navigation.NavigateTo($"/buat-ba?edit={id}");
     }
 
-    private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
-
-    private IEnumerable<BeritaAcaraEntity> SortedDrafts
-    {
-        get
-        {
-            var query = sortColumn switch
-            {
-                "Tanggal" => sortAscending ? drafts.OrderBy(b => b.CreatedAt) : drafts.OrderByDescending(b => b.CreatedAt),
-                "Jenis Berita Acara" => sortAscending ? drafts.OrderBy(b => b.Jenis) : drafts.OrderByDescending(b => b.Jenis),
-                "Penanggung Jawab" => sortAscending ? drafts.OrderBy(b => b.Pj?.Nama) : drafts.OrderByDescending(b => b.Pj?.Nama),
-                "Status / Keterangan" => sortAscending ? drafts.OrderBy(b => b.Status).ThenBy(b => b.CreatedAt) : drafts.OrderByDescending(b => b.Status).ThenByDescending(b => b.CreatedAt),
-                _ => drafts.AsEnumerable()
-            };
-            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
-        }
-    }
+    private IEnumerable<BeritaAcaraEntity> PaginatedDrafts => drafts.Skip((currentPage - 1) * pageSize).Take(pageSize);
 
     protected override async Task OnInitializedAsync()
     {
@@ -238,7 +205,7 @@ else
         drafts = await DbContext.Set<BeritaAcaraEntity>()
             .AsNoTracking()
             .Include(b => b.Pj)
-            .Where(b => b.CreatedBy == currentUserId && (b.Status == "Draft" || b.Status == "Rejected"))
+            .Where(b => b.CreatedBy == currentUserId && b.Status == "Draft")
             .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
         isLoading = false;
@@ -302,11 +269,15 @@ else
         catch { /* abaikan jika file sedang dipakai atau sudah tidak ada */ }
     }
 
-    private static string GetJenisPill(string jenis) => jenis switch
+    private static string GetRelativeTime(DateTime dt)
     {
-        "Alokasi" => "pill-alokasi",
-        "Peminjaman" => "pill-peminjaman",
-        "Penarikan" => "pill-penarikan",
-        _ => "pill-lainnya"
-    };
+        if (dt.Date == DateTime.Today)
+        {
+            return dt.ToString("HH.mm");
+        }
+        else
+        {
+            return dt.ToString("dd MMM yyyy, HH.mm");
+        }
+    }
 }

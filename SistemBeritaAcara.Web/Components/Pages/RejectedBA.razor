@@ -1,4 +1,4 @@
-﻿@page "/rejected"
+@page "/rejected"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -145,9 +145,9 @@ else
                             </NavLink>
                             @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
                             {
-                                <NavLink href="@($"/buat-ba?edit={ba.Id}")" class="btn btn-sm btn-primary">
+                                <button class="btn btn-sm btn-primary" @onclick="() => ConvertToDraft(ba.Id)" disabled="@isConverting">
                                     <i class="bi bi-arrow-counterclockwise"></i> Revisi
-                                </NavLink>
+                                </button>
                             }
                         </div>
                     </div>
@@ -232,5 +232,23 @@ else
         }).ToList();
 
         isLoading = false;
+    }
+
+    private bool isConverting = false;
+
+    private async Task ConvertToDraft(int baId)
+    {
+        if (isConverting) return;
+        isConverting = true;
+        
+        var ba = await DbContext.Set<BeritaAcaraEntity>().FirstOrDefaultAsync(b => b.Id == baId);
+        if (ba != null && ba.Status == "Rejected" && currentRole == "AdminGudangBarang")
+        {
+            ba.Status = "Draft";
+            await DbContext.SaveChangesAsync();
+            Navigation.NavigateTo("/draft");
+        }
+        
+        isConverting = false;
     }
 }
