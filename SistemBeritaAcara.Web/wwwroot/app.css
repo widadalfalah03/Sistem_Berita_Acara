@@ -923,7 +923,7 @@ a:hover { color: var(--primary-hover); }
     outline: none;
     border-color: var(--primary);
     border-width: 2px;
-    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+    box-shadow: none;
 }
 
 .form-control::placeholder { color: var(--text-muted); }
@@ -1833,7 +1833,7 @@ a:hover { color: var(--primary-hover); }
 .login-input:focus {
     border-color: var(--primary);
     border-width: 2px;
-    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
+    box-shadow: none;
     outline: none !important;
     background: var(--surface);
 }
