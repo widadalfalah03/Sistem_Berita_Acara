@@ -25,7 +25,7 @@
 @* ── Fullscreen overlay saat reviewer memproses Setuju / Tolak ── *@
 @if (isProcessing && isReviewerAction)
 {
-    <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+    <div style="position:fixed;inset:0;z-index:10000;background:var(--bg-overlay);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
         <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
         <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">@reviewerActionLabel</div>
         <div style="font-size:13px;color:var(--text-muted);">@reviewerActionSubLabel</div>
