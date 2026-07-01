@@ -89,10 +89,6 @@ else
 
                 <div class="review-info">
                     <div class="review-info-item">
-                        <span class="review-info-label">No. Surat</span>
-                        <span class="review-info-value text-primary">@ba.NomorSurat</span>
-                    </div>
-                    <div class="review-info-item">
                         <span class="review-info-label">Jenis</span>
                         <span class="review-info-value">@ba.Jenis</span>
                     </div>
@@ -136,12 +132,12 @@ else
                 </div>
 
                 <!-- Action buttons -->
-                <div style="display:flex;gap:12px;margin-top:20px;">
-                    <button class="btn btn-success @(isProcessing ? "btn-loading" : "")" style="flex:1;" @onclick="ApproveAsync" disabled="@isProcessing">
-                        <i class="bi bi-check-lg"></i> Setujui
-                    </button>
-                    <button class="btn btn-outline-danger @(isProcessing ? "btn-loading" : "")" style="flex:1;" @onclick="() => showRejectModal = true" disabled="@isProcessing">
+                <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
+                    <button class="btn btn-outline-danger @(isProcessing ? "btn-loading" : "")" style="flex:1;min-width:140px;" @onclick="() => showRejectModal = true" disabled="@isProcessing">
                         <i class="bi bi-x-lg"></i> Tolak
+                    </button>
+                    <button class="btn btn-success @(isProcessing ? "btn-loading" : "")" style="flex:1;min-width:140px;" @onclick="ApproveAsync" disabled="@isProcessing">
+                        <i class="bi bi-check-lg"></i> Setujui
                     </button>
                 </div>
             </div>
@@ -155,7 +151,7 @@ else
                 <div>
                     <h1 class="page-title" style="word-break:break-word;">@(ba.NomorSurat ?? "Draft BA")</h1>
                     <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
-                        @if (From != "archive" && ba.Status != "Archived")
+                        @if (_initialFrom != "archive" && ba.Status != "Archived")
                         {
                             <span class="pill @GetStatusPill(ba.Status)">@GetStatusLabel(ba.Status)</span>
                         }
@@ -326,6 +322,7 @@ else
     private BeritaAcaraEntity? ba;
     private bool isLoading = true;
     private bool notFound;
+    private string? _initialFrom;
     private bool isReviewer;
     private bool showRejectModal = false;
     private string rejectReason = string.Empty;
@@ -342,7 +339,11 @@ else
 
 
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        _initialFrom = From;
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
