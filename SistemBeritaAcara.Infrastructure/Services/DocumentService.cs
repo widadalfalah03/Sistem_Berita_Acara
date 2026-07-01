@@ -21,13 +21,14 @@ public class DocumentService : IDocumentService
     private readonly string _outputRoot;
     private readonly string _templatesDir;
     private readonly IConfiguration _config;
-    private static readonly HttpClient _httpClient = new HttpClient();
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IConfiguration config)
+    public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IConfiguration config, IHttpClientFactory httpClientFactory)
     {
         _db = db;
         _logger = logger;
         _config = config;
+        _httpClientFactory = httpClientFactory;
         _outputRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
         _templatesDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "templates");
         Directory.CreateDirectory(_outputRoot);
@@ -674,8 +675,8 @@ public class DocumentService : IDocumentService
             using var streamContent = new StreamContent(fileStream);
             request.Add(streamContent, "files", Path.GetFileName(docxPath));
 
-            var endpoint = $"{gotenbergUrl.TrimEnd('/')}/forms/libreoffice/convert";
-            var response = await _httpClient.PostAsync(endpoint, request);
+            var httpClient = _httpClientFactory.CreateClient("Gotenberg");
+            var response = await httpClient.PostAsync("/forms/libreoffice/convert", request);
             
             if (response.IsSuccessStatusCode)
             {
