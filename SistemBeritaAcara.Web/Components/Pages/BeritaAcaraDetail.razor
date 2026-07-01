@@ -1,4 +1,4 @@
-﻿@page "/berita-acara/{Id:int}"
+@page "/berita-acara/{Id:int}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.EntityFrameworkCore
@@ -175,7 +175,7 @@ else
                             <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Jenis Berita Acara</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.JenisCustom</td></tr>
                         }
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.Tanggal.ToString("dd MMMM yyyy")</td></tr>
-                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tiket SSC</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ?? "-")</td></tr>
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">@(ba.DasarAlokasi)</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ?? "-")</td></tr>
                         @if (ba.Jenis == "Peminjaman")
                         {
                             <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal Kembali</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TanggalKembali?.ToString("dd MMMM yyyy") ?? "-")</td></tr>

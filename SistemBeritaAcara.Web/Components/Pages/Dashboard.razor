@@ -214,6 +214,41 @@ else if (currentRole == "AdminGudangBarang")
                             </tr>
                         </table>
                     </div>
+                    <div class="loan-info-block">
+                        <div class="loan-info-label">Tanggal Kembali</div>
+                        <div class="loan-info-value" style="color:@(mDaysLeft < 0 ? "var(--danger)" : "var(--text-primary)");font-weight:700;">
+                            @modalBA.TanggalKembali?.ToString("dd MMMM yyyy")
+                        </div>
+                    </div>
+                    <div class="loan-info-block">
+                        <div class="loan-info-label">@(modalBA.DasarAlokasi)</div>
+                        <div class="loan-info-value">@(modalBA.TiketSscNo ?? "—")</div>
+                    </div>
+                </div>
+
+                <div class="loan-info-grid">
+                    <div class="loan-info-block">
+                        <div class="loan-info-label"><i class="bi bi-person-fill" style="color:var(--primary);"></i> Penanggung Jawab</div>
+                        <div class="loan-info-value">@modalBA.Pj?.Nama</div>
+                        <div class="loan-info-sub">@modalBA.Pj?.Jabatan · @modalBA.Pj?.FungsiDirektorat</div>
+                    </div>
+                    <div class="loan-info-block">
+                        <div class="loan-info-label"><i class="bi bi-person-badge-fill" style="color:var(--warning);"></i> Yang Menyerahkan</div>
+                        <div class="loan-info-value">@modalBA.Menyerahkan?.Nama</div>
+                        <div class="loan-info-sub">@modalBA.Menyerahkan?.FungsiDirektorat</div>
+                    </div>
+                    <div class="loan-info-block">
+                        <div class="loan-info-label"><i class="bi bi-person-check-fill" style="color:var(--success);"></i> Yang Mengetahui</div>
+                        <div class="loan-info-value">@modalBA.Mengetahui?.Nama</div>
+                        <div class="loan-info-sub">@modalBA.Mengetahui?.Jabatan</div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(modalBA.PjNoTelp))
+                    {
+                        <div class="loan-info-block">
+                            <div class="loan-info-label"><i class="bi bi-telephone-fill" style="color:var(--primary);"></i> No. Telp PJ</div>
+                            <div class="loan-info-value">@modalBA.PjNoTelp</div>
+                        </div>
+                    }
                 </div>
 
                 <!-- Daftar Perangkat -->

@@ -1,4 +1,4 @@
-﻿@page "/buat-ba"
+@page "/buat-ba"
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
@@ -240,8 +240,18 @@
             {
                 <div class="form-row" style="margin-bottom:16px;">
                     <div class="form-group" style="flex:1;">
-                        <label class="form-label">No. Tiket My SSC/Nota Dinas</label>
-                        <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="Contoh: INC-20240001" />
+                        <label class="form-label">Dasar Alokasi</label>
+                        <InputRadioGroup TValue="string" Value="@model.DasarAlokasi" ValueExpression="@(() => model.DasarAlokasi)" ValueChanged="@((string val) => { model.DasarAlokasi = val; TriggerAutoSave(); })">
+                            <div style="margin-bottom: 8px; display: flex; gap: 16px;">
+                                <label style="display:flex; align-items:center; gap:4px;">
+                                    <InputRadio Value="@("Tiket SSC")" /> Tiket SSC
+                                </label>
+                                <label style="display:flex; align-items:center; gap:4px;">
+                                    <InputRadio Value="@("Nota Dinas")" /> Nota Dinas
+                                </label>
+                            </div>
+                        </InputRadioGroup>
+                        <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="@(model.DasarAlokasi == "Nota Dinas" ? "Contoh: 123/ND/2026" : "Contoh: INC-20240001")" />
                     </div>
                     <div style="flex:1;"></div>
                 </div>
@@ -697,6 +707,7 @@
                 model.JenisCustom = existing.JenisCustom;
                 model.Tanggal = existing.Tanggal.ToDateTime(TimeOnly.MinValue);
                 model.TiketSscNo = existing.TiketSscNo;
+                model.DasarAlokasi = existing.DasarAlokasi;
                 model.TanggalKembali = existing.TanggalKembali.HasValue
                     ? existing.TanggalKembali.Value.ToDateTime(TimeOnly.MinValue)
                     : null;
@@ -753,6 +764,7 @@
                 MenyerahkanId = model.MenyerahkanId,
                 MengetahuiId = model.MengetahuiId,
                 TiketSscNo = model.TiketSscNo,
+                DasarAlokasi = model.DasarAlokasi,
                 Status = "Draft",
                 CreatedBy = _currentUserId,
                 CreatedAt = DateTime.Now,
@@ -805,6 +817,7 @@
             existing.MenyerahkanId = model.MenyerahkanId;
             existing.MengetahuiId = model.MengetahuiId;
             existing.TiketSscNo = model.TiketSscNo;
+            existing.DasarAlokasi = model.DasarAlokasi;
             existing.TanggalKembali = model.TanggalKembali.HasValue
                 ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
 
@@ -1189,6 +1202,7 @@
                                  existing.Tanggal != DateOnly.FromDateTime(model.Tanggal) ||
                                  existing.PjId != model.PjId ||
                                  existing.PjNoTelp != model.PjNoTelp ||
+                                 existing.DasarAlokasi != model.DasarAlokasi ||
                                  existing.MenyerahkanId != model.MenyerahkanId ||
                                  existing.MengetahuiId != model.MengetahuiId ||
                                  existing.TiketSscNo != model.TiketSscNo ||
@@ -1228,6 +1242,7 @@
                 existing.MenyerahkanId = model.MenyerahkanId;
                 existing.MengetahuiId = model.MengetahuiId;
                 existing.TiketSscNo = model.TiketSscNo;
+                existing.DasarAlokasi = model.DasarAlokasi;
                 existing.TanggalKembali = model.TanggalKembali.HasValue
                     ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null;
 
@@ -1317,6 +1332,7 @@
                     MenyerahkanId = model.MenyerahkanId,
                     MengetahuiId = model.MengetahuiId,
                     TiketSscNo = model.TiketSscNo,
+                    DasarAlokasi = model.DasarAlokasi,
                     TanggalKembali = model.TanggalKembali.HasValue ? DateOnly.FromDateTime(model.TanggalKembali.Value) : null,
                     Status = "Draft",
                     CreatedBy = _currentUserId,
@@ -1404,6 +1420,7 @@
         public int? MenyerahkanId { get; set; }
         public int? MengetahuiId { get; set; }
         public string? TiketSscNo { get; set; }
+        public string DasarAlokasi { get; set; } = "Tiket SSC";
         public DateTime Tanggal { get; set; } = DateTime.Today;
         public DateTime? TanggalKembali { get; set; }
         public List<PerangkatRow> Perangkat { get; set; } = new();

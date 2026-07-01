@@ -1,4 +1,4 @@
-﻿@page "/editor/{Id:int}"
+@page "/editor/{Id:int}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
@@ -154,7 +154,7 @@
                         @if (ba.TiketSscNo is not null)
                         {
                             <tr>
-                                <td style="padding:7px 0;color:var(--text-secondary);">Tiket SSC</td>
+                                <td style="padding:7px 0;color:var(--text-secondary);">@(ba.DasarAlokasi)</td>
                                 <td style="padding:7px 0;font-weight:600;">@ba.TiketSscNo</td>
                             </tr>
                         }

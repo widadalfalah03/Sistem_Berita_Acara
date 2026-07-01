@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.IO;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -137,10 +137,27 @@ public class DocumentService : IDocumentService
                 { "{{TanggalKembali}}", tanggalKembaliStr },
             };
 
-            // Ganti placeholder â€” gunakan paragraph-level replacement agar
-            // placeholder yang terpecah oleh spellcheck Word (proofErr) ikut terganti.
-            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
+            if (ba.DasarAlokasi == "Nota Dinas")
             {
+                replacements.Add("Tiket di My SSC NO.", "Nota Dinas NO.");
+                replacements.Add("Tiket di My SSC No.", "Nota Dinas No.");
+            }
+
+            // Ganti placeholder – gunakan paragraph-level replacement agar
+            // placeholder yang terpecah oleh spellcheck Word (proofErr) ikut terganti.
+            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>().ToList())
+            {
+                if (string.IsNullOrWhiteSpace(ba.TiketSscNo))
+                {
+                    var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
+                    if (fullText.Contains("Catatan: Perangkat IT ini dialokasikan") ||
+                        fullText.Contains("Tiket di My SSC") ||
+                        fullText.Contains("Nota Dinas"))
+                    {
+                        para.RemoveAllChildren<Run>();
+                        continue;
+                    }
+                }
                 NormalizeParagraphPlaceholders(para, replacements);
             }
 
