@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.IO;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -21,13 +21,14 @@ public class DocumentService : IDocumentService
     private readonly string _outputRoot;
     private readonly string _templatesDir;
     private readonly IConfiguration _config;
-    private static readonly HttpClient _httpClient = new HttpClient();
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IConfiguration config)
+    public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IConfiguration config, IHttpClientFactory httpClientFactory)
     {
         _db = db;
         _logger = logger;
         _config = config;
+        _httpClientFactory = httpClientFactory;
         _outputRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
         _templatesDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "templates");
         Directory.CreateDirectory(_outputRoot);
@@ -137,10 +138,27 @@ public class DocumentService : IDocumentService
                 { "{{TanggalKembali}}", tanggalKembaliStr },
             };
 
-            // Ganti placeholder â€” gunakan paragraph-level replacement agar
-            // placeholder yang terpecah oleh spellcheck Word (proofErr) ikut terganti.
-            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
+            if (ba.DasarAlokasi == "Nota Dinas")
             {
+                replacements.Add("Tiket di My SSC NO.", "Nota Dinas NO.");
+                replacements.Add("Tiket di My SSC No.", "Nota Dinas No.");
+            }
+
+            // Ganti placeholder – gunakan paragraph-level replacement agar
+            // placeholder yang terpecah oleh spellcheck Word (proofErr) ikut terganti.
+            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>().ToList())
+            {
+                if (string.IsNullOrWhiteSpace(ba.TiketSscNo))
+                {
+                    var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
+                    if (fullText.Contains("Catatan: Perangkat IT ini dialokasikan") ||
+                        fullText.Contains("Tiket di My SSC") ||
+                        fullText.Contains("Nota Dinas"))
+                    {
+                        para.RemoveAllChildren<Run>();
+                        continue;
+                    }
+                }
                 NormalizeParagraphPlaceholders(para, replacements);
             }
 
@@ -657,8 +675,8 @@ public class DocumentService : IDocumentService
             using var streamContent = new StreamContent(fileStream);
             request.Add(streamContent, "files", Path.GetFileName(docxPath));
 
-            var endpoint = $"{gotenbergUrl.TrimEnd('/')}/forms/libreoffice/convert";
-            var response = await _httpClient.PostAsync(endpoint, request);
+            var httpClient = _httpClientFactory.CreateClient("Gotenberg");
+            var response = await httpClient.PostAsync("/forms/libreoffice/convert", request);
             
             if (response.IsSuccessStatusCode)
             {
