@@ -1,4 +1,4 @@
-﻿@page "/progress"
+@page "/progress"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -35,35 +35,35 @@ else if (currentRole == "AdminGudangBarang")
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Dokumen <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Jenis BA"))">Jenis Berita Acara <i class="bi @GetSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Tanggal Submit"))">Waktu Submit <i class="bi @GetSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Reviewer"))">Reviewer <i class="bi @GetSortIcon("Reviewer")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Status"))">Status <i class="bi @GetSortIcon("Status")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
+                        <th>Jenis Berita Acara</th>
+                        <th>Penanggung Jawab</th>
+                        <th>Reviewer</th>
+                        <th>Waktu Pengajuan</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var ba in SortedBaList)
+                    @foreach (var ba in PaginatedBaList)
                     {
                         <tr style="cursor:pointer; transition: background 0.2s;" class="hover-row" @onclick="@(() => ViewBA(ba.Id))">
                             <td>
-                                <div class="cell-main">Berita Acara @ba.Jenis</div>
-                                <div class="cell-sub">Penanggung Jawab: @ba.Pj?.Nama</div>
+                                <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
                             </td>
-                            <td><span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span></td>
+                            <td>
+                                <div class="cell-main">@ba.Pj?.Nama</div>
+                            </td>
+                            <td>
+                                <div class="cell-main">@ba.Mengetahui?.Nama</div>
+                            </td>
                             <td>
                                 <div>@ba.SubmittedAt?.ToString("dd MMM yyyy")</div>
                                 <div style="font-size:11px;color:var(--text-muted);">@ba.SubmittedAt?.ToString("HH:mm") WIB</div>
                             </td>
                             <td>
-                                <div class="cell-main">@ba.Mengetahui?.Nama</div>
-                                <div class="cell-sub">Reviewer</div>
-                            </td>
-                            <td>
                                 @if (ba.Status == "WaitingPJSign")
                                 {
                                     <span class="pill pill-waiting-pj">
-                                        <i class="bi bi-pen" style="margin-right:4px;"></i> Menunggu TTD Penanggung Jawab
+                                        <i class="bi bi-pen" style="margin-right:4px;"></i> Menunggu TTD Pj
                                     </span>
                                 }
                                 else
@@ -106,7 +106,7 @@ else if (currentRole == "Reviewer")
             Menampilkan @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, baList.Count) dari @baList.Count dokumen
         </div>
         <div class="card">
-            @foreach (var ba in SortedBaList)
+            @foreach (var ba in PaginatedBaList)
             {
                 <NavLink class="queue-item" href="@($"/berita-acara/{ba.Id}?from=progress")">
                     <div style="display:flex;align-items:flex-start;justify-content:space-between;">
@@ -148,46 +148,19 @@ else if (currentRole == "Reviewer")
     private string currentRole = string.Empty;
     private int currentUserId;
 
-    private string sortColumn = "Tanggal Submit";
-    private bool sortAscending = false;
-    
     private int currentPage = 1;
     private int pageSize = 10;
-
-    private void SortTable(string column)
-    {
-        if (sortColumn == column)
-        {
-            sortAscending = !sortAscending;
-        }
-        else
-        {
-            sortColumn = column;
-            sortAscending = true;
-        }
-        currentPage = 1;
-    }
 
     private void ViewBA(int id)
     {
         Navigation.NavigateTo($"/berita-acara/{id}?from=progress");
     }
 
-    private string GetSortIcon(string column) => sortColumn != column ? "bi-arrow-down-up" : sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
-
-    private IEnumerable<BeritaAcaraEntity> SortedBaList
+    private IEnumerable<BeritaAcaraEntity> PaginatedBaList
     {
         get
         {
-            var query = sortColumn switch
-            {
-                "Jenis BA" => sortAscending ? baList.OrderBy(b => b.Jenis) : baList.OrderByDescending(b => b.Jenis),
-                "Tanggal Submit" => sortAscending ? baList.OrderBy(b => b.SubmittedAt) : baList.OrderByDescending(b => b.SubmittedAt),
-                "Reviewer" => sortAscending ? baList.OrderBy(b => b.Mengetahui?.Nama) : baList.OrderByDescending(b => b.Mengetahui?.Nama),
-                "Status" => sortAscending ? baList.OrderBy(b => b.Status) : baList.OrderByDescending(b => b.Status),
-                _ => baList.AsEnumerable()
-            };
-            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
+            return baList.Skip((currentPage - 1) * pageSize).Take(pageSize);
         }
     }
 
