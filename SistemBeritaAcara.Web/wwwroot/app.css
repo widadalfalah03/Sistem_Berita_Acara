@@ -4825,3 +4825,75 @@ select option { background: var(--surface); color: var(--text-primary); }
     background: var(--primary) !important;
     color: white !important;
 }
+/* -- BA Form Layout Redesign ------------------------------ */
+.ba-layout-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
+}
+
+.ba-form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.ba-sticky-sidebar {
+    position: sticky;
+    top: calc(var(--topbar-height) + 24px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Sidebar Components */
+.ba-summary-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+}
+
+.ba-summary-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-light);
+    padding-bottom: 12px;
+}
+
+.ba-summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+.ba-summary-label {
+    color: var(--text-secondary);
+}
+
+.ba-summary-value {
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: right;
+    max-width: 140px;
+}
+
+.ba-summary-value.highlight {
+    color: var(--primary);
+}
+
+@media (max-width: 992px) {
+    .ba-layout-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .ba-sticky-sidebar {
+        position: static;
+        top: 0;
+    }
+}
