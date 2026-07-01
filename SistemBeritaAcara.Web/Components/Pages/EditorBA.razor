@@ -274,10 +274,7 @@
                     var trackedBa = await DbContext.Set<BeritaAcaraEntity>().FindAsync(Id);
                     if (trackedBa != null)
                     {
-                        // Lainnya: generate dokumen simpel (judul + nomor surat saja, tanpa template lengkap)
-                        trackedBa.DocxPath = ba.Jenis == "Lainnya"
-                            ? await DocumentService.GenerateLainnyaDocxAsync(ba)
-                            : await DocumentService.GenerateDocxAsync(ba);
+                        trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(ba);
                         await DbContext.SaveChangesAsync();
                         ba = await DbContext.Set<BeritaAcaraEntity>()
                             .AsNoTracking()
@@ -418,9 +415,7 @@
 
             if (string.IsNullOrEmpty(trackedBa.DocxPath))
             {
-                trackedBa.DocxPath = trackedBa.Jenis == "Lainnya"
-                    ? await DocumentService.GenerateLainnyaDocxAsync(trackedBa)
-                    : await DocumentService.GenerateDocxAsync(trackedBa);
+                trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(trackedBa);
                 await DbContext.SaveChangesAsync();
             }
 
