@@ -63,26 +63,6 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
                 EXEC('ALTER TABLE [Users] DROP CONSTRAINT [' + @dfName + ']')
             ALTER TABLE [Users] DROP COLUMN [MustChangePw]
         END
-
-        IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'BeritaAcaraHistory')
-        BEGIN
-            CREATE TABLE [BeritaAcaraHistory] (
-                [Id] int NOT NULL IDENTITY,
-                [BaId] int NOT NULL,
-                [RejectedByUserId] int NOT NULL,
-                [AlasanReject] nvarchar(500) NOT NULL,
-                [RejectedAt] datetime2 NOT NULL DEFAULT (GETDATE()),
-                [BaJenis] nvarchar(20) NOT NULL,
-                [BaNomorSurat] nvarchar(50) NULL,
-                [BaCreatedBy] int NOT NULL,
-                [BaMengetahuiId] int NULL,
-                CONSTRAINT [PK_BeritaAcaraHistory] PRIMARY KEY ([Id]),
-                CONSTRAINT [FK_BeritaAcaraHistory_BeritaAcara_BaId] FOREIGN KEY ([BaId]) REFERENCES [BeritaAcara] ([Id]) ON DELETE CASCADE,
-                CONSTRAINT [FK_BeritaAcaraHistory_Users_RejectedByUserId] FOREIGN KEY ([RejectedByUserId]) REFERENCES [Users] ([Id])
-            );
-            CREATE INDEX [IX_BeritaAcaraHistory_BaId] ON [BeritaAcaraHistory] ([BaId]);
-            CREATE INDEX [IX_BeritaAcaraHistory_RejectedByUserId] ON [BeritaAcaraHistory] ([RejectedByUserId]);
-        END
     ");
 
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();

@@ -1,4 +1,4 @@
-﻿@page "/pj/sign/{Token}"
+@page "/pj/sign/{Token}"
 @attribute [AllowAnonymous]
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.EntityFrameworkCore
@@ -292,7 +292,7 @@ else
         if (approvalToken is null) { isValidToken = false; isLoading = false; return; }
 
         ba = approvalToken.BeritaAcara;
-        isValidToken = ba is not null;
+        isValidToken = ba is not null && ba.Status == "WaitingPJSign";
         reviewerUser = ba?.Mengetahui;
 
         if (ba?.DocxPath != null)
