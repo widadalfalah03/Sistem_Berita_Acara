@@ -282,48 +282,38 @@
 
         if (ba != null)
         {
-            // Hanya generate jika belum ada sama sekali (BA baru pertama kali dibuka)
-            if (string.IsNullOrEmpty(ba.DocxPath))
+            // Selalu regenerate agar perubahan data/template selalu tercermin di pratinjau
+            try
             {
-                try
+                DbContext.ChangeTracker.Clear();
+
+                var trackedBa = await DbContext.Set<BeritaAcaraEntity>().FindAsync(Id);
+                if (trackedBa != null)
                 {
-                    // Perlu tracked entity untuk SaveChanges
-                    // Bersihkan tracking lama agar FindAsync tidak mengembalikan entitas stale
-                    // dari SubmitAsync sebelumnya yang mungkin tidak memiliki navigation properties.
-                    DbContext.ChangeTracker.Clear();
+                    trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+                    await DbContext.SaveChangesAsync();
+                    ba = await DbContext.Set<BeritaAcaraEntity>()
+                        .AsNoTracking()
+                        .Include(b => b.Pj).Include(b => b.Menyerahkan).Include(b => b.Mengetahui)
+                        .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
+                        .Include(b => b.BuktiFotos)
+                        .FirstOrDefaultAsync(b => b.Id == Id);
 
-                    var trackedBa = await DbContext.Set<BeritaAcaraEntity>().FindAsync(Id);
-                    if (trackedBa != null)
+                    if (ba?.Jenis != "Lainnya" && !string.IsNullOrEmpty(ba?.DocxPath))
                     {
-                        trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(ba);
-                        await DbContext.SaveChangesAsync();
-                        ba = await DbContext.Set<BeritaAcaraEntity>()
-                            .AsNoTracking()
-                            .Include(b => b.Pj).Include(b => b.Menyerahkan).Include(b => b.Mengetahui)
-                            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
-                            .Include(b => b.BuktiFotos)
-                            .FirstOrDefaultAsync(b => b.Id == Id);
-
-                        // TTD Menyerahkan hanya untuk BA yang punya blok tanda tangan (bukan Lainnya).
-                        // Dipindah ke dalam blok ini agar hanya dipanggil setelah DOCX berhasil dibuat
-                        // dan DocxPath tersimpan ke DB — mencegah NRE di EmbedTtdMenyerahkanAsync
-                        // jika DocxPath masih null.
-                        if (ba?.Jenis != "Lainnya" && !string.IsNullOrEmpty(ba?.DocxPath))
+                        var currentUser = await DbContext.Users.FindAsync(_currentUserId);
+                        if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
                         {
-                            var currentUser = await DbContext.Users.FindAsync(_currentUserId);
-                            if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
-                            {
-                                var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                                await DocumentService.EmbedTtdMenyerahkanAsync(Id, ttdPhysicalPath);
-                            }
+                            var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                            await DocumentService.EmbedTtdMenyerahkanAsync(Id, ttdPhysicalPath);
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"[EditorBA] Error saat generate/embed dokumen BA {Id}: {ex}");
-                    errorMessage = "Gagal memuat pratinjau dokumen: " + ex.Message;
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[EditorBA] Error saat generate/embed dokumen BA {Id}: {ex}");
+                errorMessage = "Gagal memuat pratinjau dokumen: " + ex.Message;
             }
 
             // Jika BA pernah ditandatangani oleh PJ (kasus BA rejected lalu direvisi),
