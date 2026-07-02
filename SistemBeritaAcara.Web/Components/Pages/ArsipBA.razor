@@ -32,9 +32,9 @@
         <!-- No. Surat -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">No. Surat</div>
-            <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);">
+            <div style="display:flex;align-items:center;gap:8px;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
                 <input type="text" placeholder="Cari nomor..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
                        @bind="search" @bind:event="oninput" />
                 <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
             </div>
@@ -44,7 +44,7 @@
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;position:relative;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Pihak Terkait</div>
             <button @onclick="ToggleNamePopover"
-                    style="display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);cursor:pointer;text-align:left;box-sizing:border-box;">
+                    style="display:flex;align-items:center;gap:8px;height:36px;width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);cursor:pointer;text-align:left;box-sizing:border-box;font-family:inherit;">
                 <span style="font-size:13px;color:@(HasNameFilter ? "var(--text-primary)" : "var(--text-muted)");flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                     @(HasNameFilter ? GetNameFilterSummary() : "Cari nama...")
                 </span>
@@ -92,24 +92,24 @@
             }
         </div>
 
-        <!-- Tanggal -->
-        <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Tanggal</div>
-            <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);">
-                <input type="date"
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
-                       @bind="dateFilter" />
-            </div>
-        </div>
-
         <!-- Keterangan -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Keterangan</div>
-            <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);">
+            <div style="display:flex;align-items:center;gap:8px;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
                 <input type="text" placeholder="Cari keterangan / barang..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
                        @bind="keteranganSearch" @bind:event="oninput" />
                 <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
+            </div>
+        </div>
+
+        <!-- Tanggal -->
+        <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Tanggal</div>
+            <div style="display:flex;align-items:center;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
+                <input type="date"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
+                       @bind="dateFilter" />
             </div>
         </div>
 
@@ -117,7 +117,7 @@
         <div style="padding:10px 14px;position:relative;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Jenis Berita Acara</div>
             <div @onclick="() => showJenisDropdown = !showJenisDropdown"
-                 style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);cursor:pointer;min-width:150px;white-space:nowrap;">
+                 style="display:flex;align-items:center;justify-content:space-between;gap:8px;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);cursor:pointer;min-width:150px;white-space:nowrap;">
                 <span style="font-size:13px;color:var(--text-primary);">@(string.IsNullOrEmpty(jenisFilter) ? "Semua Jenis" : jenisFilter)</span>
                 <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showJenisDropdown ? "transform:rotate(180deg);" : "")"></i>
             </div>
@@ -240,24 +240,10 @@ else
 {
     <div class="modal-overlay" @onclick="() => previewBaId = null">
         <div class="modal-content" @onclick:stopPropagation
-             style="width:90%;max-width:920px;height:88vh;display:flex;flex-direction:column;padding:0;border-radius:var(--radius-lg);overflow:hidden;">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0;">
-                <div style="font-weight:600;font-size:15px;">Pratinjau Dokumen</div>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <a href="/api/ba/@previewBaId/download" download class="btn btn-outline btn-sm"
-                       style="display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 14px;">
-                        <i class="bi bi-download"></i> Unduh
-                    </a>
-                    <button class="modal-close" @onclick="() => previewBaId = null">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-            </div>
-            <div style="flex:1;overflow:hidden;background:#E8EAF0;">
-                <iframe src="/api/preview/pdf/@previewBaId#toolbar=1&navpanes=0"
-                        style="width:100%;height:100%;border:none;"
-                        title="Pratinjau BA"></iframe>
-            </div>
+             style="width:90%;max-width:920px;height:88vh;padding:0;border-radius:var(--radius-lg);overflow:hidden;">
+            <iframe src="/api/preview/pdf/@previewBaId#toolbar=1&navpanes=0"
+                    style="width:100%;height:100%;border:none;display:block;"
+                    title="Pratinjau BA"></iframe>
         </div>
     </div>
 }
