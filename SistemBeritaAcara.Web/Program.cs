@@ -109,10 +109,60 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
 
         -- Migrate legacy 'Tiket SSC' to new 'No. Tiket My SSC'
         UPDATE [BeritaAcara] SET [DasarAlokasi] = 'No. Tiket My SSC' WHERE [DasarAlokasi] = 'Tiket SSC';
-        
+
         -- Migrate legacy 'Approver' role to 'Reviewer'
         UPDATE [AspNetRoles] SET [Name] = 'Reviewer', [NormalizedName] = 'REVIEWER' WHERE [Name] = 'Approver';
         UPDATE [Users] SET [Role] = 'Reviewer' WHERE [Role] = 'Approver';
+
+        -- Migrate MenyerahkanId: ubah FK dari Pegawai ke Users
+        -- Cek apakah FK lama (ke Pegawai) masih ada; jika ya, drop dan migrasi data
+        IF EXISTS (
+            SELECT 1 FROM sys.foreign_keys fk
+            INNER JOIN sys.tables t  ON fk.parent_object_id    = t.object_id
+            INNER JOIN sys.tables rt ON fk.referenced_object_id = rt.object_id
+            WHERE t.name = 'BeritaAcara' AND rt.name = 'Pegawai'
+              AND EXISTS (
+                  SELECT 1 FROM sys.foreign_key_columns fkc
+                  INNER JOIN sys.columns c ON fkc.parent_object_id = c.object_id AND fkc.parent_column_id = c.column_id
+                  WHERE fkc.constraint_object_id = fk.object_id AND c.name = 'MenyerahkanId'
+              )
+        )
+        BEGIN
+            -- Drop FK lama ke Pegawai
+            DECLARE @fkMenyerahkan nvarchar(200)
+            SELECT TOP 1 @fkMenyerahkan = fk.name
+            FROM sys.foreign_keys fk
+            INNER JOIN sys.tables t  ON fk.parent_object_id    = t.object_id
+            INNER JOIN sys.tables rt ON fk.referenced_object_id = rt.object_id
+            WHERE t.name = 'BeritaAcara' AND rt.name = 'Pegawai'
+              AND EXISTS (
+                  SELECT 1 FROM sys.foreign_key_columns fkc
+                  INNER JOIN sys.columns c ON fkc.parent_object_id = c.object_id AND fkc.parent_column_id = c.column_id
+                  WHERE fkc.constraint_object_id = fk.object_id AND c.name = 'MenyerahkanId'
+              )
+            IF @fkMenyerahkan IS NOT NULL
+                EXEC('ALTER TABLE [BeritaAcara] DROP CONSTRAINT [' + @fkMenyerahkan + ']')
+
+            -- Normalisasi: set 0 → NULL
+            UPDATE [BeritaAcara] SET [MenyerahkanId] = NULL WHERE [MenyerahkanId] = 0
+
+            -- Konversi PegawaiId → UserId (via Users.PegawaiId)
+            UPDATE ba
+            SET ba.[MenyerahkanId] = u.[Id]
+            FROM [BeritaAcara] ba
+            INNER JOIN [Users] u ON u.[PegawaiId] = ba.[MenyerahkanId]
+            WHERE ba.[MenyerahkanId] IS NOT NULL
+
+            -- Nullify nilai sisa yang tidak cocok dengan Users.Id mana pun
+            UPDATE [BeritaAcara]
+            SET [MenyerahkanId] = NULL
+            WHERE [MenyerahkanId] IS NOT NULL
+              AND [MenyerahkanId] NOT IN (SELECT [Id] FROM [Users])
+
+            -- Tambah FK baru ke Users
+            ALTER TABLE [BeritaAcara] ADD CONSTRAINT [FK_BeritaAcara_Users_MenyerahkanId]
+                FOREIGN KEY ([MenyerahkanId]) REFERENCES [Users]([Id]) ON DELETE NO ACTION
+        END
     ");
     }
     catch (Exception ex)

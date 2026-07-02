@@ -14,11 +14,7 @@ window.appLoading = {
         }
         this._el.innerHTML =
             '<div class="spinner" style="width:56px;height:56px;border-width:5px;' +
-            'border-color:var(--primary,#2563EB);border-top-color:transparent;"></div>' +
-            '<div style="font-size:18px;font-weight:700;color:var(--text-primary,#111);margin-top:4px;">' +
-            (message || 'Memproses...') + '</div>' +
-            '<div style="font-size:13px;color:var(--text-muted,#6B7280);">' +
-            (subtext || 'Harap tunggu sebentar') + '</div>';
+            'border-color:var(--primary,#2563EB);border-top-color:transparent;"></div>';
         this._el.style.display = 'flex';
     },
     hide: function () {

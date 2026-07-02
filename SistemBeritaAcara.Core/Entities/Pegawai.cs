@@ -16,6 +16,5 @@ public class Pegawai
     public DateTime? LastSync { get; set; }
 
     public ICollection<BeritaAcara> BeritaAcaraPj { get; set; } = [];
-    public ICollection<BeritaAcara> BeritaAcaraMenyerahkan { get; set; } = [];
     public ICollection<ApplicationUser> Users { get; set; } = [];
 }

@@ -33,7 +33,7 @@ public class BeritaAcara
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     public Pegawai? Pj { get; set; }
-    public Pegawai? Menyerahkan { get; set; }
+    public ApplicationUser? Menyerahkan { get; set; }
     public ApplicationUser? Mengetahui { get; set; }
     public ApplicationUser Creator { get; set; } = null!;
     public ICollection<PerangkatBA> Perangkat { get; set; } = [];

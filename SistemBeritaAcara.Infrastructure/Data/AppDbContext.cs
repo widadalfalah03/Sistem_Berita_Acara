@@ -81,7 +81,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
                 .OnDelete(DeleteBehavior.Restrict);
 
             e.HasOne(ba => ba.Menyerahkan)
-                .WithMany(p => p.BeritaAcaraMenyerahkan)
+                .WithMany(u => u.BeritaAcaraMenyerahkan)
                 .HasForeignKey(ba => ba.MenyerahkanId)
                 .OnDelete(DeleteBehavior.Restrict);
 

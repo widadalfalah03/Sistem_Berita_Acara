@@ -27,7 +27,7 @@
 
 @if (isLoading)
 {
-    <div class="loading-spinner"><div class="spinner"></div><span>Memuat profil...</span></div>
+    <div class="loading-spinner"><div class="spinner"></div></div>
 }
 else if (currentUser is null)
 {
@@ -201,7 +201,6 @@ else
                     @if (isOpeningModal)
                     {
                         <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
-                        <span style="margin-left: 8px;">Memproses...</span>
                     }
                     else
                     {

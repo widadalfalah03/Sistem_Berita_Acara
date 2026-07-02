@@ -29,7 +29,6 @@
         @if (autoSaveStatus == AutoSaveState.Saving)
         {
             <span class="spinner" style="width:13px;height:13px;border-width:2px;"></span>
-            <span>Menyimpan draft...</span>
         }
         else if (autoSaveStatus == AutoSaveState.Saved)
         {
@@ -437,7 +436,7 @@
                         {
                             <span style="font-weight:600;color:var(--text-primary);">
                                 <i class="bi bi-person-check" style="color:var(--success);"></i>
-                                @(adminGudangUsers.FirstOrDefault(u => u.PegawaiId == model.MenyerahkanId)?.Nama ?? currentUserObj?.Nama ?? "Admin Gudang")
+                                @(adminGudangUsers.FirstOrDefault(u => u.Id == model.MenyerahkanId)?.Nama ?? currentUserObj?.Nama ?? "Admin Gudang")
                             </span>
                         }
                     </div>
@@ -598,7 +597,6 @@
             @if (isSaving)
             {
                 <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
-                <span>Menyimpan...</span>
             }
             else
             {
@@ -675,7 +673,7 @@
 
         currentUserObj = adminGudangUsers.FirstOrDefault(u => u.Id == _currentUserId);
         if (currentUserObj != null && !editId.HasValue)
-            model.MenyerahkanId = currentUserObj.PegawaiId ?? 0;
+            model.MenyerahkanId = _currentUserId;
 
         editId = EditIdParam;
         if (editId.HasValue)
@@ -706,12 +704,7 @@
                 model.PengunaAlihDaya = existing.PengunaAlihDaya;
                 model.TipePj = string.IsNullOrEmpty(existing.PengunaAlihDaya) ? "Pekerja" : "TenagaAlihDaya";
 
-                if (adminGudangUsers.Any(u => u.PegawaiId == existing.MenyerahkanId))
-                    model.MenyerahkanId = existing.MenyerahkanId;
-                else if (adminGudangUsers.FirstOrDefault(u => u.Id == existing.MenyerahkanId) is { } oldFormatUser)
-                    model.MenyerahkanId = oldFormatUser.PegawaiId ?? 0;
-                else
-                    model.MenyerahkanId = existing.MenyerahkanId;
+                model.MenyerahkanId = existing.MenyerahkanId ?? _currentUserId;
                 model.MengetahuiId = existing.MengetahuiId;
 
                 selectedPj = allPegawai.FirstOrDefault(p => p.Id == existing.PjId);
@@ -912,7 +905,7 @@
             // Restore MenyerahkanId ke default (Admin Gudang / current user) jika kosong
             if (model.MenyerahkanId == null || model.MenyerahkanId == 0)
             {
-                model.MenyerahkanId = currentUserObj?.PegawaiId ?? 0;
+                model.MenyerahkanId = _currentUserId;
             }
             if (model.Perangkat.Count == 0)
             {
@@ -1384,7 +1377,7 @@
 
     private void SelectMenyerahkan(ApplicationUser u)
     {
-        model.MenyerahkanId = u.PegawaiId ?? 0;
+        model.MenyerahkanId = u.Id;
         showMenyerahkanSearch = false;
         _ = AutoSaveAsync();
     }
