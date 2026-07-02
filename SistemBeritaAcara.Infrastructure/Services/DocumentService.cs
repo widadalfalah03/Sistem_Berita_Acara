@@ -135,6 +135,7 @@ public class DocumentService : IDocumentService
                 { "{{JenisPerangkat}}", jenisPerangkatStr },
                 { "{{TiketSscNo}}", ba.TiketSscNo ?? "-" },
                 { "{{TanggalKembali}}", tanggalKembaliStr },
+                { "{{Keterangan}}", ba.Keterangan ?? "" },
             };
 
             if (!string.IsNullOrWhiteSpace(ba.PengunaAlihDaya))
