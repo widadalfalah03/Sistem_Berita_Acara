@@ -506,7 +506,7 @@ else
             // TESTING: 2 menit (Production: 24 jam)
             Hangfire.BackgroundJob.Schedule<SistemBeritaAcara.Infrastructure.Jobs.AutoApproveJob>(
                 job => job.ProcessSingleAutoApproveAsync(ba.Id),
-                TimeSpan.FromHours(24)
+                TimeSpan.FromMinutes(2)
             );
 
             var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
