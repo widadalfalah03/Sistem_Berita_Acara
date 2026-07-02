@@ -109,9 +109,9 @@
                                placeholder="Contoh: Serah Terima Jabatan" />
                 </div>
                 <div class="form-group" style="flex:1;">
-                    <label class="form-label">Keterangan</label>
+                    <label class="form-label">Keterangan <span style="color:var(--danger)">*</span></label>
                     <InputText class="form-control" @bind-Value="model.Keterangan" @bind-Value:after="TriggerAutoSave"
-                               placeholder="Keterangan tambahan (opsional)" />
+                               placeholder="Keterangan berita acara" />
                 </div>
             }
         </div>
@@ -1165,7 +1165,8 @@
         // ── Validasi ──
         if (model.Jenis == "Lainnya")
         {
-            if (string.IsNullOrWhiteSpace(model.JenisCustom)) { errorMessage = "Nama/Jenis Berita Acara wajib diisi."; return; }
+            if (string.IsNullOrWhiteSpace(model.JenisCustom)) { errorMessage = "Judul Berita Acara wajib diisi."; return; }
+            if (string.IsNullOrWhiteSpace(model.Keterangan)) { errorMessage = "Keterangan wajib diisi."; return; }
         }
         else
         {
