@@ -97,7 +97,7 @@ else
                 <div class="review-info">
                     <div class="review-info-item">
                         <span class="review-info-label">No. Surat</span>
-                        <span class="review-info-value" style="color:var(--text-muted);font-style:italic;font-size:12px;">dibuat saat PJ tanda tangan final</span>
+                        <span class="review-info-value" style="color:var(--text-muted);font-style:italic;font-size:12px;">dibuat saat PJ tanda tangan</span>
                     </div>
                     <div class="review-info-item">
                         <span class="review-info-label">Jenis Berita Acara</span>
@@ -129,26 +129,34 @@ else
                     <div class="timeline-item">
                         <div class="timeline-dot pending"></div>
                         <div class="timeline-content">
-                            <div class="timeline-title pending">Menunggu Persetujuan Anda</div>
+                            <div class="timeline-title pending">Menunggu Tanda Tangan Anda</div>
                             <div class="timeline-desc">Harap review dokumen dan berikan keputusan</div>
                         </div>
                     </div>
                     <div class="timeline-item">
                         <div class="timeline-dot" style="background-color: var(--border);"></div>
                         <div class="timeline-content">
-                            <div class="timeline-title" style="color:var(--text-muted);">PJ Menandatangani</div>
-                            <div class="timeline-desc" style="color:var(--text-muted);">Setelah Anda menyetujui dokumen ini</div>
+                            <div class="timeline-title" style="color:var(--text-muted);">Tanda Tangan PJ</div>
+                            <div class="timeline-desc" style="color:var(--text-muted);">Setelah Anda menandatangani dokumen ini</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Action buttons -->
-                <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
-                    <button class="btn btn-outline-danger @(isProcessing ? "btn-loading" : "")" style="flex:1;min-width:140px;" @onclick="() => showRejectModal = true" disabled="@isProcessing">
+                <div style="display:flex;gap:10px;margin-top:24px;">
+                    <button class="btn @(isProcessing ? "btn-loading" : "")"
+                            style="flex:0 0 auto;padding:10px 20px;border:1.5px solid var(--danger);color:var(--danger);background:transparent;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s,color .15s;"
+                            onmouseover="if(!this.disabled){this.style.background='var(--danger)';this.style.color='white';}"
+                            onmouseout="this.style.background='transparent';this.style.color='var(--danger)';"
+                            @onclick="() => showRejectModal = true" disabled="@isProcessing">
                         <i class="bi bi-x-lg"></i> Tolak
                     </button>
-                    <button class="btn btn-success @(isProcessing ? "btn-loading" : "")" style="flex:1;min-width:140px;" @onclick="ApproveAsync" disabled="@isProcessing">
-                        <i class="bi bi-check-lg"></i> Setujui
+                    <button class="btn @(isProcessing ? "btn-loading" : "")"
+                            style="flex:1;padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:opacity .15s;"
+                            onmouseover="if(!this.disabled)this.style.opacity='.85';"
+                            onmouseout="this.style.opacity='1';"
+                            @onclick="ApproveAsync" disabled="@isProcessing">
+                        <i class="bi bi-pen-fill"></i> Tandatangani
                     </button>
                 </div>
             </div>
@@ -423,7 +431,6 @@ else
 
             var tokenValue = Guid.NewGuid().ToString("N");
             var newToken = new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) };
-            ba!.ApprovalTokens.Add(newToken);
             DbContext.ApprovalToken.Add(newToken);
             ba!.Status = "WaitingPJSign";
             ba.SubmittedAt = DateTime.Now;
@@ -442,7 +449,7 @@ else
             actionIsError = false; actionMessage = "Magic link berhasil dikirim ke email PJ.";
             await LoadAsync();
         }
-        catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}"; }
+        catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " + ex.InnerException.Message : "")}"; }
         finally { isProcessing = false; }
     }
 
@@ -488,9 +495,8 @@ else
 
             var tokenValue = Guid.NewGuid().ToString("N");
             var newToken = new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) };
-            ba!.ApprovalTokens.Add(newToken);
             DbContext.ApprovalToken.Add(newToken);
-            
+
             ba.Status = "WaitingPJSign";
             // ApprovedAt and NomorSurat will be generated when PJ signs
             await DbContext.SaveChangesAsync();
