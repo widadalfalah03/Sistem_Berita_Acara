@@ -19,13 +19,9 @@ public static class DependencyInjection
         string connectionString = config.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' tidak ditemukan.");
 
-        services.AddDbContext<AppDbContext>(opt =>
-            opt.UseSqlServer(connectionString));
-
-        // H-8: Daftarkan factory agar komponen dapat membuat DbContext baru per-operasi
-        // (menghindari masalah long-lived DbContext di Blazor Server circuits)
+        // Factory (Singleton) + AppDbContext (Scoped) — AddDbContextFactory mendaftarkan keduanya.
         services.AddDbContextFactory<AppDbContext>(opt =>
-            opt.UseSqlServer(connectionString), ServiceLifetime.Scoped);
+            opt.UseSqlServer(connectionString));
 
         services.AddIdentity<ApplicationUser, IdentityRole<int>>(opt =>
         {
@@ -46,7 +42,7 @@ public static class DependencyInjection
 
         services.Configure<SecurityStampValidatorOptions>(options =>
         {
-            options.ValidationInterval = TimeSpan.Zero;
+            options.ValidationInterval = TimeSpan.FromMinutes(2);
         });
 
         services.AddHangfire(hf => hf

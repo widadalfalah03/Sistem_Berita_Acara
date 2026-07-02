@@ -15,6 +15,7 @@
 @inject IJSRuntime JSRuntime
 @inject ILogger<BeritaAcara> Logger
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
 <PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") — Sistem Berita Acara</PageTitle>
@@ -762,6 +763,7 @@
     private void TriggerAutoSave()
     {
         _autoSaveCts?.Cancel();
+        _autoSaveCts?.Dispose();
         _autoSaveCts = new System.Threading.CancellationTokenSource();
         var token = _autoSaveCts.Token;
         _ = Task.Run(async () =>
@@ -1149,6 +1151,9 @@
     private async Task SubmitAsync()
     {
         errorMessage = string.Empty;
+        _autoSaveCts?.Cancel();
+        _autoSaveCts?.Dispose();
+        _autoSaveCts = null;
 
         // ── Validasi ──
         if (model.Jenis == "Lainnya")
@@ -1407,6 +1412,13 @@
         model.MengetahuiId = u.Id;
         showMengetahuiSearch = false;
         _ = AutoSaveAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _autoSaveCts?.Cancel();
+        _autoSaveCts?.Dispose();
+        _autoSaveCts = null;
     }
 
     private class CreateBaModel

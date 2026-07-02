@@ -16,14 +16,12 @@
             <!-- Logo only, no text heading -->
             <div class="login-logo">
                 <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height:88px;width:auto;" alt="Pertamina Patra Niaga" />
-                <div style="font-size:13px;color:var(--text-muted);margin-top:12px;">Selamat datang, lengkapi profil Anda.</div>
             </div>
 
             @if (isLoading)
             {
                 <div style="text-align:center;padding:24px;">
                     <div class="spinner"></div>
-                    <div style="margin-top:8px;font-size:13px;color:var(--text-secondary);">Memvalidasi undangan...</div>
                 </div>
             }
             else if (invalidToken)
@@ -151,11 +149,6 @@
     </div>
 </div>
 
-<form id="autoLogin" method="post" action="/account/login" style="display:none;">
-    <input type="hidden" name="email" value="@email" />
-    <input type="hidden" name="password" value="@newPassword" />
-    <input type="hidden" name="returnUrl" value="/dashboard" />
-</form>
 
 @code {
     [SupplyParameterFromQuery]
@@ -301,6 +294,16 @@
             var base64 = dataUrl.Split(',')[1];
             var bytes = Convert.FromBase64String(base64);
 
+            // Validasi magic bytes — tolak file yang bukan PNG atau JPEG
+            if (bytes.Length < 4 ||
+                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && // PNG
+                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) // JPEG
+            {
+                errorMessage = "Gagal: File tanda tangan bukan gambar PNG atau JPEG yang valid.";
+                isSaving = false;
+                return;
+            }
+
             var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
@@ -313,8 +316,8 @@
             
             var updateResult = await UserManager.UpdateAsync(user);
 
-            // Execute auto-login
-            await JS.InvokeVoidAsync("eval", "document.getElementById('autoLogin').submit();");
+            // Redirect ke login — user login manual dengan password yang baru dibuat
+            Navigation.NavigateTo("/login");
         }
         catch (Exception ex)
         {

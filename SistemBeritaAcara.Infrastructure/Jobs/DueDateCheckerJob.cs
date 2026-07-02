@@ -32,6 +32,7 @@ public class DueDateCheckerJob(
     public async Task CheckDueDatesAsync()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
+        var todayStart = DateTime.Today;
 
         // ── 1. Jatuh tempo HARI INI (H-0) ─────────────────────────────────────
         var dueToday = await db.BeritaAcara
@@ -46,6 +47,10 @@ public class DueDateCheckerJob(
 
         foreach (var ba in dueToday)
         {
+            // Dedup: skip jika notifikasi DUE_TODAY untuk BA ini sudah dikirim hari ini
+            if (await db.Notification.AnyAsync(n => n.BaId == ba.Id && n.Tipe == "DUE_TODAY" && n.CreatedAt >= todayStart))
+                continue;
+
             string tglStr = today.ToString("dd/MM/yyyy");
             string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
             string pjNama = ba.Pj?.Nama ?? "–";
@@ -103,6 +108,10 @@ public class DueDateCheckerJob(
 
         foreach (var ba in dueTomorrow)
         {
+            // Dedup: skip jika notifikasi DUE_TOMORROW untuk BA ini sudah dikirim hari ini
+            if (await db.Notification.AnyAsync(n => n.BaId == ba.Id && n.Tipe == "DUE_TOMORROW" && n.CreatedAt >= todayStart))
+                continue;
+
             string tglStr = tomorrow.ToString("dd/MM/yyyy");
             string nomorSurat = ba.NomorSurat ?? $"BA-{ba.Id}";
             string pjNama = ba.Pj?.Nama ?? "–";
