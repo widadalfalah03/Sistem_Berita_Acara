@@ -186,7 +186,7 @@ else
                 <tbody>
                     @foreach (var ba in FilteredBA)
                     {
-                        <tr>
+                        <tr style="cursor:pointer;" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}?from=archive"))">
                             <td>
                                 <div class="cell-main" style="font-weight:600;">@ba.NomorSurat</div>
                             </td>
@@ -207,7 +207,7 @@ else
                             </td>
                             <td style="white-space:nowrap;">@ba.Tanggal.ToString("dd MMM yyyy")</td>
                             <td>
-                                <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                                <div style="display:flex;align-items:center;justify-content:center;gap:6px;" @onclick:stopPropagation>
                                     @if (!string.IsNullOrEmpty(ba.DocxFinalPath) || !string.IsNullOrEmpty(ba.DocxPath))
                                     {
                                         <button class="btn-icon" title="Pratinjau" @onclick="@(() => previewBaId = ba.Id)">
