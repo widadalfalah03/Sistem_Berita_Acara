@@ -13,16 +13,9 @@
 
 <PageTitle>Data Pekerja — Sistem Berita Acara</PageTitle>
 
-<div class="page-header d-flex align-center justify-between" style="align-items: center; margin-bottom: 24px;">
-    <!-- Stat Card moved to header -->
-    <div class="stat-cards" style="grid-template-columns:repeat(1,1fr);max-width:220px; margin: 0;">
-        <div class="stat-card" style="margin: 0; padding: 16px 20px;">
-            <div class="stat-card-icon total"><i class="bi bi-person-badge"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Total Pekerja</div>
-                <div class="stat-card-value">@allPegawai.Count(p => p.IsAktif)</div>
-            </div>
-        </div>
+<div class="page-header d-flex align-center justify-between">
+    <div>
+        <h1 class="page-title"></h1>
     </div>
     <div style="display:flex;gap:8px;">
         <button @onclick="ExportExcelAsync" disabled="@isExporting"
@@ -38,6 +31,17 @@
             <i class="bi bi-upload" style="font-size:14px;"></i>
             Import Excel
         </button>
+    </div>
+</div>
+
+<!-- Stat Card -->
+<div class="stat-cards" style="grid-template-columns:repeat(1,1fr);max-width:220px;margin-bottom:24px;">
+    <div class="stat-card">
+        <div class="stat-card-icon total"><i class="bi bi-person-badge"></i></div>
+        <div class="stat-card-info">
+            <div class="stat-card-label">Total Pekerja</div>
+            <div class="stat-card-value">@allPegawai.Count(p => p.IsAktif)</div>
+        </div>
     </div>
 </div>
 
