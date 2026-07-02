@@ -66,10 +66,10 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             ALTER TABLE [Users] DROP COLUMN [MustChangePw]
         END
         
-        -- Migrate legacy "Tiket SSC" to new "No. Tiket My SSC"
+        -- Migrate legacy Tiket SSC to new No. Tiket My SSC
         UPDATE [BeritaAcara] SET [DasarAlokasi] = 'No. Tiket My SSC' WHERE [DasarAlokasi] = 'Tiket SSC';
         
-        -- Migrate legacy "Approver" role to "Reviewer"
+        -- Migrate legacy Approver role to Reviewer
         UPDATE [AspNetRoles] SET [Name] = 'Reviewer', [NormalizedName] = 'REVIEWER' WHERE [Name] = 'Approver';
         UPDATE [Users] SET [Role] = 'Reviewer' WHERE [Role] = 'Approver';
     ");

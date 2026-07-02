@@ -108,8 +108,8 @@ public class DocumentService : IDocumentService
                 jabatanReviewer = "-";
             }
 
-            // Tujuan BA: reviewer's jabatan (where the BA is addressed to)
-            var tujuanStr = !string.IsNullOrWhiteSpace(jabatanReviewer) ? jabatanReviewer : "-";
+            // Tujuan BA: Fungsi/Direktorat PJ (where the BA is addressed to)
+            var tujuanStr = !string.IsNullOrWhiteSpace(ba.Pj?.FungsiDirektorat) ? ba.Pj.FungsiDirektorat : "-";
 
             var replacements = new Dictionary<string, string>
             {
