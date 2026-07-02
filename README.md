@@ -1,294 +1,164 @@
+<div align="center">
+
+<img src="SistemBeritaAcara.Web/wwwroot/images/PT_Pertamina_Patra_Niaga.svg.png" alt="PT Pertamina Patra Niaga" width="180"/>
+
 # Sistem Berita Acara Digital
 
-Sistem pengelolaan **Berita Acara (BA)** berbasis web untuk PT Pertamina Patra Niaga SSC ICT. Menggantikan proses manual dengan alur digital: pembuatan → tanda tangan → review → arsip.
+**Platform pengelolaan dokumen Berita Acara berbasis web untuk PT Pertamina Patra Niaga SSC ICT**
+
+![.NET](https://img.shields.io/badge/.NET_10-Blazor_Server-512BD4?style=flat-square&logo=dotnet)
+![SQL Server](https://img.shields.io/badge/SQL_Server-Database-CC2927?style=flat-square&logo=microsoftsqlserver)
+![SignalR](https://img.shields.io/badge/SignalR-Real--time-FF6C37?style=flat-square)
+![Hangfire](https://img.shields.io/badge/Hangfire-Background_Jobs-darkgreen?style=flat-square)
+
+</div>
 
 ---
 
-## Daftar Isi
+## Latar Belakang
 
-- [Teknologi](#teknologi)
-- [Arsitektur](#arsitektur)
-- [Prasyarat](#prasyarat)
-- [Instalasi & Konfigurasi](#instalasi--konfigurasi)
-- [Menjalankan Aplikasi](#menjalankan-aplikasi)
-- [Setup Pertama Kali](#setup-pertama-kali)
-- [Peran (Roles)](#peran-roles)
-- [Fitur Utama](#fitur-utama)
-- [Struktur Folder](#struktur-folder)
-- [Deploy ke Produksi](#deploy-ke-produksi)
-- [Reset Database](#reset-database)
+Proses penerbitan Berita Acara (BA) di lingkungan gudang barang PT Pertamina Patra Niaga SSC ICT sebelumnya berjalan secara manual — dokumen dicetak, ditandatangani fisik, difotokopi, lalu diarsipkan ke dalam tumpukan berkas. Proses ini lambat, rawan hilang, dan sulit dilacak statusnya.
+
+**Sistem Berita Acara Digital** hadir sebagai solusi penuh: dari pembuatan dokumen, pengiriman ke penanggung jawab untuk tanda tangan, review oleh atasan, hingga pengarsipan — semua berjalan dalam satu platform web tanpa selembar kertas pun.
 
 ---
 
-## Teknologi
+## Alur Kerja
 
-| Komponen | Teknologi |
+Berita Acara melewati beberapa tahap yang saling terhubung secara otomatis:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   Admin Gudang        PJ (Penanggung Jawab)  Reviewer   │
+│       │                       │                  │      │
+│   Isi form BA                 │                  │      │
+│   + Upload foto               │                  │      │
+│       │                       │                  │      │
+│   Dokumen .docx               │                  │      │
+│   di-generate otomatis        │                  │      │
+│       │                       │                  │      │
+│       └──── Email dikirim ────►                  │      │
+│                         Tanda tangan digital     │      │
+│                               │                  │      │
+│                               └── Email ─────────►      │
+│                                           Review dokumen │
+│                                           Setujui / Tolak│
+│                                                  │      │
+│                          ◄── Jika ditolak ───────┘      │
+│                     Revisi & kirim ulang                 │
+│                                                  │      │
+│                          Nomor surat terbit      │      │
+│                          Dokumen final diarsipkan│      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+Setiap perpindahan tahap disertai **notifikasi email** dan **notifikasi real-time** di dalam aplikasi.
+
+---
+
+## Jenis Berita Acara
+
+Sistem mendukung empat jenis dokumen yang masing-masing memiliki template dan format nomor surat sendiri:
+
+| Jenis | Keterangan |
 |---|---|
-| Framework | ASP.NET Core 10 — Blazor Server |
-| Database | Microsoft SQL Server (Express/Standard) |
-| ORM | Entity Framework Core 10 |
-| Auth | ASP.NET Core Identity |
-| Background Jobs | Hangfire |
-| Editor Dokumen | OnlyOffice Document Server |
-| Konversi PDF | Spire.Doc (embedded) |
-| Email | MailKit (SMTP) |
-| Excel | ClosedXML |
-| Real-time | SignalR (notifikasi) |
-
----
-
-## Arsitektur
-
-```
-SistemBeritaAcara/
-├── SistemBeritaAcara.Core/          # Entitas domain & interface
-├── SistemBeritaAcara.Infrastructure/# EF Core, Services, Jobs
-└── SistemBeritaAcara.Web/           # Blazor Server, Pages, API
-```
-
-**Alur Berita Acara:**
-
-```
-Admin GB → Buat BA → Editor (Preview) → Kirim
-         ↓
-       PJ Sign (tanda tangan penanggung jawab)
-         ↓
-     Reviewer → Setujui → Nomor Surat → Arsip
-              → Tolak   → Admin GB (Revisi)
-```
-
----
-
-## Prasyarat
-
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- SQL Server 2019+ atau SQL Server Express
-- [OnlyOffice Document Server](https://www.onlyoffice.com/download-docs.aspx) (opsional, untuk edit manual)
-- SMTP server (Gmail, dll.) untuk notifikasi email
-
----
-
-## Instalasi & Konfigurasi
-
-### 1. Clone Repository
-
-```bash
-git clone <repo-url>
-cd Sistem_Berita_Acara
-```
-
-### 2. Konfigurasi `appsettings.json`
-
-Edit `SistemBeritaAcara.Web/appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost\\SQLEXPRESS;Database=SistemBeritaAcara;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
-  },
-  "Email": {
-    "SmtpHost": "smtp.gmail.com",
-    "SmtpPort": "587",
-    "Username": "email@gmail.com",
-    "Password": "app-password-gmail",
-    "From": "email@gmail.com"
-  },
-  "App": {
-    "BaseUrl": "http://localhost:5000",
-    "PublicUrl": "https://domain-publik.com"
-  },
-  "OnlyOffice": {
-    "ServerUrl": "http://localhost:8081",
-    "CallbackSecret": ""
-  },
-  "NomorSurat": {
-    "FormatUmum":  "BA {counter}/PPNEG1000/{year}-S0",
-    "FormatLainnya": "BA {counter}/PPNEG1000/{year}-S8"
-  }
-}
-```
-
-> **Gmail App Password:** aktifkan 2FA di akun Google, lalu buat App Password di `myaccount.google.com/apppasswords`.
-
-### 3. Konfigurasi OnlyOffice (opsional)
-
-Salin file `local.json` ke direktori konfigurasi OnlyOffice Document Server agar server mengizinkan callback dari IP lokal:
-
-```json
-{
-  "services": {
-    "CoAuthoring": {
-      "request-filtering-agent": {
-        "allowPrivateIPAddress": true,
-        "allowMetaIPAddress": true
-      }
-    }
-  }
-}
-```
-
-### 4. Template Dokumen
-
-Pastikan file template `.docx` ada di `SistemBeritaAcara.Web/wwwroot/files/templates/`:
-
-```
-Template_BA_ALOKASI.docx
-Template_BA_PEMINJAMAN.docx
-Template_BA_PENARIKAN.docx
-Template_BA_LAINNYA.docx
-```
-
-Template menggunakan placeholder `{{NamaPJ}}`, `{{TujuanBA}}`, `{{Tanggal}}`, dll.
-
----
-
-## Menjalankan Aplikasi
-
-```bash
-cd SistemBeritaAcara.Web
-dotnet run
-```
-
-Akses di browser: `http://localhost:5000`
-
-Database dibuat otomatis oleh `EnsureCreated()` saat pertama kali dijalankan.
-
----
-
-## Setup Pertama Kali
-
-1. Buka `http://localhost:5000` — akan diarahkan ke `/setup`
-2. Isi form untuk membuat akun **Admin IT** pertama
-3. Login dengan akun tersebut
-4. Tambah pengguna lain via menu **Daftar Pengguna**
-5. Import data Pegawai dan MasterBarang via menu masing-masing
-
----
-
-## Peran (Roles)
-
-| Role | Deskripsi |
-|---|---|
-| `AdminIT` | Kelola pengguna, import data master |
-| `AdminGudangBarang` | Buat dan kelola Berita Acara |
-| `Reviewer` | Review dan setujui/tolak Berita Acara |
+| **Alokasi Barang** | Pencatatan distribusi/pengeluaran barang dari gudang |
+| **Peminjaman Barang** | Barang dipinjam dengan tanggal pengembalian |
+| **Penarikan Barang** | Barang ditarik kembali dari lokasi pemakaian |
+| **Lainnya** | Dokumen bebas dengan judul dan tujuan kustom |
 
 ---
 
 ## Fitur Utama
 
-### Berita Acara
-- Jenis: **Alokasi**, **Peminjaman**, **Penarikan**, **Lainnya**
-- Generate dokumen `.docx` dari template otomatis
-- Preview PDF langsung di browser
-- Edit manual via OnlyOffice (opsional)
-- Sistem tanda tangan digital (gambar PNG)
-- Penomoran surat otomatis dengan format konfigurabel
+### Dokumen Otomatis
+Setiap Berita Acara di-generate langsung dari template `.docx` yang telah dikonfigurasi. Data dari form — nama, jabatan, daftar barang, tanggal, tujuan — diisi ke dalam placeholder template secara otomatis. Hasilnya bisa langsung diunduh atau dipreview sebagai PDF di browser.
 
-### Alur Persetujuan
-- Notifikasi email & real-time (SignalR) di setiap tahap
-- Penanggung Jawab (PJ) tanda tangan via link email
-- Reviewer setujui/tolak dengan alasan
-- Riwayat penolakan tersimpan permanen (`BeritaAcaraHistory`)
-- Auto-approve via Hangfire job (jika dikonfigurasi)
+### Tanda Tangan Digital
+Penanggung Jawab (PJ) menerima **magic link** melalui email — satu tautan unik yang langsung membawa ke halaman penandatanganan tanpa perlu login. Tanda tangan berupa gambar yang diunggah saat setup akun, lalu di-embed langsung ke dalam dokumen Word di posisi yang tepat.
 
-### Master Data
-- Import Pegawai dari Excel (`.xlsx`)
-- Import Barang dari Excel (`.xlsx`)
-- Sinkronisasi data dari sistem ERP
+### Auto-Approve
+Jika PJ tidak menandatangani dalam batas waktu yang ditentukan, sistem secara otomatis memberikan **stempel "Auto-Approved"** pada dokumen dan melanjutkan alur ke tahap review. Proses ini dijalankan oleh background job terjadwal tanpa intervensi manual.
 
-### Arsip
-- Arsip semua BA yang sudah disetujui
-- Export rekap ke Excel
-- Filter dan pencarian
+### Penomoran Surat Otomatis
+Nomor surat diterbitkan secara otomatis menggunakan format yang bisa dikonfigurasi, misalnya `BA 001/PPNEG1000/2025-S0`. Counter per tahun dijaga konsistensinya dengan mekanisme database yang aman dari race condition.
 
----
+### Real-time Notifications
+Notifikasi masuk secara langsung ke inbox pengguna menggunakan **SignalR** — tanpa perlu refresh halaman. Setiap tindakan (submit, tanda tangan, approval, penolakan) memicu notifikasi ke pihak yang relevan.
 
-## Struktur Folder
+### Riwayat & Audit Trail
+Setiap penolakan menyimpan catatan alasan ke dalam tabel riwayat yang permanen. Admin dapat menelusuri histori lengkap siklus hidup suatu Berita Acara kapan saja.
 
-```
-SistemBeritaAcara.Web/
-├── Components/
-│   ├── Layout/         # MainLayout, EmptyLayout
-│   ├── Pages/          # Semua halaman Blazor
-│   └── Shared/         # Komponen reusable (Pagination, dll.)
-├── wwwroot/
-│   ├── app.css         # Stylesheet utama
-│   ├── js/             # JavaScript (loading overlay, pdf.js, dll.)
-│   ├── files/
-│   │   ├── templates/  # Template .docx (di-commit ke Git)
-│   │   ├── documents/  # Dokumen BA generated (tidak di-commit)
-│   │   └── signatures/ # File TTD pengguna (tidak di-commit)
-│   └── images/         # Logo, aset statis
-└── appsettings.json
-```
+### Arsip & Export
+Dokumen yang telah disetujui masuk ke halaman **Arsip** dengan fitur pencarian, filter, dan export rekap ke file Excel (`.xlsx`) lengkap dengan hyperlink ke dokumen final.
+
+### Import Data Master
+Data Pegawai dan Master Barang dapat diperbarui secara massal melalui upload file Excel — cocok untuk sinkronisasi dengan sistem HR atau ERP yang ada.
 
 ---
 
-## Deploy ke Produksi
+## Peran Pengguna
 
-### Publish
-
-```bash
-dotnet publish SistemBeritaAcara.Web -c Release -o ./publish
-```
-
-### IIS / Windows Server
-
-1. Install .NET 10 Hosting Bundle
-2. Buat site baru di IIS, arahkan ke folder `publish/`
-3. Set Application Pool: `.NET CLR version = No Managed Code`
-4. Pastikan identity pool punya akses tulis ke `wwwroot/files/`
-5. Set environment variable `ASPNETCORE_ENVIRONMENT=Production`
-6. Buat `appsettings.Production.json` dengan konfigurasi production
-
-### Reverse Proxy (Nginx)
-
-```nginx
-location / {
-    proxy_pass         http://localhost:5000;
-    proxy_http_version 1.1;
-    proxy_set_header   Upgrade $http_upgrade;
-    proxy_set_header   Connection keep-alive;
-    proxy_set_header   Host $host;
-    proxy_cache_bypass $http_upgrade;
-}
-```
-
-> SignalR memerlukan WebSocket — pastikan `proxy_set_header Upgrade` dikonfigurasi.
-
-### Checklist Deploy
-
-- [ ] Connection string production di `appsettings.Production.json`
-- [ ] SMTP email dikonfigurasi
-- [ ] `App:PublicUrl` diisi dengan domain publik (digunakan untuk link email PJ Sign)
-- [ ] OnlyOffice Document Server jalan (jika dipakai)
-- [ ] Folder `wwwroot/files/documents/` dan `wwwroot/files/signatures/` bisa ditulis
-- [ ] Template `.docx` ada di `wwwroot/files/templates/`
-- [ ] Jalankan `reset_database.sql` jika butuh clean start
+| Role | Tanggung Jawab |
+|---|---|
+| **Admin IT** | Manajemen akun pengguna, import data master, konfigurasi sistem |
+| **Admin Gudang Barang** | Membuat dan mengelola Berita Acara, upload foto bukti |
+| **Reviewer** | Mereview dokumen final, menyetujui atau menolak Berita Acara |
 
 ---
 
-## Reset Database
+## Tumpukan Teknologi
 
-Untuk reset data sebelum go-live atau saat testing:
-
-```bash
-# Di SQL Server Management Studio atau sqlcmd:
-sqlcmd -S localhost\SQLEXPRESS -d SistemBeritaAcara -i reset_database.sql
-```
-
-Script `reset_database.sql` menghapus:
-- Semua Berita Acara dan data turunannya
-- Semua pengguna (Users, Roles)
-- Notifikasi, token, riwayat
-- Counter nomor surat (reset ke 1)
-- Data Pegawai & MasterBarang **tidak** dihapus secara default (lihat MODE A di dalam script)
-
-Setelah reset, jalankan aplikasi dan buka `/setup` untuk membuat Admin IT baru.
+| Lapisan | Teknologi |
+|---|---|
+| Framework | ASP.NET Core 10 — Blazor Server |
+| Database | Microsoft SQL Server |
+| ORM | Entity Framework Core 10 |
+| Autentikasi | ASP.NET Core Identity |
+| Background Jobs | Hangfire |
+| Editor Dokumen | OnlyOffice Document Server |
+| Konversi PDF | Spire.Doc |
+| Email | MailKit (SMTP) |
+| Excel | ClosedXML |
+| Real-time | SignalR |
 
 ---
 
-## Lisensi
+## Arsitektur
 
-Internal — PT Pertamina Patra Niaga SSC ICT
+Proyek mengikuti pola **Clean Architecture** sederhana dengan tiga lapisan:
+
+```
+SistemBeritaAcara/
+├── SistemBeritaAcara.Core/           # Domain: Entitas & Interface
+│   ├── Entities/                     # BeritaAcara, Pegawai, User, ...
+│   └── Interfaces/                   # IDocumentService, IEmailService, ...
+│
+├── SistemBeritaAcara.Infrastructure/ # Data & Layanan
+│   ├── Data/                         # AppDbContext, EF Migrations
+│   ├── Services/                     # DocumentService, EmailService, ...
+│   └── Jobs/                         # AutoApproveJob, DueDateCheckerJob
+│
+└── SistemBeritaAcara.Web/            # Presentasi
+    ├── Components/Pages/             # Semua halaman Blazor
+    ├── Security/                     # Middleware, AuthHandler
+    └── wwwroot/                      # Aset statis, template dokumen
+```
+
+Core tidak bergantung pada lapisan lain — Infrastructure dan Web bergantung ke Core. Ketergantungan hanya mengalir ke dalam.
+
+---
+
+## Tentang Proyek
+
+Proyek ini dikembangkan sebagai bagian dari program **magang** di PT Pertamina Patra Niaga SSC ICT. Dibangun untuk menggantikan proses manual penerbitan Berita Acara di lingkungan gudang barang, dengan fokus pada kemudahan penggunaan, keandalan alur dokumen, dan jejak audit yang lengkap.
+
+---
+
+<div align="center">
+
+*Internal — PT Pertamina Patra Niaga SSC ICT*
+
+</div>
