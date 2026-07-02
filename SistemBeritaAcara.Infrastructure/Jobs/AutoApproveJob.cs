@@ -124,12 +124,6 @@ public class AutoApproveJob(
                     await emailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, true, ba.Id, BaseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
                 }
 
-                if (ba.Mengetahui != null && !string.IsNullOrEmpty(ba.Mengetahui.Email))
-                {
-                    // Mengetahui juga dapat notifikasi (dianalogikan isForPj: true karena Reviewer juga tidak butuh tombol-tombol lain)
-                    await emailService.SendApprovalResultAsync(ba.Mengetahui.Email, ba.Mengetahui.Nama, ba.Jenis, true, ba.Id, BaseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
-                }
-
                 logger.LogInformation($"[AutoApproveJob] BA {ba.Id} ({ba.NomorSurat}) berhasil di-auto-approve dan selesai.");
             }
             catch (Exception ex)

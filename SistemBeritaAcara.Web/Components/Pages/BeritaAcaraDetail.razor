@@ -272,8 +272,8 @@ else
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
                 @if (ba.Status == "Draft")
                 {
-                    <button class="btn btn-primary @(isProcessing ? "btn-loading" : "")" @onclick="SendMagicLinkAsync" disabled="@isProcessing">
-                        <i class="bi bi-send"></i> Kirim Notifikasi ke PJ
+                    <button class="btn btn-primary @(isProcessing ? "btn-loading" : "")" @onclick="SubmitToReviewerAsync" disabled="@isProcessing">
+                        <i class="bi bi-person-check"></i> Ajukan ke Reviewer
                     </button>
                 }
                 else if (ba.Status == "WaitingPJSign")
@@ -400,27 +400,32 @@ else
         }
     }
 
-    private async Task SendMagicLinkAsync()
+    private async Task SubmitToReviewerAsync()
     {
         isProcessing = true;
         try
         {
-            // M-2: Invalidasi semua token PJ_SIGNATURE lama yang belum digunakan untuk BA ini
-            var oldTokens = await DbContext.ApprovalToken
-                .Where(t => t.BaId == ba!.Id && t.TokenType == "PJ_SIGNATURE" && t.UsedAt == null)
-                .ToListAsync();
-            foreach (var old in oldTokens)
-                old.UsedAt = DateTime.Now;
-
-            var tokenValue = Guid.NewGuid().ToString("N");
-            var newToken = new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) };
-            ba!.ApprovalTokens.Add(newToken);
-            DbContext.ApprovalToken.Add(newToken);
-            ba!.Status = "WaitingPJSign";
+            ba!.Status = "WaitingApproval";
             ba.SubmittedAt = DateTime.Now;
+            ba.AlasanReject = null; 
             await DbContext.SaveChangesAsync();
-            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
-            var barangListMagic = ba.Perangkat
+
+            await NotificationService.SendAsync(
+                ba.MengetahuiId ?? 0,
+                "WAITING_APPROVAL",
+                $"Berita Acara {ba.Jenis} {(ba.NomorSurat ?? "")} telah diajukan dan membutuhkan persetujuan Anda.".Replace("  ", " ").Trim(),
+                ba.Id
+            );
+            
+            await NotificationService.SendAsync(
+                ba.CreatedBy,
+                "WAITING_APPROVAL",
+                $"Berita Acara {ba.Jenis} telah diajukan. Menunggu persetujuan Reviewer.",
+                ba.Id
+            );
+
+            var baseUrlReviewer = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+            var barangListReviewer = ba.Perangkat
                 .Select(p => {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
@@ -428,9 +433,20 @@ else
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
                     return $"{nama} — {detail}";
                 }).ToList();
-            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis, barangListMagic);
-            await NotificationService.SendToRoleAsync("AdminGudangBarang", "WAITING_PJ_SIGN", $"Berita Acara {ba.Jenis} {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
-            actionIsError = false; actionMessage = "Magic link berhasil dikirim ke email PJ.";
+            
+            if (!string.IsNullOrEmpty(ba.Mengetahui?.Email))
+            {
+                await EmailService.SendApprovalRequestAsync(
+                    ba.Mengetahui.Email,
+                    ba.Mengetahui.Nama ?? "Reviewer",
+                    baseUrlReviewer,
+                    ba.Id,
+                    ba.Jenis ?? "Berita Acara",
+                    barangListReviewer
+                );
+            }
+
+            actionIsError = false; actionMessage = "Berita Acara berhasil diajukan ke Reviewer.";
             await LoadAsync();
         }
         catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}"; }
