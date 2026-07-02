@@ -108,7 +108,7 @@ public class DocumentService : IDocumentService
                 jabatanReviewer = "-";
             }
 
-            // Tujuan BA: Fungsi/Direktorat PJ (where the BA is addressed to)
+            // Tujuan BA: fungsi/direktorat PJ
             var tujuanStr = !string.IsNullOrWhiteSpace(ba.Pj?.FungsiDirektorat) ? ba.Pj.FungsiDirektorat : "-";
 
             var replacements = new Dictionary<string, string>
@@ -135,6 +135,7 @@ public class DocumentService : IDocumentService
                 { "{{JenisPerangkat}}", jenisPerangkatStr },
                 { "{{TiketSscNo}}", ba.TiketSscNo ?? "-" },
                 { "{{TanggalKembali}}", tanggalKembaliStr },
+                { "{{Keterangan}}", ba.Keterangan ?? "" },
             };
 
             if (!string.IsNullOrWhiteSpace(ba.PengunaAlihDaya))

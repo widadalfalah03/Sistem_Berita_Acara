@@ -104,10 +104,14 @@
             else if (model.Jenis == "Lainnya")
             {
                 <div class="form-group" style="flex:1;">
-                    <label class="form-label">Nama / Jenis Berita Acara <span style="color:var(--danger)">*</span></label>
+                    <label class="form-label">Judul Berita Acara <span style="color:var(--danger)">*</span></label>
                     <InputText class="form-control" @bind-Value="model.JenisCustom" @bind-Value:after="TriggerAutoSave"
                                placeholder="Contoh: Serah Terima Jabatan" />
-                    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Teks ini akan tampil sebagai judul di dokumen</div>
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Keterangan <span style="color:var(--danger)">*</span></label>
+                    <InputText class="form-control" @bind-Value="model.Keterangan" @bind-Value:after="TriggerAutoSave"
+                               placeholder="Keterangan berita acara" />
                 </div>
             }
         </div>
@@ -694,6 +698,7 @@
 
                 model.Jenis = existing.Jenis;
                 model.JenisCustom = existing.JenisCustom;
+                model.Keterangan = existing.Keterangan;
                 model.Tanggal = existing.Tanggal.ToDateTime(TimeOnly.MinValue);
                 model.TiketSscNo = existing.TiketSscNo;
                 model.DasarAlokasi = existing.DasarAlokasi;
@@ -742,6 +747,7 @@
                 Tanggal = DateOnly.FromDateTime(model.Tanggal),
                 Jenis = model.Jenis,
                 JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null,
+                Keterangan = model.Jenis == "Lainnya" ? model.Keterangan : null,
                 PjId = model.PjId,
                 PjNoTelp = model.PjNoTelp,
                 PengunaAlihDaya = model.PengunaAlihDaya,
@@ -797,6 +803,7 @@
             existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
             existing.Jenis = model.Jenis;
             existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
+            existing.Keterangan = model.Jenis == "Lainnya" ? model.Keterangan : null;
             existing.PjNoTelp = model.PjNoTelp;
             existing.PengunaAlihDaya = model.PengunaAlihDaya;
             existing.MenyerahkanId = model.MenyerahkanId;
@@ -1158,7 +1165,8 @@
         // ── Validasi ──
         if (model.Jenis == "Lainnya")
         {
-            if (string.IsNullOrWhiteSpace(model.JenisCustom)) { errorMessage = "Nama/Jenis Berita Acara wajib diisi."; return; }
+            if (string.IsNullOrWhiteSpace(model.JenisCustom)) { errorMessage = "Judul Berita Acara wajib diisi."; return; }
+            if (string.IsNullOrWhiteSpace(model.Keterangan)) { errorMessage = "Keterangan wajib diisi."; return; }
         }
         else
         {
@@ -1204,6 +1212,7 @@
                 // Periksa apakah ada perubahan pada data form
                 bool isChanged = existing.Jenis != model.Jenis ||
                                  existing.JenisCustom != (model.Jenis == "Lainnya" ? model.JenisCustom : null) ||
+                                 existing.Keterangan != (model.Jenis == "Lainnya" ? model.Keterangan : null) ||
                                  existing.Tanggal != DateOnly.FromDateTime(model.Tanggal) ||
                                  existing.PjId != model.PjId ||
                                  existing.PjNoTelp != model.PjNoTelp ||
@@ -1242,6 +1251,7 @@
                 existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);
                 existing.Jenis = model.Jenis;
                 existing.JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null;
+                existing.Keterangan = model.Jenis == "Lainnya" ? model.Keterangan : null;
                 existing.PjNoTelp = model.PjNoTelp;
                 existing.PengunaAlihDaya = model.PengunaAlihDaya;
                 existing.MenyerahkanId = model.MenyerahkanId;
@@ -1331,6 +1341,7 @@
                     Tanggal = DateOnly.FromDateTime(model.Tanggal),
                     Jenis = model.Jenis,
                     JenisCustom = model.Jenis == "Lainnya" ? model.JenisCustom : null,
+                    Keterangan = model.Jenis == "Lainnya" ? model.Keterangan : null,
                     PjId = model.PjId,
                     PjNoTelp = model.PjNoTelp,
                     PengunaAlihDaya = model.PengunaAlihDaya,
@@ -1425,6 +1436,7 @@
     {
         public string Jenis { get; set; } = "Alokasi";
         public string? JenisCustom { get; set; }
+        public string? Keterangan { get; set; }
         public string TipePj { get; set; } = "Pekerja";
         public string? PengunaAlihDaya { get; set; }
         public int? PjId { get; set; }

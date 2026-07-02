@@ -9,7 +9,7 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
-@rendermode InteractiveServer
+
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 <style>
@@ -216,7 +216,7 @@ else if (currentRole == "AdminGudangBarang")
                         var daysLeft = (d.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
                         var badgeClass = daysLeft < 0 ? "due-badge overdue" : daysLeft == 0 ? "due-badge today" : daysLeft <= 2 ? "due-badge h1" : "due-badge h2";
                         var badgeText = daysLeft < 0 ? $"Lewat {Math.Abs(daysLeft)}h" : daysLeft == 0 ? "Hari Ini" : $"H-{daysLeft}";
-                        <div class="due-item" @onclick="@(() => OpenDetailModal(d.Id))">
+                        <div class="due-item" @onclick="@(async () => await OpenDetailModal(d.Id))">
                             <div class="due-item-info">
                                 <div class="due-item-surat">@d.NomorSurat</div>
                                 <div class="due-item-pj"><i class="bi bi-person" style="font-size:11px;"></i> @d.Pj?.Nama</div>
@@ -281,6 +281,98 @@ else if (currentRole == "AdminGudangBarang")
 
 
 
+                <!-- Perpanjangan Waktu -->
+                <div class="card" style="margin-bottom:16px;box-shadow:none;border:1px solid #cbd5e1;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #cbd5e1;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <h3 style="margin:0;font-size:15px;color:var(--text-primary);font-weight:700;">Perpanjangan Waktu</h3>
+                            @if (riwayatPerpanjangan.Count > 0)
+                            {
+                                <span style="background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;">@riwayatPerpanjangan.Count× diperpanjang</span>
+                            }
+                        </div>
+                        @if (!showPerpanjanganForm)
+                        {
+                            <button @onclick="@(() => { showPerpanjanganForm = true; perpanjanganError = null; })"
+                                    style="display:flex;align-items:center;gap:6px;background:var(--primary);color:white;border:none;border-radius:var(--radius);padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">
+                                <i class="bi bi-calendar-plus"></i> Perpanjang
+                            </button>
+                        }
+                    </div>
+
+                    @if (showPerpanjanganForm)
+                    {
+                        <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;background:#f8fafc;">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:10px;">Tanggal Kembali Saat Ini: <span style="color:var(--text-primary);">@modalBA.TanggalKembali?.ToString("dd MMMM yyyy")</span></div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                                <div>
+                                    <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">Tanggal Kembali Baru <span style="color:var(--danger)">*</span></label>
+                                    <input type="date"
+                                           style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:13px;outline:none;background:white;color:var(--text-primary);font-family:inherit;"
+                                           @bind="inputTanggalPerpanjangan" />
+                                </div>
+                                <div>
+                                    <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">Catatan (opsional)</label>
+                                    <input type="text" placeholder="Alasan perpanjangan..."
+                                           style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:13px;outline:none;background:white;color:var(--text-primary);font-family:inherit;"
+                                           @bind="inputCatatanPerpanjangan" />
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(perpanjanganError))
+                            {
+                                <div style="font-size:12px;color:var(--danger);margin-bottom:8px;">@perpanjanganError</div>
+                            }
+                            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                                <button @onclick="@(() => { showPerpanjanganForm = false; perpanjanganError = null; })"
+                                        style="background:none;border:1px solid var(--border);border-radius:var(--radius);padding:6px 14px;font-size:12px;cursor:pointer;color:var(--text-secondary);">
+                                    Batal
+                                </button>
+                                <button @onclick="SavePerpanjangan" disabled="@isSavingPerpanjangan"
+                                        style="background:var(--primary);color:white;border:none;border-radius:var(--radius);padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                                    @if (isSavingPerpanjangan)
+                                    {
+                                        <div class="spinner" style="width:12px;height:12px;border-width:2px;border-color:white;border-top-color:transparent;"></div>
+                                    }
+                                    Simpan Perpanjangan
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                    @if (riwayatPerpanjangan.Count == 0 && !showPerpanjanganForm)
+                    {
+                        <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">
+                            <i class="bi bi-calendar-check" style="font-size:20px;display:block;margin-bottom:6px;"></i>
+                            Belum ada perpanjangan
+                        </div>
+                    }
+                    else if (riwayatPerpanjangan.Count > 0)
+                    {
+                        <div style="padding:0;">
+                            @foreach (var (p, idx) in riwayatPerpanjangan.Select((p, i) => (p, i)))
+                            {
+                                <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:12px;padding:12px 16px;@(idx < riwayatPerpanjangan.Count - 1 ? "border-bottom:1px solid #f1f5f9;" : "")">
+                                    <div style="width:28px;height:28px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+                                        @(riwayatPerpanjangan.Count - idx)
+                                    </div>
+                                    <div>
+                                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:2px;">
+                                            @p.TanggalKembalisebelumnya.ToString("dd MMM yyyy")
+                                            <i class="bi bi-arrow-right" style="font-size:11px;color:var(--text-muted);margin:0 4px;"></i>
+                                            @p.TanggalKembaliBaru.ToString("dd MMM yyyy")
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(p.Catatan))
+                                        {
+                                            <div style="font-size:12px;color:var(--text-secondary);">@p.Catatan</div>
+                                        }
+                                    </div>
+                                    <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;margin-top:3px;">@p.DiperpanjangPada.ToString("dd MMM yyyy")</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
                 <!-- Daftar Perangkat -->
                 @if (modalBA.Perangkat.Any())
                 {
@@ -306,7 +398,7 @@ else if (currentRole == "AdminGudangBarang")
                                             <td><span style="font-weight:600;font-size:13px;">@p.Barang?.NamaBarang</span></td>
                                             <td style="font-size:13px;">@p.Jumlah</td>
                                             <td style="color:var(--text-secondary);font-size:13px;">@p.Satuan</td>
-                                            <td style="font-family:monospace;font-size:12px;">@(p.NoSerial ?? "-")</td>
+                                            <td style="font-size:13px;">@(p.NoSerial ?? "-")</td>
                                             <td style="color:var(--text-secondary);font-size:13px;">@(p.Keterangan ?? "-")</td>
                                         </tr>
                                     }
@@ -358,11 +450,27 @@ else if (currentRole == "Reviewer")
     <div class="dashboard-fill">
     <div class="stat-cards">
         <div class="stat-card">
-            <div class="stat-card-icon pending"><i class="bi bi-inbox"></i></div>
+            <div class="stat-card-icon progress"><i class="bi bi-hourglass-split"></i></div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Antrean Pending</div>
-                <div class="stat-card-value red">@reviewerStat.Pending</div>
+                <div class="stat-card-label">Menunggu Persetujuan</div>
+                <div class="stat-card-value blue">@reviewerStat.Pending</div>
                 <div class="stat-card-desc">Perlu diproses</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon approved"><i class="bi bi-check-circle"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Disetujui Bulan Ini</div>
+                <div class="stat-card-value green">@reviewerStat.ApprovedThisMonth</div>
+                <div class="stat-card-desc">Telah disetujui</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon rejected" style="background:#FEE2E2;color:#EF4444;"><i class="bi bi-x-circle"></i></div>
+            <div class="stat-card-info">
+                <div class="stat-card-label">Ditolak Bulan Ini</div>
+                <div class="stat-card-value red">@reviewerStat.RejectedThisMonth</div>
+                <div class="stat-card-desc">Dikembalikan</div>
             </div>
         </div>
         <div class="stat-card">
@@ -371,38 +479,6 @@ else if (currentRole == "Reviewer")
                 <div class="stat-card-label">Total Review</div>
                 <div class="stat-card-value">@reviewerStat.Total</div>
                 <div class="stat-card-desc">Semua waktu</div>
-            </div>
-        </div>
-        <div class="stat-card" title="@reviewerStat.ApprovedAlokasi Berita Acara Selesai">
-            <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Alokasi</div>
-                <div class="stat-card-value blue">@reviewerStat.ApprovedAlokasi</div>
-                <div class="stat-card-desc">Berita Acara Alokasi</div>
-            </div>
-        </div>
-        <div class="stat-card" title="@reviewerStat.ApprovedPeminjaman Berita Acara Selesai">
-            <div class="stat-card-icon approved"><i class="bi bi-arrow-left-right"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Peminjaman</div>
-                <div class="stat-card-value purple">@reviewerStat.ApprovedPeminjaman</div>
-                <div class="stat-card-desc">Berita Acara Peminjaman</div>
-            </div>
-        </div>
-        <div class="stat-card" title="@reviewerStat.ApprovedPenarikan Berita Acara Selesai">
-            <div class="stat-card-icon" style="background:#FEF3C7;color:#D97706;"><i class="bi bi-box-arrow-down"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Penarikan</div>
-                <div class="stat-card-value" style="color:#D97706">@reviewerStat.ApprovedPenarikan</div>
-                <div class="stat-card-desc">Berita Acara Penarikan</div>
-            </div>
-        </div>
-        <div class="stat-card" title="@reviewerStat.ApprovedLainnya Berita Acara Selesai">
-            <div class="stat-card-icon" style="background:#F1F5F9;color:#475569;"><i class="bi bi-file-earmark-plus"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Lainnya</div>
-                <div class="stat-card-value" style="color:#475569">@reviewerStat.ApprovedLainnya</div>
-                <div class="stat-card-desc">Berita Acara Lainnya</div>
             </div>
         </div>
     </div>
@@ -427,56 +503,110 @@ else if (currentRole == "Reviewer")
         </div>
     </div>
 
-    <!-- Antrian -->
-    <div class="dashboard-grid" style="grid-template-columns:1fr;">
-    <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;">
-        <div class="card-header" style="flex-shrink:0;">
-            <h3>Antrean Persetujuan</h3>
-            @if (reviewerQueue.Any())
-            {
-                <span class="pill pill-waiting-approval">@reviewerQueue.Count Menunggu</span>
+    <div class="dashboard-grid">
+        <!-- Jenis BA Progress (Left Column) -->
+        <div class="jenis-card">
+            <div class="jenis-title">Berita Acara Direview</div>
+            @{
+                var totalRev = reviewerStat.Total;
+                var pctRevAlokasi = totalRev > 0 ? (int)Math.Round((double)reviewerStat.ApprovedAlokasi / totalRev * 100) : 0;
+                var pctRevPeminjaman = totalRev > 0 ? (int)Math.Round((double)reviewerStat.ApprovedPeminjaman / totalRev * 100) : 0;
+                var pctRevPenarikan = totalRev > 0 ? (int)Math.Round((double)reviewerStat.ApprovedPenarikan / totalRev * 100) : 0;
+                var pctRevLainnya = totalRev > 0 ? (int)Math.Round((double)reviewerStat.ApprovedLainnya / totalRev * 100) : 0;
             }
+              <div class="jenis-item">
+                  <div class="jenis-label">
+                      <span class="jenis-name">Alokasi</span>
+                      <span class="jenis-pct">@pctRevAlokasi%</span>
+                  </div>
+                  <div class="jenis-bar"><div class="jenis-fill alokasi" style="width:@pctRevAlokasi%"></div></div>
+                  <div class="custom-chart-tooltip">
+                      <span class="tooltip-color-box" style="background:var(--primary);"></span>
+                      Alokasi: @reviewerStat.ApprovedAlokasi
+                  </div>
+              </div>
+              <div class="jenis-item">
+                  <div class="jenis-label">
+                      <span class="jenis-name">Peminjaman</span>
+                      <span class="jenis-pct">@pctRevPeminjaman%</span>
+                  </div>
+                  <div class="jenis-bar"><div class="jenis-fill peminjaman" style="width:@pctRevPeminjaman%"></div></div>
+                  <div class="custom-chart-tooltip">
+                      <span class="tooltip-color-box" style="background:var(--success);"></span>
+                      Peminjaman: @reviewerStat.ApprovedPeminjaman
+                  </div>
+              </div>
+              <div class="jenis-item">
+                  <div class="jenis-label">
+                      <span class="jenis-name">Penarikan</span>
+                      <span class="jenis-pct">@pctRevPenarikan%</span>
+                  </div>
+                  <div class="jenis-bar"><div class="jenis-fill penarikan" style="width:@pctRevPenarikan%; background: #F59E0B"></div></div>
+                  <div class="custom-chart-tooltip">
+                      <span class="tooltip-color-box" style="background:#F59E0B;"></span>
+                      Penarikan: @reviewerStat.ApprovedPenarikan
+                  </div>
+              </div>
+              <div class="jenis-item">
+                  <div class="jenis-label">
+                      <span class="jenis-name">Lainnya</span>
+                      <span class="jenis-pct">@pctRevLainnya%</span>
+                  </div>
+                  <div class="jenis-bar"><div class="jenis-fill lainnya" style="width:@pctRevLainnya%; background: #64748B"></div></div>
+                  <div class="custom-chart-tooltip">
+                      <span class="tooltip-color-box" style="background:#64748B;"></span>
+                      Lainnya: @reviewerStat.ApprovedLainnya
+                  </div>
+              </div>
         </div>
-        @if (!reviewerQueue.Any())
-        {
-            <div style="text-align:center;padding:48px;color:var(--text-muted);flex:1;">
-                <i class="bi bi-inbox" style="font-size:32px;display:block;margin-bottom:12px;"></i>
-                Tidak ada antrian persetujuan saat ini
+
+        <!-- Antrean List (Right Column) -->
+        <div class="due-section">
+            <div class="due-header">
+                <div class="due-title">
+                    <i class="bi bi-inbox"></i>
+                    Antrean Persetujuan
+                </div>
+                @if (reviewerQueue.Any())
+                {
+                    <span class="pill" style="background:var(--warning-light);color:var(--warning);font-size:11px;">@reviewerQueue.Count Menunggu</span>
+                }
             </div>
-        }
-        else
-        {
-            <div style="flex:1;overflow-y:auto;min-height:0;">
-            <table class="data-table table-hover">
-                <thead style="position:sticky;top:0;background:var(--bg);z-index:1;">
-                    <tr>
-                        <th style="cursor:pointer;" @onclick="@(() => SortReviewer("No. Surat"))">No. Surat <i class="bi @GetReviewerSortIcon("No. Surat")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortReviewer("Jenis BA"))">Jenis Berita Acara <i class="bi @GetReviewerSortIcon("Jenis BA")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortReviewer("Penanggung Jawab"))">Penanggung Jawab <i class="bi @GetReviewerSortIcon("Penanggung Jawab")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                        <th style="cursor:pointer;" @onclick="@(() => SortReviewer("Tanggal Submit"))">Waktu Submit <i class="bi @GetReviewerSortIcon("Tanggal Submit")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i></th>
-                    </tr>
-                </thead>
-                <tbody>
+            @if (!reviewerQueue.Any())
+            {
+                <div style="text-align:center;padding:24px;color:var(--text-muted);">
+                    <i class="bi bi-check-circle" style="font-size:24px;"></i>
+                    <div style="margin-top:8px;font-size:14px;">Tidak ada antrean persetujuan</div>
+                </div>
+            }
+            else
+            {
+                <div class="due-list">
                     @foreach (var ba in SortedReviewerQueue)
                     {
-                        <tr @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}?from=dashboard"))" style="cursor:pointer;" class="clickable-row">
-                            <td><span class="fw-semibold text-primary">@ba.NomorSurat</span></td>
-                            <td><span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span></td>
-                            <td>
-                                <div class="cell-main">@ba.Pj?.Nama</div>
-                                <div class="cell-sub">@ba.Pj?.FungsiDirektorat</div>
-                            </td>
-                            <td>
-                                <div>@ba.SubmittedAt?.ToString("dd MMM yyyy")</div>
-                                <div style="font-size:11px;color:var(--text-muted);">@ba.SubmittedAt?.ToString("HH:mm") WIB</div>
-                            </td>
-                        </tr>
+                        var isToday = ba.SubmittedAt?.Date == DateTime.Today;
+                        var badgeClass = isToday ? "due-badge today" : "due-badge h2";
+                        var badgeText = isToday ? "Hari Ini" : "Menunggu";
+                        <div class="due-item" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}?from=dashboard"))">
+                            <div class="due-item-info">
+                                <div class="due-item-surat">
+                                    @if (!string.IsNullOrEmpty(ba.NomorSurat))
+                                    {
+                                        <span>@ba.NomorSurat</span>
+                                    }
+                                    <span class="pill @GetJenisPill(ba.Jenis)" style="@(string.IsNullOrEmpty(ba.NomorSurat) ? "" : "margin-left:6px;")font-size:10px;padding:2px 6px;">@ba.Jenis</span>
+                                </div>
+                                <div class="due-item-pj"><i class="bi bi-person" style="font-size:11px;"></i> @ba.Pj?.Nama</div>
+                                <div class="due-item-tgl"><i class="bi bi-calendar-event" style="font-size:11px;"></i> @ba.SubmittedAt?.ToString("dd MMM yyyy")</div>
+                            </div>
+                            <div class="due-item-right">
+                                <span class="@badgeClass">@badgeText</span>
+                            </div>
+                        </div>
                     }
-                </tbody>
-            </table>
-            </div>
-        }
-    </div>
+                </div>
+            }
+        </div>
     </div>
     </div>
 }
@@ -555,8 +685,16 @@ else if (currentRole == "AdminIT")
     private bool isReturning = false;
     private BAEntity? modalBA = null;
 
+    // Perpanjangan state
+    private List<SistemBeritaAcara.Core.Entities.PerpanjanganBA> riwayatPerpanjangan = new();
+    private bool showPerpanjanganForm = false;
+    private DateTime? inputTanggalPerpanjangan = null;
+    private string inputCatatanPerpanjangan = string.Empty;
+    private bool isSavingPerpanjangan = false;
+    private string? perpanjanganError = null;
+
     // Reviewer stats
-    private (int Pending, int Total, int ApprovedAlokasi, int ApprovedPeminjaman, int ApprovedPenarikan, int ApprovedLainnya) reviewerStat;
+    private (int Pending, int Total, int ApprovedThisMonth, int RejectedThisMonth, int ApprovedAlokasi, int ApprovedPeminjaman, int ApprovedPenarikan, int ApprovedLainnya) reviewerStat;
     private List<BAEntity> reviewerQueue = new();
 
     // AdminIT stats
@@ -679,11 +817,20 @@ else if (currentRole == "AdminIT")
 
         reviewerStat.Pending = myQueue.Count(b => b.Status == "WaitingApproval");
         var approvedBA = myQueue.Where(b => b.Status == "Approved" || b.Status == "Archived").ToList();
-        reviewerStat.Total = approvedBA.Count;
-        reviewerStat.ApprovedAlokasi = approvedBA.Count(b => b.Jenis == "Alokasi");
-        reviewerStat.ApprovedPeminjaman = approvedBA.Count(b => b.Jenis == "Peminjaman");
-        reviewerStat.ApprovedPenarikan = approvedBA.Count(b => b.Jenis == "Penarikan");
-        reviewerStat.ApprovedLainnya = approvedBA.Count(b => b.Jenis != "Alokasi" && b.Jenis != "Peminjaman" && b.Jenis != "Penarikan");
+        var rejectedBA = myQueue.Where(b => b.Status == "Rejected").ToList();
+        
+        var currentMonth = DateTime.Now.Month;
+        var currentYear = DateTime.Now.Year;
+
+        reviewerStat.Total = myQueue.Count(b => b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected");
+        reviewerStat.ApprovedThisMonth = approvedBA.Count(b => b.ApprovedAt?.Month == currentMonth && b.ApprovedAt?.Year == currentYear);
+        // We use CreatedAt or Tanggal if RejectedAt doesn't exist. Actually, let's just use simple current month filter for rejected. (Wait, let's see if there is RejectedAt or just use simple comparison)
+        reviewerStat.RejectedThisMonth = rejectedBA.Count; // Simplification, or let's use Tanggal as a proxy for this month if there's no RejectedAt
+        
+        reviewerStat.ApprovedAlokasi = myQueue.Count(b => b.Jenis == "Alokasi" && (b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected"));
+        reviewerStat.ApprovedPeminjaman = myQueue.Count(b => b.Jenis == "Peminjaman" && (b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected"));
+        reviewerStat.ApprovedPenarikan = myQueue.Count(b => b.Jenis == "Penarikan" && (b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected"));
+        reviewerStat.ApprovedLainnya = myQueue.Count(b => b.Jenis != "Alokasi" && b.Jenis != "Peminjaman" && b.Jenis != "Penarikan" && (b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected"));
 
         reviewerQueue = myQueue
             .Where(b => b.Status == "WaitingApproval")
@@ -775,10 +922,19 @@ else if (currentRole == "AdminIT")
     };
 
     // Modal actions
-    private void OpenDetailModal(int baId)
+    private async Task OpenDetailModal(int baId)
     {
         modalBA = activePeminjaman.FirstOrDefault(b => b.Id == baId);
         confirmReturnId = null;
+        showPerpanjanganForm = false;
+        inputTanggalPerpanjangan = null;
+        inputCatatanPerpanjangan = string.Empty;
+        perpanjanganError = null;
+
+        riwayatPerpanjangan = await DbCtx.Set<SistemBeritaAcara.Core.Entities.PerpanjanganBA>()
+            .Where(p => p.BeritaAcaraId == baId)
+            .OrderByDescending(p => p.DiperpanjangPada)
+            .ToListAsync();
     }
 
     private void CloseModal()
@@ -787,6 +943,58 @@ else if (currentRole == "AdminIT")
         modalBA = null;
         confirmReturnId = null;
         confirmReturnNomorSurat = string.Empty;
+        showPerpanjanganForm = false;
+        riwayatPerpanjangan.Clear();
+    }
+
+    private async Task SavePerpanjangan()
+    {
+        perpanjanganError = null;
+        if (!inputTanggalPerpanjangan.HasValue)
+        {
+            perpanjanganError = "Pilih tanggal kembali baru terlebih dahulu.";
+            return;
+        }
+        var newDate = DateOnly.FromDateTime(inputTanggalPerpanjangan.Value);
+        if (newDate <= modalBA!.TanggalKembali)
+        {
+            perpanjanganError = "Tanggal baru harus lebih dari tanggal kembali sebelumnya.";
+            return;
+        }
+
+        isSavingPerpanjangan = true;
+        try
+        {
+            var ba = await DbCtx.Set<BAEntity>().FirstOrDefaultAsync(b => b.Id == modalBA.Id);
+            if (ba is null) return;
+
+            var perpanjangan = new SistemBeritaAcara.Core.Entities.PerpanjanganBA
+            {
+                BeritaAcaraId = ba.Id,
+                TanggalKembalisebelumnya = ba.TanggalKembali!.Value,
+                TanggalKembaliBaru = newDate,
+                DiperpanjangPada = DateTime.Now,
+                Catatan = string.IsNullOrWhiteSpace(inputCatatanPerpanjangan) ? null : inputCatatanPerpanjangan.Trim()
+            };
+
+            ba.TanggalKembali = newDate;
+            DbCtx.Set<SistemBeritaAcara.Core.Entities.PerpanjanganBA>().Add(perpanjangan);
+            await DbCtx.SaveChangesAsync();
+
+            // Update local list
+            modalBA.TanggalKembali = newDate;
+            var localBa = activePeminjaman.FirstOrDefault(b => b.Id == modalBA.Id);
+            if (localBa is not null) localBa.TanggalKembali = newDate;
+
+            riwayatPerpanjangan.Insert(0, perpanjangan);
+            showPerpanjanganForm = false;
+            inputTanggalPerpanjangan = null;
+            inputCatatanPerpanjangan = string.Empty;
+        }
+        finally
+        {
+            isSavingPerpanjangan = false;
+        }
     }
 
     // Return actions

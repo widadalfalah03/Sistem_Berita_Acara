@@ -25,7 +25,7 @@ public class BACounterService(AppDbContext db, IConfiguration configuration) : I
         bool isLainnya = jenis != null && jenis.Equals("Lainnya", StringComparison.OrdinalIgnoreCase);
         var formatKey = isLainnya ? "NomorSurat:FormatLainnya" : "NomorSurat:FormatUmum";
         var format = configuration[formatKey]
-            ?? (isLainnya ? "BA {counter}/PPNEG1000/{year}-S8" : "BA {counter}/PPNEG1000/{year}-S0");
+            ?? (isLainnya ? "BA-{counter}/PPNEG1000/{year}-S8" : "BA-{counter}/PPNEG1000/{year}-S0");
 
         var nomor = format
             .Replace("{counter}", value.ToString("D3"))

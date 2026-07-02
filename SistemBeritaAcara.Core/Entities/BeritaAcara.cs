@@ -8,6 +8,7 @@ public class BeritaAcara
     public DateOnly Tanggal { get; set; }
     public string Jenis { get; set; } = string.Empty;
     public string? JenisCustom { get; set; }
+    public string? Keterangan { get; set; }
     public int? PjId { get; set; }
     public string? PjNoTelp { get; set; }
     /// <summary>Diisi jika tipe PJ adalah Tenaga Alih Daya (TAD). Nama pengguna/user TAD.</summary>

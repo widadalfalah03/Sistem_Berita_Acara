@@ -8,7 +8,7 @@
 @inject NavigationManager Navigation
 @inject IExcelService ExcelService
 @inject IJSRuntime JS
-@rendermode InteractiveServer
+
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 <PageTitle>Archive — Sistem Berita Acara</PageTitle>
@@ -27,14 +27,14 @@
 
 <!-- Filter Panel -->
 <div class="card" style="margin-bottom:16px;overflow:visible;padding:0;">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:start;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;align-items:start;">
 
         <!-- No. Surat -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">No. Surat</div>
-            <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);">
+            <div style="display:flex;align-items:center;gap:8px;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
                 <input type="text" placeholder="Cari nomor..."
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;"
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
                        @bind="search" @bind:event="oninput" />
                 <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
             </div>
@@ -44,7 +44,7 @@
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;position:relative;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Pihak Terkait</div>
             <button @onclick="ToggleNamePopover"
-                    style="display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);cursor:pointer;text-align:left;box-sizing:border-box;">
+                    style="display:flex;align-items:center;gap:8px;height:36px;width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);cursor:pointer;text-align:left;box-sizing:border-box;font-family:inherit;">
                 <span style="font-size:13px;color:@(HasNameFilter ? "var(--text-primary)" : "var(--text-muted)");flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                     @(HasNameFilter ? GetNameFilterSummary() : "Cari nama...")
                 </span>
@@ -92,10 +92,21 @@
             }
         </div>
 
+        <!-- Keterangan -->
+        <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Keterangan</div>
+            <div style="display:flex;align-items:center;gap:8px;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
+                <input type="text" placeholder="Cari keterangan / barang..."
+                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
+                       @bind="keteranganSearch" @bind:event="oninput" />
+                <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
+            </div>
+        </div>
+
         <!-- Tanggal -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Tanggal</div>
-            <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);">
+            <div style="display:flex;align-items:center;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
                 <input type="date"
                        style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
                        @bind="dateFilter" />
@@ -106,7 +117,7 @@
         <div style="padding:10px 14px;position:relative;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Jenis Berita Acara</div>
             <div @onclick="() => showJenisDropdown = !showJenisDropdown"
-                 style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;background:var(--surface);cursor:pointer;min-width:150px;white-space:nowrap;">
+                 style="display:flex;align-items:center;justify-content:space-between;gap:8px;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);cursor:pointer;min-width:150px;white-space:nowrap;">
                 <span style="font-size:13px;color:var(--text-primary);">@(string.IsNullOrEmpty(jenisFilter) ? "Semua Jenis" : jenisFilter)</span>
                 <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showJenisDropdown ? "transform:rotate(180deg);" : "")"></i>
             </div>
@@ -161,27 +172,60 @@ else if (!FilteredBA.Any())
 else
 {
     <div class="card" style="overflow:hidden;padding:0;">
-        @foreach (var ba in FilteredBA)
-        {
-            <div class="arsip-row" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}?from=archive"))">
-                <span class="arsip-row-number">@ba.NomorSurat</span>
-                <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
-                <div style="margin-left:auto;display:flex;align-items:center;gap:14px;flex-shrink:0;">
-                    <span class="arsip-row-date">@ba.Tanggal.ToString("dd MMM yyyy")</span>
-                    @if (!string.IsNullOrEmpty(ba.DocxFinalPath) || !string.IsNullOrEmpty(ba.DocxPath))
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nomor Surat</th>
+                        <th>Jenis Berita Acara</th>
+                        <th>Keterangan</th>
+                        <th>Tanggal</th>
+                        <th style="width:90px;text-align:center;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ba in FilteredBA)
                     {
-                        <a href="/api/ba/@ba.Id/download" download
-                           class="arsip-row-download"
-                           @onclick:stopPropagation="true"
-                           title="Unduh dokumen">
-                            <i class="bi bi-download"></i>
-                        </a>
+                        <tr>
+                            <td>
+                                <div class="cell-main" style="font-weight:600;">@ba.NomorSurat</div>
+                            </td>
+                            <td>
+                                <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
+                            </td>
+                            <td>
+                                <div class="cell-main">
+                                    @if (ba.Jenis == "Lainnya")
+                                    {
+                                        @(ba.Keterangan ?? "—")
+                                    }
+                                    else
+                                    {
+                                        @(ba.Perangkat?.FirstOrDefault()?.Barang?.NamaBarang ?? "—")
+                                    }
+                                </div>
+                            </td>
+                            <td style="white-space:nowrap;">@ba.Tanggal.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                                    @if (!string.IsNullOrEmpty(ba.DocxFinalPath) || !string.IsNullOrEmpty(ba.DocxPath))
+                                    {
+                                        <button class="btn-icon" title="Pratinjau" @onclick="@(() => previewBaId = ba.Id)">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <a href="/api/ba/@ba.Id/download" download class="btn-icon" title="Unduh">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
                     }
-                </div>
-            </div>
-        }
+                </tbody>
+            </table>
+        </div>
     </div>
-    
+
     @if (TotalFilteredItems > 0)
     {
         <SistemBeritaAcara.Web.Components.Shared.Pagination
@@ -192,6 +236,18 @@ else
     }
 }
 
+@if (previewBaId.HasValue)
+{
+    <div class="modal-overlay" @onclick="() => previewBaId = null">
+        <div class="modal-content" @onclick:stopPropagation
+             style="width:90%;max-width:920px;height:88vh;padding:0;border-radius:var(--radius-lg);overflow:hidden;">
+            <iframe src="/api/preview/pdf/@previewBaId#toolbar=1&navpanes=0"
+                    style="width:100%;height:100%;border:none;display:block;"
+                    title="Pratinjau BA"></iframe>
+        </div>
+    </div>
+}
+
 @code {
     private List<BeritaAcaraEntity> allBA = new();
     private bool isLoading = true;
@@ -200,6 +256,7 @@ else
     private int currentUserId;
     private bool showNamePopover = false;
     private bool showJenisDropdown = false;
+    private int? previewBaId;
 
     private string _search = string.Empty;
     private string search
@@ -236,6 +293,13 @@ else
         set { _jenisFilter = value; currentPage = 1; }
     }
 
+    private string _keteranganSearch = string.Empty;
+    private string keteranganSearch
+    {
+        get => _keteranganSearch;
+        set { _keteranganSearch = value; currentPage = 1; }
+    }
+
     private DateTime? _dateFilter;
     private DateTime? dateFilter
     {
@@ -255,6 +319,7 @@ else
         !string.IsNullOrEmpty(search) ||
         HasNameFilter ||
         !string.IsNullOrEmpty(jenisFilter) ||
+        !string.IsNullOrEmpty(keteranganSearch) ||
         dateFilter.HasValue;
 
     private string GetNameFilterSummary()
@@ -287,6 +352,10 @@ else
                     (b.Mengetahui?.Nama ?? "").Contains(mengetahuiSearch, StringComparison.OrdinalIgnoreCase))
         .Where(b => string.IsNullOrEmpty(jenisFilter) ||
                     b.Jenis.Equals(jenisFilter, StringComparison.OrdinalIgnoreCase))
+        .Where(b => string.IsNullOrEmpty(keteranganSearch) ||
+                    (b.Jenis == "Lainnya"
+                        ? (b.Keterangan ?? "").Contains(keteranganSearch, StringComparison.OrdinalIgnoreCase)
+                        : (b.Perangkat?.FirstOrDefault()?.Barang?.NamaBarang ?? "").Contains(keteranganSearch, StringComparison.OrdinalIgnoreCase)))
         .Where(b => !dateFilter.HasValue || b.Tanggal == DateOnly.FromDateTime(dateFilter.Value));
 
     private int TotalFilteredItems => ApplyFilters(allBA).Count();
@@ -328,6 +397,7 @@ else
         menyerahkanSearch = string.Empty;
         mengetahuiSearch = string.Empty;
         jenisFilter = string.Empty;
+        keteranganSearch = string.Empty;
         dateFilter = null;
         showNamePopover = false;
         showJenisDropdown = false;
