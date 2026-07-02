@@ -230,7 +230,7 @@ else
                 </button>
                 <button @onclick='() => SwitchTtdMode("upload")'
                         style="flex:1;padding:9px 12px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(ttdMode=="upload"?"var(--primary)":"transparent");color:@(ttdMode=="upload"?"white":"var(--text-secondary)");">
-                    <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload Gambar
+                    <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload TTD
                 </button>
             </div>
 
@@ -255,24 +255,24 @@ else
 
             <!-- ── MODE: UPLOAD ── -->
             <div style="display:@(ttdMode == "upload" ? "block" : "none")">
-                <label for="ttd-ul-input" style="cursor:pointer;display:block;">
-                    <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--surface);padding:20px;text-align:center;transition:border-color .15s;"
-                         onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-                        <i class="bi bi-image" style="font-size:30px;color:var(--primary);display:block;margin-bottom:8px;"></i>
-                        <div style="font-weight:600;font-size:14px;margin-bottom:3px;">Klik untuk pilih gambar</div>
+                <div style="position:relative;height:200px;border:2px dashed var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;margin-bottom:12px;transition:border-color .15s;"
+                     onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <!-- Placeholder (visible sebelum file dipilih) -->
+                    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+                        <i class="bi bi-image" style="font-size:30px;color:var(--primary);margin-bottom:8px;"></i>
+                        <div style="font-weight:600;font-size:14px;margin-bottom:3px;">Klik untuk pilih TTD</div>
                         <div style="font-size:12px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
                     </div>
+                    <!-- Preview canvas (ditampilkan JS setelah file dipilih) -->
+                    <div id="ttd-ul-wrap" style="display:none;position:absolute;inset:0;background:white;padding:8px;">
+                        <canvas id="ttd-ul-canvas" style="display:block;max-width:100%;max-height:184px;margin:auto;"></canvas>
+                    </div>
+                    <!-- Click target tidak terlihat, menutup seluruh area -->
+                    <label for="ttd-ul-input" style="position:absolute;inset:0;cursor:pointer;"></label>
                     <input type="file" id="ttd-ul-input" accept="image/*" style="display:none"
                            onchange="ttdUpload.onFileChange('ttd-ul-input', 'ttd-ul-canvas', 'ttd-ul-wrap')" />
-                </label>
-
-                <div id="ttd-ul-wrap" style="display:none;margin-top:14px;">
-                    <div style="background:white;border-radius:var(--radius);border:2px solid var(--border);padding:8px;min-height:80px;display:flex;align-items:center;justify-content:center;">
-                        <canvas id="ttd-ul-canvas" style="display:block;max-width:100%;height:auto;"></canvas>
-                    </div>
                 </div>
-
-                <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+                <div style="display:flex;justify-content:flex-end;">
                     <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@isSavingTtd">
                         @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
                         else { <i class="bi bi-save"></i> <span>Simpan</span> }
@@ -372,7 +372,7 @@ else
             if (ttdMode == "upload")
             {
                 bool hasImg = await JS.InvokeAsync<bool>("ttdUpload.hasImage");
-                if (!hasImg) { globalMessage = "Gagal: Silakan upload gambar tanda tangan terlebih dahulu."; return; }
+                if (!hasImg) { globalMessage = "Gagal: Silakan upload TTD terlebih dahulu."; return; }
                 dataUrl = await JS.InvokeAsync<string>("ttdUpload.getDataUrl");
             }
             else

@@ -119,7 +119,7 @@ else
                 </button>
                 <button @onclick='() => SwitchPjMode("upload")'
                         style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(pjTtdMode=="upload"?"var(--primary)":"transparent");color:@(pjTtdMode=="upload"?"white":"var(--text-secondary)");">
-                    <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload Gambar
+                    <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload TTD
                 </button>
             </div>
 
@@ -389,7 +389,7 @@ else
                 bool hasImg = await JS.InvokeAsync<bool>("ttdUpload.hasImage");
                 if (!hasImg)
                 {
-                    actionMessage = "Silakan upload gambar tanda tangan terlebih dahulu.";
+                    actionMessage = "Silakan upload TTD terlebih dahulu.";
                     isSubmitting = false;
                     return;
                 }

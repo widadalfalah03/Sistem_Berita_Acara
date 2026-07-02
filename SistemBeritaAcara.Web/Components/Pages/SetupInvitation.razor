@@ -97,7 +97,7 @@
                         </button>
                         <button @onclick='() => SwitchSetupMode("upload")'
                                 style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(setupTtdMode=="upload"?"var(--primary)":"transparent");color:@(setupTtdMode=="upload"?"white":"var(--text-secondary)");">
-                            <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload Gambar
+                            <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload TTD
                         </button>
                     </div>
 
@@ -267,7 +267,7 @@
         if (setupTtdMode == "upload")
         {
             bool hasImg = await JS.InvokeAsync<bool>("ttdUpload.hasImage");
-            if (!hasImg) { errorMessage = "Silakan upload gambar tanda tangan terlebih dahulu."; return; }
+            if (!hasImg) { errorMessage = "Silakan upload TTD terlebih dahulu."; return; }
             dataUrl = await JS.InvokeAsync<string>("ttdUpload.getDataUrl");
         }
         else
