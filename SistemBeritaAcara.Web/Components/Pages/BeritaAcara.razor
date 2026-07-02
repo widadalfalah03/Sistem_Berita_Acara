@@ -116,15 +116,15 @@
     <!-- ── Card 2–5 ── -->
     @if (model.Jenis != "Lainnya")
     {
-        <!-- ── 2. Data Penanggung Jawab ── -->
+        <!-- ── 2. Data Pegawai ── -->
         <div class="form-section">
-            <div class="form-section-title">2. Data Penanggung Jawab</div>
+            <div class="form-section-title">2. Data Pegawai</div>
 
             <div class="form-row">
                 <div style="display:flex;flex-direction:column;gap:16px;flex:1;">
                     <!-- Radio: Pekerja vs Tenaga Alih Daya -->
                     <div>
-                        <label class="form-label" style="margin-bottom:8px;display:block;">Tipe Penanggung Jawab</label>
+                        <label class="form-label" style="margin-bottom:8px;display:block;">Status Kepegawaian</label>
                         <div style="display:flex;gap:24px;align-items:center;">
                             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
                                 <input type="radio" name="tipePj" value="Pekerja"
@@ -145,7 +145,7 @@
                     <!-- Field Pengguna: muncul jika TAD -->
                     @if (model.TipePj == "TenagaAlihDaya")
                     {
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom:8px;">
                             <label class="form-label">Nama Pengguna <span style="color:var(--danger)">*</span></label>
                             <input type="text" class="form-control"
                                    placeholder="Masukkan nama pengguna TAD"
