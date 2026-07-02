@@ -42,7 +42,6 @@
 {
     <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;background:var(--bg);">
         <div class="spinner" style="width:40px;height:40px;border-width:4px;"></div>
-        <div style="color:var(--text-secondary);">Memvalidasi link...</div>
     </div>
 }
 else if (!isValidToken)
@@ -419,10 +418,9 @@ else
             ba!.TtdPjPath = $"files/signatures/{fname}";
             ba.Status = "WaitingApproval";
             ba.PjSignedAt = DateTime.Now;
+            await DocumentService.EmbedTtdPjAsync(ba.Id, fpath);
             approvalToken!.UsedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
-
-            await DocumentService.EmbedTtdPjAsync(ba.Id, fpath);
 
             // File TTD PJ sengaja TIDAK dihapus di sini — dibutuhkan lagi saat Approve
             // untuk di-embed ulang ke dokumen final (ApproveAsync akan menghapusnya setelah selesai)

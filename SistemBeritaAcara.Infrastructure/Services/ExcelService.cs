@@ -74,11 +74,16 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
                 existing.LastSync = DateTime.Now;
                 updated++;
 
-                var linkedUsers = await db.Users.Where(u => u.PegawaiId == existing.Id && u.IsDeleted).ToListAsync();
+                var linkedUsers = await db.Users.Where(u => u.PegawaiId == existing.Id).ToListAsync();
                 foreach (var user in linkedUsers)
                 {
-                    user.IsDeleted = false;
-                    user.DeletedAt = null;
+                    user.Nama = nama;
+                    user.Jabatan = jabatan;
+                    if (user.IsDeleted)
+                    {
+                        user.IsDeleted = false;
+                        user.DeletedAt = null;
+                    }
                 }
             }
         }

@@ -443,6 +443,6 @@ RecurringJob.AddOrUpdate<DueDateCheckerJob>(
 RecurringJob.AddOrUpdate<AutoApproveJob>(
     "cek-auto-approve-pj",
     job => job.ProcessAutoApproveAsync(),
-    "* * * * *"); // TESTING: setiap menit (production: Cron.Hourly())
+    Cron.Hourly());
 
 app.Run();

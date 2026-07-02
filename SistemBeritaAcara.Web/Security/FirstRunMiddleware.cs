@@ -30,6 +30,7 @@ public class FirstRunMiddleware(RequestDelegate next)
     // Cache in-memory agar tidak query DB setiap request setelah ada user.
     // volatile: memastikan semua thread membaca nilai terbaru tanpa race condition.
     private static volatile bool _hasUsers = false;
+    private static readonly SemaphoreSlim _checkLock = new(1, 1);
 
     public async Task InvokeAsync(HttpContext context, IServiceProvider services)
     {
@@ -45,9 +46,20 @@ public class FirstRunMiddleware(RequestDelegate next)
         // Jika cache sudah tahu ada user, skip pengecekan DB
         if (!_hasUsers)
         {
-            using var scope = services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            _hasUsers = db.Users.Any();
+            await _checkLock.WaitAsync();
+            try
+            {
+                if (!_hasUsers) // double-check setelah acquire lock
+                {
+                    using var scope = services.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    _hasUsers = db.Users.Any();
+                }
+            }
+            finally
+            {
+                _checkLock.Release();
+            }
         }
 
         if (!_hasUsers)

@@ -213,6 +213,7 @@
     private bool isSubmitting = false;
     private string errorMessage = string.Empty;
     private int _currentUserId;
+    private bool _menyerahkanEmbedded = false;
     // pdfVersion hanya naik saat kita sengaja refresh data dari DB.
     // Digunakan sebagai @key pada iframe sehingga browser memuat ulang PDF
     // tepat satu kali setiap kali kita kembali dari ONLYOFFICE editor.
@@ -315,6 +316,7 @@
                             {
                                 var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
                                 await DocumentService.EmbedTtdMenyerahkanAsync(Id, ttdPhysicalPath);
+                                _menyerahkanEmbedded = true;
                             }
                         }
                     }
@@ -448,7 +450,7 @@
                 .Include(b => b.Pj)
                 .Include(b => b.Mengetahui)
                 .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
-                .FirstOrDefaultAsync(b => b.Id == ba.Id);
+                .FirstOrDefaultAsync(b => b.Id == ba.Id && b.CreatedBy == _currentUserId);
 
             if (trackedBa is null)
             {
@@ -480,8 +482,13 @@
             else
             {
                 // Embed TTD Menyerahkan (Admin GB) untuk BA selain Lainnya
+                // Lewati jika sudah di-embed saat LoadBaAsync pada sesi ini
                 var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser!.TtdPath!.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                await DocumentService.EmbedTtdMenyerahkanAsync(trackedBa.Id, ttdPhysicalPath);
+                if (!_menyerahkanEmbedded)
+                {
+                    await DocumentService.EmbedTtdMenyerahkanAsync(trackedBa.Id, ttdPhysicalPath);
+                }
+                _menyerahkanEmbedded = false;
 
                 bool pjAlreadySigned = !string.IsNullOrEmpty(trackedBa.TtdPjPath) && trackedBa.PjSignedAt.HasValue;
 
