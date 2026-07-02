@@ -12,7 +12,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject IConfiguration Configuration
-
+@rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 @implements IDisposable
 
@@ -132,7 +132,7 @@
                     <table style="width:100%;border-collapse:collapse;font-size:13px;">
                         <tr>
                             <td style="padding:7px 0;color:var(--text-secondary);width:45%;">No. Surat</td>
-                            <td style="padding:7px 0;font-weight:600;color:var(--primary);">@(ba.NomorSurat ?? (ba.Jenis == "Lainnya" ? "Dibuat otomatis saat ditambahkan ke arsip" : "Dibuat otomatis saat dikirim"))</td>
+                            <td style="padding:7px 0;font-weight:600;color:var(--primary);">@(ba.NomorSurat ?? "Dibuat otomatis saat dikirim")</td>
                         </tr>
                         <tr>
                             <td style="padding:7px 0;color:var(--text-secondary);">Jenis Berita Acara</td>
@@ -295,7 +295,10 @@
                     var trackedBa = await DbContext.Set<BeritaAcaraEntity>().FindAsync(Id);
                     if (trackedBa != null)
                     {
-                        trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+                        // Lainnya: generate dokumen simpel (judul + nomor surat saja, tanpa template lengkap)
+                        trackedBa.DocxPath = ba.Jenis == "Lainnya"
+                            ? await DocumentService.GenerateLainnyaDocxAsync(ba)
+                            : await DocumentService.GenerateDocxAsync(ba);
                         await DbContext.SaveChangesAsync();
                         ba = await DbContext.Set<BeritaAcaraEntity>()
                             .AsNoTracking()
@@ -459,7 +462,9 @@
 
             if (string.IsNullOrEmpty(trackedBa.DocxPath))
             {
-                trackedBa.DocxPath = await DocumentService.GenerateDocxAsync(trackedBa);
+                trackedBa.DocxPath = trackedBa.Jenis == "Lainnya"
+                    ? await DocumentService.GenerateLainnyaDocxAsync(trackedBa)
+                    : await DocumentService.GenerateDocxAsync(trackedBa);
                 await DbContext.SaveChangesAsync();
             }
 

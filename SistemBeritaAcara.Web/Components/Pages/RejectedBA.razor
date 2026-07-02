@@ -5,7 +5,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
-
+@rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 <PageTitle>Rejected — Sistem Berita Acara</PageTitle>
@@ -67,15 +67,6 @@
 @if (isLoading)
 {
     <div class="loading-spinner"><div class="spinner"></div></div>
-}
-else if (loadError is not null)
-{
-    <div class="card" style="text-align:center;padding:60px;border-radius:var(--radius-lg);">
-        <i class="bi bi-exclamation-triangle" style="font-size:48px;color:var(--danger,#ef4444);display:block;margin-bottom:16px;"></i>
-        <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Gagal memuat halaman</div>
-        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">@loadError</div>
-        <button class="btn btn-primary" @onclick="() => Navigation.NavigateTo(Navigation.Uri, true)">Muat Ulang</button>
-    </div>
 }
 else
 {
@@ -199,7 +190,6 @@ else
     private string activeTab = "revisi";
     private int currentPage = 1;
     private int pageSize = 10;
-    private string? loadError;
 
     private void SwitchTab(string tab)
     {
@@ -227,9 +217,8 @@ else
 
             isLoading = false;
         }
-        catch (Exception ex)
+        catch
         {
-            loadError = ex.Message;
             isLoading = false;
         }
     }

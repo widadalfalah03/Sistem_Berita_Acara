@@ -1,14 +1,14 @@
-@page "/edit-pengguna/{Id:int}"
+﻿@page "/edit-pengguna/{Id:int}"
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @inject AppDbContext DbContext
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
-
+@rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
 
-<PageTitle>Edit Pengguna � Sistem Berita Acara</PageTitle>
+<PageTitle>Edit Pengguna — Sistem Berita Acara</PageTitle>
 
 @if (isLoading)
 {

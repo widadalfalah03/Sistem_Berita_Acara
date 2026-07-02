@@ -71,8 +71,6 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             ALTER TABLE [BeritaAcara] ADD [PengunaAlihDaya] nvarchar(200) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'WasRejected')
             ALTER TABLE [BeritaAcara] ADD [WasRejected] bit NOT NULL DEFAULT 0;
-        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'DasarAlokasi')
-            ALTER TABLE [BeritaAcara] ADD [DasarAlokasi] nvarchar(30) NOT NULL DEFAULT 'No. Tiket My SSC';
 
         -- MustChangePw dihapus dari entity C# — hapus kolom dari DB agar INSERT tidak gagal (NOT NULL tanpa DEFAULT)
         IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'MustChangePw')
@@ -87,27 +85,8 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
                 EXEC('ALTER TABLE [Users] DROP CONSTRAINT [' + @dfName + ']')
             ALTER TABLE [Users] DROP COLUMN [MustChangePw]
         END
-
-        -- Create BeritaAcaraHistory table jika belum ada (ditambahkan setelah DB awal dibuat)
-        IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[BeritaAcaraHistory]') AND type = 'U')
-        BEGIN
-            CREATE TABLE [BeritaAcaraHistory] (
-                [Id] int NOT NULL IDENTITY,
-                [BaId] int NOT NULL,
-                [RejectedByUserId] int NOT NULL,
-                [AlasanReject] nvarchar(max) NOT NULL DEFAULT '',
-                [RejectedAt] datetime2 NOT NULL DEFAULT GETDATE(),
-                [BaJenis] nvarchar(max) NOT NULL DEFAULT '',
-                [BaNomorSurat] nvarchar(max) NULL,
-                [BaCreatedBy] int NOT NULL DEFAULT 0,
-                [BaMengetahuiId] int NULL,
-                CONSTRAINT [PK_BeritaAcaraHistory] PRIMARY KEY ([Id]),
-                CONSTRAINT [FK_BeritaAcaraHistory_BeritaAcara_BaId] FOREIGN KEY ([BaId]) REFERENCES [BeritaAcara]([Id]) ON DELETE CASCADE,
-                CONSTRAINT [FK_BeritaAcaraHistory_Users_RejectedByUserId] FOREIGN KEY ([RejectedByUserId]) REFERENCES [Users]([Id])
-            )
-        END
-
-        -- Migrate legacy 'Tiket SSC' to new 'No. Tiket My SSC'
+        
+        -- Migrate legacy "Tiket SSC" to new "No. Tiket My SSC"
         UPDATE [BeritaAcara] SET [DasarAlokasi] = 'No. Tiket My SSC' WHERE [DasarAlokasi] = 'Tiket SSC';
 
         -- Migrate legacy 'Approver' role to 'Reviewer'
@@ -290,7 +269,7 @@ app.MapPost("/account/logout", async (
 {
     await signInManager.SignOutAsync();
     return Results.Redirect("/login");
-}).DisableAntiforgery();
+});
 
 // ── ONLYOFFICE Callback Endpoint ──
 app.MapPost("/api/onlyoffice/callback/{baId:int}", async (

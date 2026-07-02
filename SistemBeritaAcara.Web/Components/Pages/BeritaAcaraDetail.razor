@@ -15,7 +15,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject SistemBeritaAcara.Web.Services.BaUpdateService BaUpdateService
-
+@rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @implements IAsyncDisposable
 
@@ -143,12 +143,12 @@ else
                 </div>
 
                 <!-- Action buttons -->
-                <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
-                    <button class="btn btn-outline-danger @(isProcessing ? "btn-loading" : "")" style="flex:1;min-width:140px;" @onclick="() => showRejectModal = true" disabled="@isProcessing">
-                        <i class="bi bi-x-lg"></i> Tolak
-                    </button>
-                    <button class="btn btn-success @(isProcessing ? "btn-loading" : "")" style="flex:1;min-width:140px;" @onclick="ApproveAsync" disabled="@isProcessing">
+                <div style="display:flex;gap:12px;margin-top:20px;">
+                    <button class="btn btn-success @(isProcessing ? "btn-loading" : "")" style="flex:1;" @onclick="ApproveAsync" disabled="@isProcessing">
                         <i class="bi bi-check-lg"></i> Setujui
+                    </button>
+                    <button class="btn btn-outline-danger @(isProcessing ? "btn-loading" : "")" style="flex:1;" @onclick="() => showRejectModal = true" disabled="@isProcessing">
+                        <i class="bi bi-x-lg"></i> Tolak
                     </button>
                 </div>
             </div>
@@ -162,7 +162,7 @@ else
                 <div>
                     <h1 class="page-title" style="word-break:break-word;">@(ba.NomorSurat ?? "Draft BA")</h1>
                     <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
-                        @if (_initialFrom != "archive" && ba.Status != "Archived")
+                        @if (From != "archive" && ba.Status != "Archived")
                         {
                             <span class="pill @GetStatusPill(ba.Status)">@GetStatusLabel(ba.Status)</span>
                         }
@@ -181,13 +181,10 @@ else
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">No. Surat</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.NomorSurat ?? "Belum dibuat")</td></tr>
                         @if (ba.Jenis == "Lainnya")
                         {
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Judul Berita Acara</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.JenisCustom</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Jenis Berita Acara</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.JenisCustom</td></tr>
                         }
                         <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.Tanggal.ToString("dd MMMM yyyy")</td></tr>
-                        @if (ba.Jenis != "Lainnya")
-                        {
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">No. Tiket My SSC/Nota Dinas</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ?? "-")</td></tr>
-                        }
+                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">@(ba.DasarAlokasi)</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ?? "-")</td></tr>
                         @if (ba.Jenis == "Peminjaman")
                         {
                             <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal Kembali</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TanggalKembali?.ToString("dd MMMM yyyy") ?? "-")</td></tr>
@@ -336,7 +333,6 @@ else
     private BeritaAcaraEntity? ba;
     private bool isLoading = true;
     private bool notFound;
-    private string? _initialFrom;
     private bool isReviewer;
     private bool showRejectModal = false;
     private string rejectReason = string.Empty;
@@ -353,11 +349,7 @@ else
 
 
 
-    protected override async Task OnInitializedAsync()
-    {
-        _initialFrom = From;
-        await LoadAsync();
-    }
+    protected override async Task OnInitializedAsync() => await LoadAsync();
 
     private string? loadError;
     private bool _loadingInProgress = false;

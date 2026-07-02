@@ -14,7 +14,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<BeritaAcara> Logger
-
+@rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
 <PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") â€” Sistem Berita Acara</PageTitle>
@@ -103,7 +103,7 @@
             else if (model.Jenis == "Lainnya")
             {
                 <div class="form-group" style="flex:1;">
-                    <label class="form-label">Nama / Judul Berita Acara <span style="color:var(--danger)">*</span></label>
+                    <label class="form-label">Nama / Jenis Berita Acara <span style="color:var(--danger)">*</span></label>
                     <InputText class="form-control" @bind-Value="model.JenisCustom" @bind-Value:after="TriggerAutoSave"
                                placeholder="Contoh: Serah Terima Jabatan" />
                     <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Teks ini akan tampil sebagai judul di dokumen</div>
@@ -148,7 +148,7 @@
                         <div class="form-group">
                             <label class="form-label">Nama Pengguna <span style="color:var(--danger)">*</span></label>
                             <input type="text" class="form-control"
-                                   placeholder="Masukkan nama pengguna"
+                                   placeholder="Masukkan nama pengguna TAD"
                                    value="@model.PengunaAlihDaya"
                                    @oninput="@(e => { model.PengunaAlihDaya = e.Value?.ToString(); TriggerAutoSave(); })" />
                         </div>
@@ -1171,6 +1171,8 @@
 
         // Validasi foto — opsional, tidak wajib dilampirkan
 
+        // Semua validasi lulus — tampilkan overlay via JS (instant, sebelum DB operations)
+        await JSRuntime.InvokeVoidAsync("appLoading.show", "Menyiapkan dokumen...", "Sedang memproses, harap tunggu");
         isSaving = true;
         try
         {
@@ -1180,7 +1182,7 @@
                 var userIdStr = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 int.TryParse(userIdStr, out _currentUserId);
             }
-            if (_currentUserId == 0) { errorMessage = "Sesi habis, silakan login kembali."; isSaving = false; return; }
+            if (_currentUserId == 0) { errorMessage = "Sesi habis, silakan login kembali."; await JSRuntime.InvokeVoidAsync("appLoading.hide"); isSaving = false; return; }
 
             if (!editId.HasValue) await CreateInitialDraftAsync();
 
@@ -1355,6 +1357,7 @@
         {
             var inner = ex.InnerException != null ? $"\nInner: {ex.InnerException.Message}" : "";
             errorMessage = $"Gagal menyimpan Berita Acara: {ex.Message}{inner}";
+            await JSRuntime.InvokeVoidAsync("appLoading.hide");
         }
         finally { isSaving = false; }
     }

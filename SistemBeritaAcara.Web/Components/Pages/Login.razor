@@ -33,6 +33,7 @@
             }
 
             <form method="post" action="/account/login">
+                <AntiforgeryToken />
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
 
                 <div class="form-group">
