@@ -46,26 +46,18 @@ public class AutoApproveJob(
         {
             try
             {
-                // 1. Update status & tandai sebagai auto-approved oleh sistem
+                // 1. Set info stempel (dibutuhkan saat generate dokumen dari template)
                 ba.TtdPjPath = "images/auto_approve_stamp.png";
                 ba.PjSignedAt = DateTime.Now;
-                ba.Status = "WaitingApproval";
-                ba.SubmittedAt = DateTime.Now; // Waktu pengiriman ke Reviewer
 
-                // 2. Generate ulang dokumen dari template (DocxPath bisa null jika belum pernah dibuat)
-                //    dan simpan path-nya ke ba.DocxPath
-                ba.DocxPath = null; // Paksa regenerasi dari template
-                db.BeritaAcara.Update(ba);
-                await db.SaveChangesAsync();
-
-                // 3. Generate dokumen baru dari template
+                // 2. Generate dokumen dari template dan simpan DocxPath ke DB
                 ba.DocxPath = await documentService.GenerateDocxAsync(ba);
                 db.BeritaAcara.Update(ba);
                 await db.SaveChangesAsync();
 
                 logger.LogInformation($"[AutoApproveJob] Dokumen BA {ba.Id} berhasil di-generate ulang.");
 
-                // 4. Embed stempel "Automatically Approved" ke placeholder {{SIG_PJ}}
+                // 3. Embed stempel "Automatically Approved" ke placeholder {{SIG_PJ}}
                 var stampPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "auto_approve_stamp.png");
                 if (File.Exists(stampPhysicalPath))
                 {
@@ -77,7 +69,7 @@ public class AutoApproveJob(
                     logger.LogWarning($"[AutoApproveJob] File stempel tidak ditemukan di {stampPhysicalPath}. Dokumen BA {ba.Id} tidak akan memiliki stempel.");
                 }
 
-                // 4.5 Embed tanda tangan Admin Gudang (Yang Menyerahkan)
+                // 4. Embed tanda tangan Admin Gudang (Yang Menyerahkan)
                 if (ba.Creator != null && !string.IsNullOrEmpty(ba.Creator.TtdPath))
                 {
                     var creatorTtdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", ba.Creator.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
@@ -88,11 +80,17 @@ public class AutoApproveJob(
                     }
                 }
 
-                // 5. Kirim notifikasi ke Reviewer (inbox)
+                // 5. Semua operasi dokumen selesai — baru simpan status akhir
+                ba.Status = "WaitingApproval";
+                ba.SubmittedAt = DateTime.Now;
+                db.BeritaAcara.Update(ba);
+                await db.SaveChangesAsync();
+
+                // 6. Kirim notifikasi ke Reviewer (inbox)
                 string msgInbox = $"Dokumen {ba.NomorSurat ?? $"BA-{ba.Id}"} telah disetujui otomatis (PJ melewati batas waktu 1x24 jam) dan membutuhkan otorisasi Anda.";
                 await notificationService.SendAsync(ba.MengetahuiId ?? 0, "APPROVAL_REQUIRED", msgInbox, ba.Id);
 
-                // 6. Kirim email ke Reviewer
+                // 7. Kirim email ke Reviewer
                 if (!string.IsNullOrEmpty(ba.Mengetahui?.Email))
                 {
                     var barangList = ba.Perangkat
