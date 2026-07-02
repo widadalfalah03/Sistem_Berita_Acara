@@ -216,7 +216,7 @@ else if (currentRole == "AdminGudangBarang")
                         var daysLeft = (d.TanggalKembali!.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
                         var badgeClass = daysLeft < 0 ? "due-badge overdue" : daysLeft == 0 ? "due-badge today" : daysLeft <= 2 ? "due-badge h1" : "due-badge h2";
                         var badgeText = daysLeft < 0 ? $"Lewat {Math.Abs(daysLeft)}h" : daysLeft == 0 ? "Hari Ini" : $"H-{daysLeft}";
-                        <div class="due-item" @onclick="@(() => OpenDetailModal(d.Id))">
+                        <div class="due-item" @onclick="@(async () => await OpenDetailModal(d.Id))">
                             <div class="due-item-info">
                                 <div class="due-item-surat">@d.NomorSurat</div>
                                 <div class="due-item-pj"><i class="bi bi-person" style="font-size:11px;"></i> @d.Pj?.Nama</div>
@@ -281,6 +281,98 @@ else if (currentRole == "AdminGudangBarang")
 
 
 
+                <!-- Perpanjangan Waktu -->
+                <div class="card" style="margin-bottom:16px;box-shadow:none;border:1px solid #cbd5e1;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #cbd5e1;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <h3 style="margin:0;font-size:15px;color:var(--text-primary);font-weight:700;">Perpanjangan Waktu</h3>
+                            @if (riwayatPerpanjangan.Count > 0)
+                            {
+                                <span style="background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;">@riwayatPerpanjangan.Count× diperpanjang</span>
+                            }
+                        </div>
+                        @if (!showPerpanjanganForm)
+                        {
+                            <button @onclick="@(() => { showPerpanjanganForm = true; perpanjanganError = null; })"
+                                    style="display:flex;align-items:center;gap:6px;background:var(--primary);color:white;border:none;border-radius:var(--radius);padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">
+                                <i class="bi bi-calendar-plus"></i> Perpanjang
+                            </button>
+                        }
+                    </div>
+
+                    @if (showPerpanjanganForm)
+                    {
+                        <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;background:#f8fafc;">
+                            <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:10px;">Tanggal Kembali Saat Ini: <span style="color:var(--text-primary);">@modalBA.TanggalKembali?.ToString("dd MMMM yyyy")</span></div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                                <div>
+                                    <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">Tanggal Kembali Baru <span style="color:var(--danger)">*</span></label>
+                                    <input type="date"
+                                           style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:13px;outline:none;background:white;color:var(--text-primary);font-family:inherit;"
+                                           @bind="inputTanggalPerpanjangan" />
+                                </div>
+                                <div>
+                                    <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">Catatan (opsional)</label>
+                                    <input type="text" placeholder="Alasan perpanjangan..."
+                                           style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:13px;outline:none;background:white;color:var(--text-primary);font-family:inherit;"
+                                           @bind="inputCatatanPerpanjangan" />
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(perpanjanganError))
+                            {
+                                <div style="font-size:12px;color:var(--danger);margin-bottom:8px;">@perpanjanganError</div>
+                            }
+                            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                                <button @onclick="@(() => { showPerpanjanganForm = false; perpanjanganError = null; })"
+                                        style="background:none;border:1px solid var(--border);border-radius:var(--radius);padding:6px 14px;font-size:12px;cursor:pointer;color:var(--text-secondary);">
+                                    Batal
+                                </button>
+                                <button @onclick="SavePerpanjangan" disabled="@isSavingPerpanjangan"
+                                        style="background:var(--primary);color:white;border:none;border-radius:var(--radius);padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                                    @if (isSavingPerpanjangan)
+                                    {
+                                        <div class="spinner" style="width:12px;height:12px;border-width:2px;border-color:white;border-top-color:transparent;"></div>
+                                    }
+                                    Simpan Perpanjangan
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                    @if (riwayatPerpanjangan.Count == 0 && !showPerpanjanganForm)
+                    {
+                        <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">
+                            <i class="bi bi-calendar-check" style="font-size:20px;display:block;margin-bottom:6px;"></i>
+                            Belum ada perpanjangan
+                        </div>
+                    }
+                    else if (riwayatPerpanjangan.Count > 0)
+                    {
+                        <div style="padding:0;">
+                            @foreach (var (p, idx) in riwayatPerpanjangan.Select((p, i) => (p, i)))
+                            {
+                                <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:12px;padding:12px 16px;@(idx < riwayatPerpanjangan.Count - 1 ? "border-bottom:1px solid #f1f5f9;" : "")">
+                                    <div style="width:28px;height:28px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+                                        @(riwayatPerpanjangan.Count - idx)
+                                    </div>
+                                    <div>
+                                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:2px;">
+                                            @p.TanggalKembalisebelumnya.ToString("dd MMM yyyy")
+                                            <i class="bi bi-arrow-right" style="font-size:11px;color:var(--text-muted);margin:0 4px;"></i>
+                                            @p.TanggalKembaliBaru.ToString("dd MMM yyyy")
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(p.Catatan))
+                                        {
+                                            <div style="font-size:12px;color:var(--text-secondary);">@p.Catatan</div>
+                                        }
+                                    </div>
+                                    <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;margin-top:3px;">@p.DiperpanjangPada.ToString("dd MMM yyyy")</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
                 <!-- Daftar Perangkat -->
                 @if (modalBA.Perangkat.Any())
                 {
@@ -306,7 +398,7 @@ else if (currentRole == "AdminGudangBarang")
                                             <td><span style="font-weight:600;font-size:13px;">@p.Barang?.NamaBarang</span></td>
                                             <td style="font-size:13px;">@p.Jumlah</td>
                                             <td style="color:var(--text-secondary);font-size:13px;">@p.Satuan</td>
-                                            <td style="font-family:monospace;font-size:12px;">@(p.NoSerial ?? "-")</td>
+                                            <td style="font-size:13px;">@(p.NoSerial ?? "-")</td>
                                             <td style="color:var(--text-secondary);font-size:13px;">@(p.Keterangan ?? "-")</td>
                                         </tr>
                                     }
@@ -593,6 +685,14 @@ else if (currentRole == "AdminIT")
     private bool isReturning = false;
     private BAEntity? modalBA = null;
 
+    // Perpanjangan state
+    private List<SistemBeritaAcara.Core.Entities.PerpanjanganBA> riwayatPerpanjangan = new();
+    private bool showPerpanjanganForm = false;
+    private DateTime? inputTanggalPerpanjangan = null;
+    private string inputCatatanPerpanjangan = string.Empty;
+    private bool isSavingPerpanjangan = false;
+    private string? perpanjanganError = null;
+
     // Reviewer stats
     private (int Pending, int Total, int ApprovedThisMonth, int RejectedThisMonth, int ApprovedAlokasi, int ApprovedPeminjaman, int ApprovedPenarikan, int ApprovedLainnya) reviewerStat;
     private List<BAEntity> reviewerQueue = new();
@@ -822,10 +922,19 @@ else if (currentRole == "AdminIT")
     };
 
     // Modal actions
-    private void OpenDetailModal(int baId)
+    private async Task OpenDetailModal(int baId)
     {
         modalBA = activePeminjaman.FirstOrDefault(b => b.Id == baId);
         confirmReturnId = null;
+        showPerpanjanganForm = false;
+        inputTanggalPerpanjangan = null;
+        inputCatatanPerpanjangan = string.Empty;
+        perpanjanganError = null;
+
+        riwayatPerpanjangan = await DbCtx.Set<SistemBeritaAcara.Core.Entities.PerpanjanganBA>()
+            .Where(p => p.BeritaAcaraId == baId)
+            .OrderByDescending(p => p.DiperpanjangPada)
+            .ToListAsync();
     }
 
     private void CloseModal()
@@ -834,6 +943,58 @@ else if (currentRole == "AdminIT")
         modalBA = null;
         confirmReturnId = null;
         confirmReturnNomorSurat = string.Empty;
+        showPerpanjanganForm = false;
+        riwayatPerpanjangan.Clear();
+    }
+
+    private async Task SavePerpanjangan()
+    {
+        perpanjanganError = null;
+        if (!inputTanggalPerpanjangan.HasValue)
+        {
+            perpanjanganError = "Pilih tanggal kembali baru terlebih dahulu.";
+            return;
+        }
+        var newDate = DateOnly.FromDateTime(inputTanggalPerpanjangan.Value);
+        if (newDate <= modalBA!.TanggalKembali)
+        {
+            perpanjanganError = "Tanggal baru harus lebih dari tanggal kembali sebelumnya.";
+            return;
+        }
+
+        isSavingPerpanjangan = true;
+        try
+        {
+            var ba = await DbCtx.Set<BAEntity>().FirstOrDefaultAsync(b => b.Id == modalBA.Id);
+            if (ba is null) return;
+
+            var perpanjangan = new SistemBeritaAcara.Core.Entities.PerpanjanganBA
+            {
+                BeritaAcaraId = ba.Id,
+                TanggalKembalisebelumnya = ba.TanggalKembali!.Value,
+                TanggalKembaliBaru = newDate,
+                DiperpanjangPada = DateTime.Now,
+                Catatan = string.IsNullOrWhiteSpace(inputCatatanPerpanjangan) ? null : inputCatatanPerpanjangan.Trim()
+            };
+
+            ba.TanggalKembali = newDate;
+            DbCtx.Set<SistemBeritaAcara.Core.Entities.PerpanjanganBA>().Add(perpanjangan);
+            await DbCtx.SaveChangesAsync();
+
+            // Update local list
+            modalBA.TanggalKembali = newDate;
+            var localBa = activePeminjaman.FirstOrDefault(b => b.Id == modalBA.Id);
+            if (localBa is not null) localBa.TanggalKembali = newDate;
+
+            riwayatPerpanjangan.Insert(0, perpanjangan);
+            showPerpanjanganForm = false;
+            inputTanggalPerpanjangan = null;
+            inputCatatanPerpanjangan = string.Empty;
+        }
+        finally
+        {
+            isSavingPerpanjangan = false;
+        }
     }
 
     // Return actions
