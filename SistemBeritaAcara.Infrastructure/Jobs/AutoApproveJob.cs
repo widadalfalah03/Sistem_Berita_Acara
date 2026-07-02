@@ -13,51 +13,66 @@ public class AutoApproveJob(
     INotificationService notificationService,
     IEmailService emailService,
     IConfiguration configuration,
+    IBACounterService baCounterService,
+    IExcelService excelService,
     ILogger<AutoApproveJob> logger)
 {
     private string BaseUrl => (configuration["App:PublicUrl"] ?? configuration["App:BaseUrl"] ?? "http://localhost:5000").TrimEnd('/');
 
-    public async Task ProcessAutoApproveAsync()
+    public async Task ProcessSingleAutoApproveAsync(int baId)
     {
-        // Gunakan DateTime.Now (waktu lokal) agar konsisten dengan cara SubmittedAt disimpan
-        // TESTING: batas waktu 2 menit (production: 24 jam)
-        var cutoffTime = DateTime.Now.AddMinutes(-2);
-
-        // Cari BA yang statusnya "WaitingPJSign" dan sudah lebih dari 1x24 jam sejak di-submit
-        var pendingBas = await db.BeritaAcara
+        // Cari BA spesifik
+        var ba = await db.BeritaAcara
             .Include(b => b.Pj)
             .Include(b => b.Menyerahkan)
             .Include(b => b.Mengetahui)
             .Include(b => b.Creator)
             .Include(b => b.BuktiFotos)
             .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
-            .Where(b => b.Status == "WaitingPJSign" && b.SubmittedAt <= cutoffTime)
-            .ToListAsync();
+            .FirstOrDefaultAsync(b => b.Id == baId);
 
-        if (!pendingBas.Any())
+        if (ba == null) return;
+        
+        // Cek status apakah masih WaitingPJSign
+        if (ba.Status != "WaitingPJSign")
         {
-            logger.LogInformation("[AutoApproveJob] Tidak ada BA yang melewati batas waktu 1x24 jam.");
+            logger.LogInformation($"[AutoApproveJob] BA {baId} tidak jadi di-auto-approve karena status sudah berubah menjadi {ba.Status}.");
             return;
         }
 
-        logger.LogInformation($"[AutoApproveJob] Ditemukan {pendingBas.Count} BA yang melewati 1x24 jam. Memulai auto-approve.");
+        logger.LogInformation($"[AutoApproveJob] Memulai auto-approve untuk BA ID {ba.Id} secara real-time.");
 
-        foreach (var ba in pendingBas)
+        try
         {
-            try
-            {
-                // 1. Set info stempel (dibutuhkan saat generate dokumen dari template)
+
+                // 1. Set info stempel
                 ba.TtdPjPath = "images/auto_approve_stamp.png";
                 ba.PjSignedAt = DateTime.Now;
 
-                // 2. Generate dokumen dari template dan simpan DocxPath ke DB
-                ba.DocxPath = await documentService.GenerateDocxAsync(ba);
-                db.BeritaAcara.Update(ba);
-                await db.SaveChangesAsync();
+                // 2. Generate Nomor Surat
+                if (string.IsNullOrEmpty(ba.NomorSurat))
+                {
+                    var next = await baCounterService.GetNextNomorSuratAsync(ba.Tanggal, ba.Jenis);
+                    ba.CounterValue = next.counterValue;
+                    ba.NomorSurat = next.nomorSurat;
+                }
 
-                logger.LogInformation($"[AutoApproveJob] Dokumen BA {ba.Id} berhasil di-generate ulang.");
+                // 3. Patch Nomor Surat atau Generate
+                var docxPhysicalPath = string.IsNullOrEmpty(ba.DocxPath)
+                    ? null
+                    : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                          ba.DocxPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
-                // 3. Embed stempel "Automatically Approved" ke placeholder {{SIG_PJ}}
+                if (docxPhysicalPath != null && File.Exists(docxPhysicalPath))
+                {
+                    await documentService.PatchNomorSuratAsync(ba.Id, ba.NomorSurat!);
+                }
+                else
+                {
+                    ba.DocxPath = await documentService.GenerateDocxAsync(ba);
+                }
+
+                // 4. Embed stempel "Automatically Approved"
                 var stampPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "auto_approve_stamp.png");
                 if (File.Exists(stampPhysicalPath))
                 {
@@ -69,57 +84,51 @@ public class AutoApproveJob(
                     logger.LogWarning($"[AutoApproveJob] File stempel tidak ditemukan di {stampPhysicalPath}. Dokumen BA {ba.Id} tidak akan memiliki stempel.");
                 }
 
-                // 4. Embed tanda tangan Admin Gudang (Yang Menyerahkan)
-                if (ba.Creator != null && !string.IsNullOrEmpty(ba.Creator.TtdPath))
-                {
-                    var creatorTtdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", ba.Creator.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                    if (File.Exists(creatorTtdPhysicalPath))
-                    {
-                        await documentService.EmbedTtdMenyerahkanAsync(ba.Id, creatorTtdPhysicalPath);
-                        logger.LogInformation($"[AutoApproveJob] TTD Admin Gudang berhasil di-embed ke BA {ba.Id}.");
-                    }
-                }
-
-                // 5. Semua operasi dokumen selesai — baru simpan status akhir
-                ba.Status = "WaitingApproval";
-                ba.SubmittedAt = DateTime.Now;
+                // 5. Transaksi database & Ekspor Excel
+                await using var tx = await db.Database.BeginTransactionAsync();
+                ba.Status = "Approved";
+                ba.ApprovedAt = DateTime.Now;
+                ba.ExcelExported = false;
+                
                 db.BeritaAcara.Update(ba);
                 await db.SaveChangesAsync();
 
-                // 6. Kirim notifikasi ke Reviewer (inbox)
-                string msgInbox = $"Dokumen {ba.NomorSurat ?? $"BA-{ba.Id}"} telah disetujui otomatis (PJ melewati batas waktu 1x24 jam) dan membutuhkan otorisasi Anda.";
-                await notificationService.SendAsync(ba.MengetahuiId ?? 0, "APPROVAL_REQUIRED", msgInbox, ba.Id);
+                await excelService.AppendBeritaAcaraToArsipAsync(ba);
+                ba.ExcelExported = true;
+                await db.SaveChangesAsync();
+                await tx.CommitAsync();
 
-                // 7. Kirim email ke Reviewer
-                if (!string.IsNullOrEmpty(ba.Mengetahui?.Email))
+                // 6. Kirim notifikasi ke Admin Gudang (Creator)
+                string msgInbox = $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah selesai secara otomatis (PJ melewati batas waktu).";
+                await notificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", msgInbox, ba.Id);
+
+                // 7. Kirim email ke Admin Gudang dan PJ
+                var barangList = ba.Perangkat
+                    .Select(p =>
+                    {
+                        string namaBarang = p.Barang?.NamaBarang ?? "Perangkat";
+                        string detail = $"{p.Jumlah} {p.Satuan}";
+                        if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                        if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                        return $"{namaBarang} — {detail}";
+                    })
+                    .ToList();
+
+                if (ba.Creator != null && !string.IsNullOrEmpty(ba.Creator.Email))
                 {
-                    var barangList = ba.Perangkat
-                        .Select(p =>
-                        {
-                            string namaBarang = p.Barang?.NamaBarang ?? "Perangkat";
-                            string detail = $"{p.Jumlah} {p.Satuan}";
-                            if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
-                            if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                            return $"{namaBarang} — {detail}";
-                        })
-                        .ToList();
-
-                    await emailService.SendApprovalRequestAsync(
-                        ba.Mengetahui.Email,
-                        ba.Mengetahui.Nama ?? "Reviewer",
-                        BaseUrl,
-                        ba.Id,
-                        ba.Jenis ?? "Berita Acara",
-                        barangList
-                    );
+                    await emailService.SendApprovalResultAsync(ba.Creator.Email, ba.Creator.Nama ?? ba.Creator.Email, ba.Jenis, true, ba.Id, BaseUrl, isForPj: false, nomorSurat: ba.NomorSurat, barangList: barangList);
+                }
+                
+                if (ba.Pj != null && !string.IsNullOrEmpty(ba.Pj.Email))
+                {
+                    await emailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, true, ba.Id, BaseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
                 }
 
-                logger.LogInformation($"[AutoApproveJob] BA {ba.Id} ({ba.NomorSurat}) berhasil di-auto-approve dan notifikasi dikirim ke Reviewer.");
+                logger.LogInformation($"[AutoApproveJob] BA {ba.Id} ({ba.NomorSurat}) berhasil di-auto-approve dan selesai.");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, $"[AutoApproveJob] Gagal memproses auto-approve untuk BA ID: {ba.Id}.");
+                logger.LogError(ex, $"[AutoApproveJob] Gagal memproses auto-approve untuk BA ID: {baId}.");
             }
-        }
     }
 }

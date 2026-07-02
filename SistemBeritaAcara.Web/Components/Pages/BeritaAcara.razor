@@ -1,4 +1,4 @@
-﻿@page "/buat-ba"
+@page "/buat-ba"
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
@@ -828,6 +828,7 @@
 
             // Kosongkan DocxPath agar EditorBA tahu harus regenerasi dari template.
             existing.DocxPath = null;
+            existing.DocxFinalPath = null;
 
             // Update perangkat hanya jika ada yang terisi minimal 1 barang
             var validPerangkat = model.Perangkat.Where(p => p.BarangId > 0 && p.Jumlah > 0).ToList();
@@ -1237,6 +1238,7 @@
                 if (isChanged || photosChanged || (photoFiles.Any() && !existingPhotoUrls.Any()))
                 {
                     existing.DocxPath = null;
+                    existing.DocxFinalPath = null;
                 }
 
                 existing.Tanggal = DateOnly.FromDateTime(model.Tanggal);

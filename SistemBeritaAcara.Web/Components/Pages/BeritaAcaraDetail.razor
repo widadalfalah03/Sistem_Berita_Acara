@@ -97,7 +97,7 @@ else
                 <div class="review-info">
                     <div class="review-info-item">
                         <span class="review-info-label">No. Surat</span>
-                        <span class="review-info-value" style="color:var(--text-muted);font-style:italic;font-size:12px;">dibuat otomatis saat anda menyetujui</span>
+                        <span class="review-info-value" style="color:var(--text-muted);font-style:italic;font-size:12px;">dibuat saat PJ tanda tangan final</span>
                     </div>
                     <div class="review-info-item">
                         <span class="review-info-label">Jenis Berita Acara</span>
@@ -127,17 +127,17 @@ else
                         </div>
                     </div>
                     <div class="timeline-item">
-                        <div class="timeline-dot completed"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-title">PJ Menandatangani</div>
-                            <div class="timeline-desc">@(ba.PjSignedAt?.ToString("dd MMM yyyy HH:mm") ?? "-")</div>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
                         <div class="timeline-dot pending"></div>
                         <div class="timeline-content">
                             <div class="timeline-title pending">Menunggu Persetujuan Anda</div>
                             <div class="timeline-desc">Harap review dokumen dan berikan keputusan</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot" style="background-color: var(--border);"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title" style="color:var(--text-muted);">PJ Menandatangani</div>
+                            <div class="timeline-desc" style="color:var(--text-muted);">Setelah Anda menyetujui dokumen ini</div>
                         </div>
                     </div>
                 </div>
@@ -413,7 +413,9 @@ else
                 old.UsedAt = DateTime.Now;
 
             var tokenValue = Guid.NewGuid().ToString("N");
-            DbContext.ApprovalToken.Add(new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) });
+            var newToken = new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) };
+            ba!.ApprovalTokens.Add(newToken);
+            DbContext.ApprovalToken.Add(newToken);
             ba!.Status = "WaitingPJSign";
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
@@ -465,84 +467,32 @@ else
                 return;
             }
 
-            // Generate nomor surat saat approve
-            if (string.IsNullOrEmpty(ba!.NomorSurat))
-            {
-                var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal, ba.Jenis);
-                ba.CounterValue = next.counterValue;
-                ba.NomorSurat = next.nomorSurat;
-            }
-
-            // ── Perbarui dokumen untuk versi final ─────────────────────────────────
-            // JANGAN regenerasi dari template jika DOCX sudah ada di disk —
-            // itu akan menghapus semua hasil edit ONLYOFFICE.
-            // Cukup patch nomor surat di file yang sudah ada.
-            // Jika file belum ada (kasus langka: BA belum pernah melewati editor), baru generate.
-            var docxPhysicalPath = string.IsNullOrEmpty(ba!.DocxPath)
-                ? null
-                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                      ba.DocxPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-
-            if (docxPhysicalPath != null && File.Exists(docxPhysicalPath))
-            {
-                // File sudah ada → hanya patch NomorSurat
-                await DocumentService.PatchNomorSuratAsync(ba.Id, ba.NomorSurat!);
-            }
-            else
-            {
-                // File belum ada → generate dari template (fallback)
-                ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
-            }
-
-            // Re-embed TTD Yang Menyerahkan (Admin Gudang yang membuat BA)
-            var creatorForTtd = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
-            if (!string.IsNullOrWhiteSpace(creatorForTtd?.TtdPath))
-            {
-                var menyerahkanTtdPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                    creatorForTtd.TtdPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                if (File.Exists(menyerahkanTtdPhysical))
-                    await DocumentService.EmbedTtdMenyerahkanAsync(ba.Id, menyerahkanTtdPhysical);
-            }
-
-            // Re-embed TTD PJ (Yang Menerima) — file masih ada, dihapus setelah ini
-            // PENGECUALIAN: jika TTD PJ adalah stempel sistem auto-approve, JANGAN dihapus
-            // (itu aset bersama di wwwroot/images/, bukan file personal PJ)
-            if (!string.IsNullOrWhiteSpace(ba.TtdPjPath))
-            {
-                var pjTtdPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                    ba.TtdPjPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                if (File.Exists(pjTtdPhysical))
-                {
-                    await DocumentService.EmbedTtdPjAsync(ba.Id, pjTtdPhysical);
-                    // Hapus file TTD PJ personal setelah di-embed ke dokumen final
-                    // JANGAN hapus jika ini adalah stempel sistem auto-approve
-                    bool isAutoApproveStamp = ba.TtdPjPath.Contains("auto_approve_stamp");
-                    if (!isAutoApproveStamp)
-                    {
-                        try { File.Delete(pjTtdPhysical); } catch { }
-                    }
-                }
-            }
-
             // Embed TTD Yang Mengetahui (Reviewer)
             await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, reviewerTtdPhysical);
 
-            // H-2: Bungkus kedua SaveChanges dalam satu transaction agar atomic
-            await using var tx = await DbContext.Database.BeginTransactionAsync();
-            ba.Status = "Approved";
-            ba.ApprovedAt = DateTime.Now;
-            ba.ExcelExported = false;
+            // Invalidasi token PJ_SIGNATURE lama
+            var oldTokens = await DbContext.ApprovalToken
+                .Where(t => t.BaId == ba!.Id && t.TokenType == "PJ_SIGNATURE" && t.UsedAt == null)
+                .ToListAsync();
+            foreach (var old in oldTokens)
+                old.UsedAt = DateTime.Now;
+
+            var tokenValue = Guid.NewGuid().ToString("N");
+            var newToken = new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) };
+            ba!.ApprovalTokens.Add(newToken);
+            DbContext.ApprovalToken.Add(newToken);
+            
+            ba.Status = "WaitingPJSign";
+            // ApprovedAt and NomorSurat will be generated when PJ signs
             await DbContext.SaveChangesAsync();
 
-            // Export Excel di luar TX (operasi file), tapi flag ExcelExported di-commit bersama
-            await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
-            ba.ExcelExported = true;
-            await DbContext.SaveChangesAsync();
-            await tx.CommitAsync();
-            await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah disetujui.", ba.Id);
+            // Schedule Auto-Approve Job (Real-time delay)
+            // TESTING: 2 menit (Production: 24 jam)
+            Hangfire.BackgroundJob.Schedule<SistemBeritaAcara.Infrastructure.Jobs.AutoApproveJob>(
+                job => job.ProcessSingleAutoApproveAsync(ba.Id),
+                TimeSpan.FromMinutes(2)
+            );
 
-            // Email ke Admin Gudang & Barang (creator)
-            var creatorUser = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
             var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangList = ba.Perangkat
                 .Select(p => {
@@ -552,14 +502,12 @@ else
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
                     return $"{nama} — {detail}";
                 }).ToList();
-            if (!string.IsNullOrEmpty(creatorUser?.Email))
-                await EmailService.SendApprovalResultAsync(creatorUser.Email, creatorUser.Nama ?? creatorUser.Email, ba.Jenis, true, ba.Id, baseUrl, isForPj: false, nomorSurat: ba.NomorSurat, barangList: barangList);
+                
+            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis, barangList);
+            
+            await NotificationService.SendAsync(ba.CreatedBy, "WAITING_PJ_SIGN", $"Berita Acara {ba.Jenis} telah disetujui Reviewer dan diteruskan ke PJ.", ba.Id);
 
-            // Email ke PJ
-            if (!string.IsNullOrEmpty(ba.Pj?.Email))
-                await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, true, ba.Id, baseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
-
-            actionIsError = false; actionMessage = "Berita Acara berhasil disetujui!";
+            actionIsError = false; actionMessage = "Berita Acara disetujui. Menunggu TTD PJ.";
             await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
             await LoadAsync();
         }

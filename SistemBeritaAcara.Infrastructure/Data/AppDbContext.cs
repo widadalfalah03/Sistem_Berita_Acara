@@ -116,6 +116,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
             e.Property(t => t.Token).HasMaxLength(128).IsRequired();
             e.HasIndex(t => t.Token).IsUnique();
             e.Property(t => t.TokenType).HasMaxLength(20).HasDefaultValue("PJ_SIGNATURE");
+            
+            e.HasOne(t => t.BeritaAcara)
+             .WithMany(ba => ba.ApprovalTokens)
+             .HasForeignKey(t => t.BaId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<Notification>(e =>

@@ -34,8 +34,8 @@ else if (currentRole == "AdminGudangBarang")
                 <thead>
                     <tr>
                         <th>Jenis Berita Acara</th>
-                        <th>Penanggung Jawab</th>
                         <th>Reviewer</th>
+                        <th>Penanggung Jawab</th>
                         <th>Waktu Pengajuan</th>
                         <th>Status</th>
                     </tr>
@@ -48,10 +48,10 @@ else if (currentRole == "AdminGudangBarang")
                                 <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
                             </td>
                             <td>
-                                <div class="cell-main">@ba.Pj?.Nama</div>
+                                <div class="cell-main">@ba.Mengetahui?.Nama</div>
                             </td>
                             <td>
-                                <div class="cell-main">@ba.Mengetahui?.Nama</div>
+                                <div class="cell-main">@ba.Pj?.Nama</div>
                             </td>
                             <td>
                                 <div>@ba.SubmittedAt?.ToString("dd MMM yyyy")</div>

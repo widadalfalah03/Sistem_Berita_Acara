@@ -11,6 +11,10 @@
 @inject IJSRuntime JS
 @inject IConfiguration Configuration
 @inject SistemBeritaAcara.Web.Services.BaUpdateService BaUpdateService
+@inject IBACounterService BACounterService
+@inject IExcelService ExcelService
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<SistemBeritaAcara.Core.Entities.ApplicationUser> UserManager
 @layout EmptyLayout
 @rendermode InteractiveServer
 
@@ -293,15 +297,19 @@ else
         isValidToken = ba is not null && ba.Status == "WaitingPJSign";
         reviewerUser = ba?.Mengetahui;
 
-        if (ba?.DocxPath != null)
+        if (ba != null)
         {
-            var pdfRelative = ba.DocxPath.Replace(".docx", ".pdf");
-            var pdfPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                pdfRelative.Replace("/", Path.DirectorySeparatorChar.ToString()));
-            if (File.Exists(pdfPhysical))
+            string targetDocx = !string.IsNullOrEmpty(ba.DocxFinalPath) ? ba.DocxFinalPath : ba.DocxPath;
+            if (!string.IsNullOrEmpty(targetDocx))
             {
-                pdfPath = pdfRelative;
-                cacheBreaker = DateTime.Now.Ticks;
+                var pdfRelative = targetDocx.Replace(".docx", ".pdf");
+                var pdfPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                    pdfRelative.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                if (File.Exists(pdfPhysical))
+                {
+                    pdfPath = pdfRelative;
+                    cacheBreaker = DateTime.Now.Ticks;
+                }
             }
         }
 
@@ -415,38 +423,69 @@ else
             fpath = Path.Combine(folder, fname);
             await File.WriteAllBytesAsync(fpath, bytes);
 
-            ba!.TtdPjPath = $"files/signatures/{fname}";
-            ba.Status = "WaitingApproval";
-            ba.PjSignedAt = DateTime.Now;
+            // File TTD PJ di-embed dan langsung dihapus setelahnya
             await DocumentService.EmbedTtdPjAsync(ba.Id, fpath);
+            try { File.Delete(fpath); } catch { }
+
+            // Generate nomor surat saat PJ selesai tanda tangan (Final)
+            if (string.IsNullOrEmpty(ba!.NomorSurat))
+            {
+                var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal, ba.Jenis);
+                ba.CounterValue = next.counterValue;
+                ba.NomorSurat = next.nomorSurat;
+            }
+
+            // Patch NomorSurat atau Generate Docx
+            var docxPhysicalPath = string.IsNullOrEmpty(ba!.DocxPath)
+                ? null
+                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                      ba.DocxPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            if (docxPhysicalPath != null && File.Exists(docxPhysicalPath))
+            {
+                await DocumentService.PatchNomorSuratAsync(ba.Id, ba.NomorSurat!);
+            }
+            else
+            {
+                ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
+            }
+
+            // Transaksi database
+            await using var tx = await DbContext.Database.BeginTransactionAsync();
+            ba.Status = "Approved";
+            ba.PjSignedAt = DateTime.Now;
+            ba.ApprovedAt = DateTime.Now;
+            ba.ExcelExported = false;
             approvalToken!.UsedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
 
-            // File TTD PJ sengaja TIDAK dihapus di sini — dibutuhkan lagi saat Approve
-            // untuk di-embed ulang ke dokumen final (ApproveAsync akan menghapusnya setelah selesai)
+            // Export Excel di luar TX
+            await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
+            ba.ExcelExported = true;
+            await DbContext.SaveChangesAsync();
+            await tx.CommitAsync();
 
+            // Kirim notifikasi ke Admin Gudang Barang
+            await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah selesai dan disetujui sepenuhnya.", ba.Id);
+            
+            var creatorUser = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
+            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+            var barangList = ba.Perangkat
+                .Select(p => {
+                    string nama = p.Barang?.NamaBarang ?? "Perangkat";
+                    string detail = $"{p.Jumlah} {p.Satuan}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                    return $"{nama} — {detail}";
+                }).ToList();
+                
+            if (!string.IsNullOrEmpty(creatorUser?.Email))
+                await EmailService.SendApprovalResultAsync(creatorUser.Email, creatorUser.Nama ?? creatorUser.Email, ba.Jenis, true, ba.Id, baseUrl, isForPj: false, nomorSurat: ba.NomorSurat, barangList: barangList);
+            
+            // Email salinan ke PJ
+            if (!string.IsNullOrEmpty(ba.Pj?.Email))
+                await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, true, ba.Id, baseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
 
-
-            await NotificationService.SendToRoleAsync("Reviewer", "WAITING_APPROVAL",
-                $"Berita Acara {ba.Jenis} telah ditandatangani PJ ({ba.Pj?.Nama}) dan menunggu review Anda.", ba.Id);
-            await NotificationService.SendToRoleAsync("AdminGudangBarang", "PJ_SIGNED",
-                $"Berita Acara {ba.Jenis} telah ditandatangani PJ ({ba.Pj?.Nama}).", ba.Id);
             await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
-
-            // Email notifikasi ke Reviewer
-            if (reviewerUser != null && !string.IsNullOrEmpty(reviewerUser.Email))
-            {
-                var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
-                var barangList = ba.Perangkat
-                    .Select(p => {
-                        string nama = p.Barang?.NamaBarang ?? "Perangkat";
-                        string detail = $"{p.Jumlah} {p.Satuan}";
-                        if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
-                        if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                        return $"{nama} — {detail}";
-                    }).ToList();
-                await EmailService.SendApprovalRequestAsync(reviewerUser.Email, reviewerUser.Nama ?? reviewerUser.Email, baseUrl, ba.Id, ba.Jenis, barangList);
-            }
 
             alreadySigned = true;
         }
