@@ -81,7 +81,7 @@
                         <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
                             @foreach (var jenis in new[] { "Alokasi", "Peminjaman", "Penarikan", "Lainnya" })
                             {
-                                <div @onclick="() => SelectJenis(jenis)"
+                                <div @onclick="async () => await SelectJenis(jenis)"
                                      style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(model.Jenis == jenis ? "600" : "400");background:@(model.Jenis == jenis ? "var(--primary)" : "transparent");color:@(model.Jenis == jenis ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
                                      onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
                                      onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
@@ -864,7 +864,7 @@
         }
     }
 
-    private void SelectJenis(string jenis)
+    private async Task SelectJenis(string jenis)
     {
         model.Jenis = jenis;
         showJenisDropdown = false;
@@ -904,7 +904,7 @@
                     }
                     catch { }
                 }
-                DbContext.SaveChanges();
+                await DbContext.SaveChangesAsync();
             }
         }
         else

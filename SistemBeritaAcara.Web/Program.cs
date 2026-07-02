@@ -1,6 +1,7 @@
 using Hangfire;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Infrastructure;
@@ -11,6 +12,7 @@ using SistemBeritaAcara.Web.Filters;
 using SistemBeritaAcara.Web.Hubs;
 using SistemBeritaAcara.Web.Services;
 using System.Globalization;
+using System.Threading.RateLimiting;
 
 // ── Atur kultur global ke Bahasa Indonesia ──────────────────────────────────
 // Semua format tanggal (ToString("MMMM"), dll.) otomatis menggunakan nama bulan
@@ -31,13 +33,31 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.Authent
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// M-6: Rate limiting pada endpoint login — maks 10 percobaan per menit per IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("login", limiter =>
+    {
+        limiter.PermitLimit = 10;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiter.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 // Ensure database and initial roles are created before the app (and Hangfire) starts
 using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
 {
     var db = preScope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    var startupLogger = preScope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+
+    try { db.Database.EnsureCreated(); }
+    catch (Exception ex) { startupLogger.LogCritical(ex, "Gagal membuat/memverifikasi database. Pastikan SQL Server berjalan dan connection string benar."); throw; }
 
     // Add columns that may be missing when DB was created before the entity was updated
+    try
+    {
     await db.Database.ExecuteSqlRawAsync(@"
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'ProfilePicPath')
             ALTER TABLE [Users] ADD [ProfilePicPath] nvarchar(500) NULL;
@@ -94,6 +114,11 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
         UPDATE [AspNetRoles] SET [Name] = 'Reviewer', [NormalizedName] = 'REVIEWER' WHERE [Name] = 'Approver';
         UPDATE [Users] SET [Role] = 'Reviewer' WHERE [Role] = 'Approver';
     ");
+    }
+    catch (Exception ex)
+    {
+        startupLogger.LogError(ex, "Satu atau lebih migrasi SQL startup gagal. Aplikasi tetap berjalan namun beberapa kolom mungkin belum ada.");
+    }
 
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
     var userManager = preScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -163,6 +188,7 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // ── First-Run Middleware: redirect ke /setup jika belum ada user di DB ──
 app.UseMiddleware<SistemBeritaAcara.Web.Security.FirstRunMiddleware>();
@@ -206,7 +232,7 @@ app.MapPost("/account/login", async (
         return Results.Redirect("/login?error=locked");
 
     return Results.Redirect("/login?error=invalid");
-}).DisableAntiforgery();
+}).DisableAntiforgery().RequireRateLimiting("login");
 
 app.MapPost("/account/logout", async (
     HttpContext ctx,

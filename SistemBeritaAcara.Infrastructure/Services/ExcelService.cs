@@ -1,12 +1,13 @@
 ﻿using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Core.Interfaces;
 using SistemBeritaAcara.Infrastructure.Data;
 
 namespace SistemBeritaAcara.Infrastructure.Services;
 
-public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService) : IExcelService
+public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService, IConfiguration configuration) : IExcelService
 {
     // H-7: Mutex untuk cegah concurrent write ke file Excel arsip
     private static readonly SemaphoreSlim _archiveLock = new(1, 1);
@@ -186,7 +187,10 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
         await _archiveLock.WaitAsync();
         try
         {
-            var dataRoot = Path.Combine(Directory.GetCurrentDirectory(), "data");
+            var configuredPath = configuration["Storage:ArchivePath"];
+            var dataRoot = !string.IsNullOrWhiteSpace(configuredPath)
+                ? configuredPath
+                : Path.Combine(Directory.GetCurrentDirectory(), "data");
             Directory.CreateDirectory(dataRoot);
 
             var archivePath = Path.Combine(dataRoot, "ArsipBeritaAcara.xlsx");

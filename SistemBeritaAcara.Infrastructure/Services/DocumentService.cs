@@ -279,7 +279,7 @@ public class DocumentService : IDocumentService
 
                 if (ba.BuktiFotos != null && ba.BuktiFotos.Any())
                 {
-                    uint imgId = (uint)new Random().Next(2000, 200000);
+                    uint imgId = (uint)Random.Shared.Next(2000, 200000);
                     var sectPr = mainPart.Document.Body!.Elements<SectionProperties>().LastOrDefault();
                     
                     foreach (var foto in ba.BuktiFotos)
@@ -349,7 +349,7 @@ public class DocumentService : IDocumentService
                     mainPart.Document.Body!.Append(p2);
                 }
 
-                uint imgId = (uint)new Random().Next(2000, 200000);
+                uint imgId = (uint)Random.Shared.Next(2000, 200000);
                 foreach (var foto in ba.BuktiFotos)
                 {
                     var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
@@ -570,7 +570,7 @@ public class DocumentService : IDocumentService
                 }
             }
 
-            uint randomId = (uint)new Random().Next(1000, 100000);
+            uint randomId = (uint)Random.Shared.Next(1000, 100000);
 
             var drawing = new Drawing(
                 new DW.Inline(

@@ -413,8 +413,15 @@ else
         isProcessing = true;
         try
         {
+            // M-2: Invalidasi semua token PJ_SIGNATURE lama yang belum digunakan untuk BA ini
+            var oldTokens = await DbContext.ApprovalToken
+                .Where(t => t.BaId == ba!.Id && t.TokenType == "PJ_SIGNATURE" && t.UsedAt == null)
+                .ToListAsync();
+            foreach (var old in oldTokens)
+                old.UsedAt = DateTime.Now;
+
             var tokenValue = Guid.NewGuid().ToString("N");
-            DbContext.ApprovalToken.Add(new ApprovalToken { BaId = ba!.Id, Token = tokenValue, ExpiresAt = DateTime.Now.AddDays(7) });
+            DbContext.ApprovalToken.Add(new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) });
             ba!.Status = "WaitingPJSign";
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();

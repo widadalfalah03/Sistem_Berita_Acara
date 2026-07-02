@@ -33,7 +33,7 @@ public static class DependencyInjection
             opt.Password.RequireLowercase = false;
             opt.Password.RequireUppercase = false;
             opt.Password.RequireNonAlphanumeric = false;
-            opt.Password.RequiredLength = 8;
+            opt.Password.RequiredLength = 6;
             opt.User.RequireUniqueEmail = true;
             // Kunci akun 5 menit setelah 5x salah password
             opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);

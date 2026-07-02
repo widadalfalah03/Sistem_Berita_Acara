@@ -231,15 +231,25 @@
 
     private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
-        // Periksa apakah URL saat ini cocok dengan halaman ini
-        var uri = new Uri(e.Location);
-        var path = uri.AbsolutePath.TrimEnd('/');
-        var expectedPath = $"/editor/{Id}";
-        if (path.Equals(expectedPath, StringComparison.OrdinalIgnoreCase) && _currentUserId != 0)
+        try
         {
-            await InvokeAsync(async () =>
+            var uri = new Uri(e.Location);
+            var path = uri.AbsolutePath.TrimEnd('/');
+            var expectedPath = $"/editor/{Id}";
+            if (path.Equals(expectedPath, StringComparison.OrdinalIgnoreCase) && _currentUserId != 0)
             {
-                await RefreshBaAsync();
+                await InvokeAsync(async () =>
+                {
+                    await RefreshBaAsync();
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                errorMessage = $"Gagal memuat ulang data: {ex.Message}";
                 StateHasChanged();
             });
         }
@@ -522,6 +532,13 @@
                 }
                 else
                 {
+                    // M-2: Invalidasi token PJ_SIGNATURE lama yang belum digunakan sebelum buat token baru
+                    var oldTokens = await DbContext.ApprovalToken
+                        .Where(t => t.BaId == trackedBa.Id && t.TokenType == "PJ_SIGNATURE" && t.UsedAt == null)
+                        .ToListAsync();
+                    foreach (var old in oldTokens)
+                        old.UsedAt = DateTime.Now;
+
                     var tokenValue = Guid.NewGuid().ToString("N");
                     DbContext.ApprovalToken.Add(new ApprovalToken
                     {
