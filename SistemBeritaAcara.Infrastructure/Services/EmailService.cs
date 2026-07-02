@@ -378,6 +378,9 @@ public class EmailService(IConfiguration config) : IEmailService
         message.Body = builder.ToMessageBody();
 
         using var client = new SmtpClient();
+        // Nonaktifkan pengecekan CRL (Certificate Revocation List) saja — tetap validasi sertifikat.
+        // CRL server Gmail tidak selalu bisa dijangkau dari jaringan korporat/VPN.
+        client.CheckCertificateRevocation = false;
         await client.ConnectAsync(_host, _port, SecureSocketOptions.StartTls);
         await client.AuthenticateAsync(_user, _pass);
         await client.SendAsync(message);

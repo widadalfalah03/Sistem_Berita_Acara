@@ -21,14 +21,12 @@
 {
     <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
         <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
-        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">Menyimpan dokumen...</div>
-        <div style="font-size:13px;color:var(--text-muted);">Mengkonversi ke PDF, harap tunggu</div>
     </div>
 }
 
 @if (isLoading)
 {
-    <div class="loading-spinner"><div class="spinner"></div><span>Memuat Editor ONLYOFFICE...</span></div>
+    <div class="loading-spinner"><div class="spinner"></div></div>
 }
 else if (ba is null)
 {
@@ -54,7 +52,6 @@ else
             @if (isSaving)
             {
                 <span class="spinner" style="width:16px;height:16px;border-width:2px;border-color:white;border-top-color:transparent;"></span>
-                <span>Menyimpan...</span>
             }
             else
             {
@@ -154,7 +151,10 @@ else
 
             var appBaseUrl = (Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var docUrl = $"{appBaseUrl}/{ba.DocxPath}";
-            var callbackUrl = $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}";
+            var callbackSecret = Configuration["OnlyOffice:CallbackSecret"] ?? "";
+            var callbackUrl = string.IsNullOrEmpty(callbackSecret)
+                ? $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}"
+                : $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}?secret={Uri.EscapeDataString(callbackSecret)}";
 
             // Key unik per sesi editor — disimpan untuk dipakai di Command Service saat forceSave
             _docKey = $"{ba.Id}-{DateTime.Now.Ticks}";

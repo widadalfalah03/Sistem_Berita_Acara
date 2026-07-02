@@ -27,14 +27,21 @@
 {
     <div style="position:fixed;inset:0;z-index:10000;background:var(--bg-overlay);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
         <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
-        <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-top:4px;">@reviewerActionLabel</div>
-        <div style="font-size:13px;color:var(--text-muted);">@reviewerActionSubLabel</div>
     </div>
 }
 
 @if (isLoading)
 {
-    <div class="loading-spinner"><div class="spinner"></div><span>Memuat detail...</span></div>
+    <div class="loading-spinner"><div class="spinner"></div></div>
+}
+else if (loadError is not null)
+{
+    <div style="text-align:center;padding:60px;color:var(--text-muted);">
+        <i class="bi bi-exclamation-triangle" style="font-size:48px;display:block;margin-bottom:16px;color:var(--danger);"></i>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Gagal memuat halaman</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">@loadError</div>
+        <button class="btn btn-primary" @onclick="() => Navigation.NavigateTo(Navigation.Uri, true)">Muat Ulang</button>
+    </div>
 }
 else if (notFound || ba is null)
 {
@@ -90,10 +97,10 @@ else
                 <div class="review-info">
                     <div class="review-info-item">
                         <span class="review-info-label">No. Surat</span>
-                        <span class="review-info-value text-primary">@ba.NomorSurat</span>
+                        <span class="review-info-value" style="color:var(--text-muted);font-style:italic;font-size:12px;">dibuat otomatis saat anda menyetujui</span>
                     </div>
                     <div class="review-info-item">
-                        <span class="review-info-label">Jenis</span>
+                        <span class="review-info-label">Jenis Berita Acara</span>
                         <span class="review-info-value">@ba.Jenis</span>
                     </div>
                     <div class="review-info-item">
@@ -344,31 +351,53 @@ else
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
+    private string? loadError;
+    private bool _loadingInProgress = false;
+
     private async Task LoadAsync()
     {
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
-        if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
-        currentRole = appUser.Role;
-        currentUserId = appUser.Id;
+        // Cegah dua LoadAsync berjalan bersamaan pada DbContext yang sama.
+        // Ini bisa terjadi saat RejectAsync/ApproveAsync memanggil LoadAsync()
+        // tepat saat SignalR BaDetailUpdated juga men-trigger LoadAsync() via InvokeAsync.
+        if (_loadingInProgress) return;
+        _loadingInProgress = true;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userName = auth.User.Identity?.Name;
+            if (string.IsNullOrEmpty(userName)) { Navigation.NavigateTo("/login", true); return; }
 
-        ba = await DbContext.Set<BeritaAcaraEntity>()
-            .Include(x => x.Pj)
-            .Include(x => x.Menyerahkan)
-            .Include(x => x.Mengetahui)
-            .Include(x => x.Creator)
-            .Include(x => x.Perangkat).ThenInclude(p => p.Barang)
-            .Include(x => x.BuktiFotos)
-            .FirstOrDefaultAsync(x => x.Id == Id);
+            var appUser = await UserManager.FindByEmailAsync(userName);
+            if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
+            currentRole = appUser.Role;
+            currentUserId = appUser.Id;
 
-        if (ba is null) { notFound = true; isLoading = false; return; }
+            DbContext.ChangeTracker.Clear();
+            ba = await DbContext.Set<BeritaAcaraEntity>()
+                .Include(x => x.Pj)
+                .Include(x => x.Menyerahkan)
+                .Include(x => x.Mengetahui)
+                .Include(x => x.Creator)
+                .Include(x => x.Perangkat).ThenInclude(p => p.Barang)
+                .Include(x => x.BuktiFotos)
+                .FirstOrDefaultAsync(x => x.Id == Id);
 
-        isReviewer = currentRole == "Reviewer" && appUser.Id == ba.MengetahuiId;
+            if (ba is null) { notFound = true; isLoading = false; return; }
 
+            isReviewer = currentRole == "Reviewer" && appUser.Id == ba.MengetahuiId;
 
-
-        pdfVersion = DateTime.UtcNow.Ticks;
-        isLoading = false;
+            pdfVersion = DateTime.UtcNow.Ticks;
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+            isLoading = false;
+        }
+        finally
+        {
+            _loadingInProgress = false;
+        }
     }
 
     private async Task SendMagicLinkAsync()
@@ -376,12 +405,19 @@ else
         isProcessing = true;
         try
         {
+            // M-2: Invalidasi semua token PJ_SIGNATURE lama yang belum digunakan untuk BA ini
+            var oldTokens = await DbContext.ApprovalToken
+                .Where(t => t.BaId == ba!.Id && t.TokenType == "PJ_SIGNATURE" && t.UsedAt == null)
+                .ToListAsync();
+            foreach (var old in oldTokens)
+                old.UsedAt = DateTime.Now;
+
             var tokenValue = Guid.NewGuid().ToString("N");
-            DbContext.ApprovalToken.Add(new ApprovalToken { BaId = ba!.Id, Token = tokenValue, ExpiresAt = DateTime.Now.AddDays(7) });
+            DbContext.ApprovalToken.Add(new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) });
             ba!.Status = "WaitingPJSign";
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
-            var baseUrl = Navigation.BaseUri.TrimEnd('/');
+            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangListMagic = ba.Perangkat
                 .Select(p => {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
@@ -408,10 +444,12 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
-            // Server-side guard: cegah approval jika status sudah berubah
+            // H-1: Re-fetch status langsung dari DB (bukan dari memori) untuk cegah double-approve
+            // jika dua reviewer membuka BA yang sama secara bersamaan.
+            await DbContext.Entry(ba!).ReloadAsync();
             if (ba!.Status != "WaitingApproval")
             {
-                actionIsError = true; actionMessage = "Gagal: Status BA sudah berubah. Refresh halaman dan coba lagi.";
+                actionIsError = true; actionMessage = "Gagal: Status BA sudah berubah (mungkin sudah diproses). Refresh halaman dan coba lagi.";
                 isProcessing = false; isReviewerAction = false; return;
             }
 
@@ -488,16 +526,19 @@ else
 
             // Embed TTD Yang Mengetahui (Reviewer)
             await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, reviewerTtdPhysical);
+
+            // H-2: Bungkus kedua SaveChanges dalam satu transaction agar atomic
+            await using var tx = await DbContext.Database.BeginTransactionAsync();
             ba.Status = "Approved";
             ba.ApprovedAt = DateTime.Now;
-            ba.ExcelExported = false; // akan di-set true setelah berhasil export
+            ba.ExcelExported = false;
             await DbContext.SaveChangesAsync();
-            if (!ba.ExcelExported)
-            {
-                await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
-                ba.ExcelExported = true;
-                await DbContext.SaveChangesAsync();
-            }
+
+            // Export Excel di luar TX (operasi file), tapi flag ExcelExported di-commit bersama
+            await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
+            ba.ExcelExported = true;
+            await DbContext.SaveChangesAsync();
+            await tx.CommitAsync();
             await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah disetujui.", ba.Id);
 
             // Email ke Admin Gudang & Barang (creator)
@@ -536,13 +577,16 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
-            // Server-side guard: cegah reject jika status sudah berubah
+            // H-1: Re-fetch status dari DB untuk cegah reject pada BA yang sudah di-approve
+            await DbContext.Entry(ba!).ReloadAsync();
             if (ba!.Status != "WaitingApproval")
             {
-                rejectError = "Status BA sudah berubah. Refresh halaman dan coba lagi.";
+                rejectError = "Status BA sudah berubah (mungkin sudah diproses). Refresh halaman dan coba lagi.";
                 isProcessing = false; isReviewerAction = false; return;
             }
 
+            // H-2: Gunakan transaction agar reject + history tersimpan bersama-sama
+            await using var txReject = await DbContext.Database.BeginTransactionAsync();
             ba!.Status = "Rejected";
             ba.AlasanReject = rejectReason;
             ba.WasRejected = true;
@@ -563,6 +607,7 @@ else
             };
             DbContext.BeritaAcaraHistory.Add(history);
             await DbContext.SaveChangesAsync();
+            await txReject.CommitAsync();
 
             var label = ba.NomorSurat ?? "";
             var text = $"Berita Acara {ba.Jenis} {label} ditolak: {rejectReason}".Replace("  ", " ").Trim();
@@ -578,14 +623,10 @@ else
                     return $"{nama} — {detail}";
                 }).ToList();
 
-            // Email ke Admin Gudang & Barang (creator)
+            // Email ke Admin Gudang & Barang (creator) — PJ tidak mendapat notifikasi penolakan
             var creatorUserReject = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
             if (!string.IsNullOrEmpty(creatorUserReject?.Email))
                 await EmailService.SendApprovalResultAsync(creatorUserReject.Email, creatorUserReject.Nama ?? creatorUserReject.Email, ba.Jenis, false, ba.Id, baseUrlReject, isForPj: false, nomorSurat: ba.NomorSurat, alasan: rejectReason, barangList: barangListReject);
-
-            // Email ke PJ
-            if (!string.IsNullOrEmpty(ba.Pj?.Email))
-                await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, false, ba.Id, baseUrlReject, isForPj: true, nomorSurat: ba.NomorSurat, alasan: rejectReason, barangList: barangListReject);
 
             showRejectModal = false;
             rejectReason = string.Empty;

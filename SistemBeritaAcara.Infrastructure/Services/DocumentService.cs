@@ -279,7 +279,7 @@ public class DocumentService : IDocumentService
 
                 if (ba.BuktiFotos != null && ba.BuktiFotos.Any())
                 {
-                    uint imgId = (uint)new Random().Next(2000, 200000);
+                    uint imgId = (uint)Random.Shared.Next(2000, 200000);
                     var sectPr = mainPart.Document.Body!.Elements<SectionProperties>().LastOrDefault();
                     
                     foreach (var foto in ba.BuktiFotos)
@@ -349,7 +349,7 @@ public class DocumentService : IDocumentService
                     mainPart.Document.Body!.Append(p2);
                 }
 
-                uint imgId = (uint)new Random().Next(2000, 200000);
+                uint imgId = (uint)Random.Shared.Next(2000, 200000);
                 foreach (var foto in ba.BuktiFotos)
                 {
                     var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
@@ -436,9 +436,12 @@ public class DocumentService : IDocumentService
 
             foreach (var text in mainPart.Document.Body!.Descendants<Text>())
             {
-                if (text.Text != null && text.Text.Contains("Draft"))
+                // H-3: Gunakan exact match bukan Contains/Replace untuk menghindari korupsi konten
+                // yang kebetulan mengandung kata "Draft" (misal: nama perangkat "Draft Book").
+                // Placeholder di template adalah satu text run yang isinya persis "Draft".
+                if (text.Text == "Draft")
                 {
-                    text.Text = text.Text.Replace("Draft", nomorSurat);
+                    text.Text = nomorSurat;
                     changed = true;
                 }
             }
@@ -461,7 +464,9 @@ public class DocumentService : IDocumentService
     public async Task<string> EmbedTtdMenyerahkanAsync(int baId, string ttdPath)
     {
         var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
-        string physicalPath = GetPhysicalPath(ba.DocxPath!);
+        if (string.IsNullOrEmpty(ba.DocxPath))
+            throw new InvalidOperationException($"BA {baId} belum memiliki dokumen (DocxPath kosong). Generate dokumen terlebih dahulu.");
+        string physicalPath = GetPhysicalPath(ba.DocxPath);
         EnsureFileExists(physicalPath);
 
         await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_MENYERAHKAN}}");
@@ -472,18 +477,22 @@ public class DocumentService : IDocumentService
     public async Task<string> EmbedTtdPreviewReviewerAsync(int baId, string ttdPath)
     {
         var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
-        string physicalPath = GetPhysicalPath(ba.DocxPath!);
+        if (string.IsNullOrEmpty(ba.DocxPath))
+            throw new InvalidOperationException($"BA {baId} belum memiliki dokumen (DocxPath kosong).");
+        string physicalPath = GetPhysicalPath(ba.DocxPath);
         EnsureFileExists(physicalPath);
 
         await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_REVIEWER}}");
 
-        return ba.DocxPath!;
+        return ba.DocxPath;
     }
 
     public async Task<string> EmbedTtdPjAsync(int baId, string ttdPath)
     {
         var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
-        string physicalPath = GetPhysicalPath(ba.DocxPath!);
+        if (string.IsNullOrEmpty(ba.DocxPath))
+            throw new InvalidOperationException($"BA {baId} belum memiliki dokumen (DocxPath kosong).");
+        string physicalPath = GetPhysicalPath(ba.DocxPath);
         EnsureFileExists(physicalPath);
 
         await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_PJ}}");
@@ -498,13 +507,15 @@ public class DocumentService : IDocumentService
         }
         await _db.SaveChangesAsync();
 
-        return ba.DocxPath!;
+        return ba.DocxPath;
     }
 
     public async Task<string> EmbedTtdMengetahuiAsync(int baId, string ttdPath)
     {
         var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
-        string draftPhysicalPath = GetPhysicalPath(ba.DocxPath!);
+        if (string.IsNullOrEmpty(ba.DocxPath))
+            throw new InvalidOperationException($"BA {baId} belum memiliki dokumen (DocxPath kosong).");
+        string draftPhysicalPath = GetPhysicalPath(ba.DocxPath);
         EnsureFileExists(draftPhysicalPath);
 
         string finalRelativePath = GetRelativePath($"ba-{baId}-final.docx");
@@ -559,7 +570,7 @@ public class DocumentService : IDocumentService
                 }
             }
 
-            uint randomId = (uint)new Random().Next(1000, 100000);
+            uint randomId = (uint)Random.Shared.Next(1000, 100000);
 
             var drawing = new Drawing(
                 new DW.Inline(
@@ -703,7 +714,12 @@ public class DocumentService : IDocumentService
     }
 
     private string GetRelativePath(string fileName) => Path.Combine("files", "documents", fileName).Replace("\\", "/");
-    private string GetPhysicalPath(string relativePath) => Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+    private string GetPhysicalPath(string? relativePath)
+    {
+        if (string.IsNullOrEmpty(relativePath))
+            throw new InvalidOperationException("Path dokumen belum tersimpan (DocxPath kosong). Pastikan dokumen berhasil di-generate terlebih dahulu.");
+        return Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+    }
 
     private static void EnsureFileExists(string path)
     {

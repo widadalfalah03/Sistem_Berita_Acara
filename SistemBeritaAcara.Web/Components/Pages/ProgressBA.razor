@@ -14,7 +14,7 @@
 
 @if (isLoading)
 {
-    <div class="loading-spinner"><div class="spinner"></div><span>Memuat data...</span></div>
+    <div class="loading-spinner"><div class="spinner"></div></div>
 }
 else if (currentRole == "AdminGudangBarang")
 {
@@ -61,7 +61,7 @@ else if (currentRole == "AdminGudangBarang")
                                 @if (ba.Status == "WaitingPJSign")
                                 {
                                     <span class="pill pill-waiting-pj">
-                                        <i class="bi bi-pen" style="margin-right:4px;"></i> Menunggu TTD Pj
+                                        <i class="bi bi-pen" style="margin-right:4px;"></i> Menunggu TTD PJ
                                     </span>
                                 }
                                 else

@@ -15,6 +15,7 @@ public class ApplicationUser : IdentityUser<int>
 
     public Pegawai? Pegawai { get; set; }
     public ICollection<BeritaAcara> BeritaAcaraCreated { get; set; } = [];
+    public ICollection<BeritaAcara> BeritaAcaraMenyerahkan { get; set; } = [];
     public ICollection<BeritaAcara> BeritaAcaraMengetahui { get; set; } = [];
     public ICollection<Notification> Notifications { get; set; } = [];
     public ICollection<PegawaiImportLog> PegawaiImportLogs { get; set; } = [];

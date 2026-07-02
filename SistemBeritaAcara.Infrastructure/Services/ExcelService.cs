@@ -1,13 +1,17 @@
 ﻿using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Core.Interfaces;
 using SistemBeritaAcara.Infrastructure.Data;
 
 namespace SistemBeritaAcara.Infrastructure.Services;
 
-public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService) : IExcelService
+public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService, IConfiguration configuration) : IExcelService
 {
+    // H-7: Mutex untuk cegah concurrent write ke file Excel arsip
+    private static readonly SemaphoreSlim _archiveLock = new(1, 1);
+
     public async Task<(int added, int updated, int deactivated, List<string> errors)> ImportPegawaiAsync(
         Stream excelStream, int importedBy, string fileName)
     {
@@ -179,40 +183,52 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService)
 
     public async Task AppendBeritaAcaraToArsipAsync(BeritaAcara ba)
     {
-        var dataRoot = Path.Combine(Directory.GetCurrentDirectory(), "data");
-        Directory.CreateDirectory(dataRoot);
-
-        var archivePath = Path.Combine(dataRoot, "ArsipBeritaAcara.xlsx");
-        using var workbook = File.Exists(archivePath)
-            ? new XLWorkbook(archivePath)
-            : new XLWorkbook();
-
-        var worksheet = workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Arsip")
-            ?? workbook.AddWorksheet("Arsip");
-
-        if (worksheet.RowsUsed() is null || worksheet.Row(1).Cell(1).GetString() != "Nomor Surat")
+        // H-7: Gunakan semaphore agar hanya satu proses yang membaca+menulis file Excel secara bersamaan
+        await _archiveLock.WaitAsync();
+        try
         {
-            worksheet.Cell(1, 1).Value = "Nomor Surat";
-            worksheet.Cell(1, 2).Value = "Tanggal";
-            worksheet.Cell(1, 3).Value = "Jenis";
-            worksheet.Cell(1, 4).Value = "PJ";
-            worksheet.Cell(1, 5).Value = "Yang Menyerahkan";
-            worksheet.Cell(1, 6).Value = "Reviewer";
-            worksheet.Cell(1, 7).Value = "Status";
-            worksheet.Cell(1, 8).Value = "Tanggal Kembali";
+            var configuredPath = configuration["Storage:ArchivePath"];
+            var dataRoot = !string.IsNullOrWhiteSpace(configuredPath)
+                ? configuredPath
+                : Path.Combine(Directory.GetCurrentDirectory(), "data");
+            Directory.CreateDirectory(dataRoot);
+
+            var archivePath = Path.Combine(dataRoot, "ArsipBeritaAcara.xlsx");
+            using var workbook = File.Exists(archivePath)
+                ? new XLWorkbook(archivePath)
+                : new XLWorkbook();
+
+            var worksheet = workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Arsip")
+                ?? workbook.AddWorksheet("Arsip");
+
+            if (worksheet.RowsUsed() is null || worksheet.Row(1).Cell(1).GetString() != "Nomor Surat")
+            {
+                worksheet.Cell(1, 1).Value = "Nomor Surat";
+                worksheet.Cell(1, 2).Value = "Tanggal";
+                worksheet.Cell(1, 3).Value = "Jenis";
+                worksheet.Cell(1, 4).Value = "PJ";
+                worksheet.Cell(1, 5).Value = "Yang Menyerahkan";
+                worksheet.Cell(1, 6).Value = "Reviewer";
+                worksheet.Cell(1, 7).Value = "Status";
+                worksheet.Cell(1, 8).Value = "Tanggal Kembali";
+            }
+
+            var nextRow = worksheet.LastRowUsed()?.RowNumber() + 1 ?? 2;
+            worksheet.Cell(nextRow, 1).Value = ba.NomorSurat;
+            worksheet.Cell(nextRow, 2).Value = ba.Tanggal.ToString("yyyy-MM-dd");
+            worksheet.Cell(nextRow, 3).Value = ba.Jenis;
+            worksheet.Cell(nextRow, 4).Value = ba.Pj?.Nama ?? string.Empty;
+            worksheet.Cell(nextRow, 5).Value = ba.Menyerahkan?.Nama ?? string.Empty;
+            worksheet.Cell(nextRow, 6).Value = ba.Mengetahui?.Nama ?? string.Empty;
+            worksheet.Cell(nextRow, 7).Value = ba.Status;
+            worksheet.Cell(nextRow, 8).Value = ba.TanggalKembali?.ToString("yyyy-MM-dd") ?? string.Empty;
+
+            workbook.SaveAs(archivePath);
         }
-
-        var nextRow = worksheet.LastRowUsed()?.RowNumber() + 1 ?? 2;
-        worksheet.Cell(nextRow, 1).Value = ba.NomorSurat;
-        worksheet.Cell(nextRow, 2).Value = ba.Tanggal.ToString("yyyy-MM-dd");
-        worksheet.Cell(nextRow, 3).Value = ba.Jenis;
-        worksheet.Cell(nextRow, 4).Value = ba.Pj?.Nama ?? string.Empty;
-        worksheet.Cell(nextRow, 5).Value = ba.Menyerahkan?.Nama ?? string.Empty;
-        worksheet.Cell(nextRow, 6).Value = ba.Mengetahui?.Nama ?? string.Empty;
-        worksheet.Cell(nextRow, 7).Value = ba.Status;
-        worksheet.Cell(nextRow, 8).Value = ba.TanggalKembali?.ToString("yyyy-MM-dd") ?? string.Empty;
-
-        workbook.SaveAs(archivePath);
+        finally
+        {
+            _archiveLock.Release();
+        }
     }
 
     public Task<byte[]> ExportArsipAsync(IEnumerable<BeritaAcara> data, string baseUrl)

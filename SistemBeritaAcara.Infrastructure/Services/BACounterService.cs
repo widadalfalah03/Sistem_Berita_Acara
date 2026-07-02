@@ -1,10 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using SistemBeritaAcara.Core.Interfaces;
 using SistemBeritaAcara.Infrastructure.Data;
 
 namespace SistemBeritaAcara.Infrastructure.Services;
 
-public class BACounterService(AppDbContext db) : IBACounterService
+public class BACounterService(AppDbContext db, IConfiguration configuration) : IBACounterService
 {
     private static readonly string[] RomawiMap = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 
@@ -21,15 +22,15 @@ public class BACounterService(AppDbContext db) : IBACounterService
         await db.SaveChangesAsync();
         await tx.CommitAsync();
 
-        string nomor;
-        if (jenis != null && jenis.Equals("Lainnya", StringComparison.OrdinalIgnoreCase))
-        {
-            nomor = $"BA {value:D3}/PPNEG1000/{tanggal.Year}-S8";
-        }
-        else
-        {
-            nomor = $"BA {value:D3}/PPNEG1000/{tanggal.Year}-S0";
-        }
+        bool isLainnya = jenis != null && jenis.Equals("Lainnya", StringComparison.OrdinalIgnoreCase);
+        var formatKey = isLainnya ? "NomorSurat:FormatLainnya" : "NomorSurat:FormatUmum";
+        var format = configuration[formatKey]
+            ?? (isLainnya ? "BA {counter}/PPNEG1000/{year}-S8" : "BA {counter}/PPNEG1000/{year}-S0");
+
+        var nomor = format
+            .Replace("{counter}", value.ToString("D3"))
+            .Replace("{year}", tanggal.Year.ToString());
+
         return (value, nomor);
     }
 }

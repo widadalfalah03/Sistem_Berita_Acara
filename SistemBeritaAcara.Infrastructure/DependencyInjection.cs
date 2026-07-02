@@ -22,13 +22,18 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(opt =>
             opt.UseSqlServer(connectionString));
 
+        // H-8: Daftarkan factory agar komponen dapat membuat DbContext baru per-operasi
+        // (menghindari masalah long-lived DbContext di Blazor Server circuits)
+        services.AddDbContextFactory<AppDbContext>(opt =>
+            opt.UseSqlServer(connectionString), ServiceLifetime.Scoped);
+
         services.AddIdentity<ApplicationUser, IdentityRole<int>>(opt =>
         {
             opt.Password.RequireDigit = false;
             opt.Password.RequireLowercase = false;
             opt.Password.RequireUppercase = false;
             opt.Password.RequireNonAlphanumeric = false;
-            opt.Password.RequiredLength = 8;
+            opt.Password.RequiredLength = 6;
             opt.User.RequireUniqueEmail = true;
             // Kunci akun 5 menit setelah 5x salah password
             opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);

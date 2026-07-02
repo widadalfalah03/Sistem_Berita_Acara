@@ -1,4 +1,4 @@
-@page "/buat-ba"
+﻿@page "/buat-ba"
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
@@ -17,9 +17,9 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
-<PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") â€” Sistem Berita Acara</PageTitle>
+<PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") — Sistem Berita Acara</PageTitle>
 
-<!-- â”€â”€ Floating toast: autosave status â”€â”€ -->
+<!-- ── Floating toast: autosave status ── -->
 @if (autoSaveStatus != AutoSaveState.Idle)
 {
     <div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,0.18);font-size:13px;font-weight:500;transition:opacity 0.3s;
@@ -29,7 +29,6 @@
         @if (autoSaveStatus == AutoSaveState.Saving)
         {
             <span class="spinner" style="width:13px;height:13px;border-width:2px;"></span>
-            <span>Menyimpan draft...</span>
         }
         else if (autoSaveStatus == AutoSaveState.Saved)
         {
@@ -44,7 +43,7 @@
     </div>
 }
 
-<!-- â”€â”€ Floating toast: error submit â”€â”€ -->
+<!-- ── Floating toast: error submit ── -->
 @if (!string.IsNullOrEmpty(errorMessage))
 {
     <div style="position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;max-width:520px;width:90%;background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--radius);padding:14px 20px;display:flex;align-items:flex-start;gap:10px;color:var(--danger);box-shadow:0 6px 24px rgba(0,0,0,0.15);">
@@ -60,7 +59,7 @@
 <EditForm Model="model" OnValidSubmit="SubmitAsync">
     <DataAnnotationsValidator />
 
-    <!-- â”€â”€ 1. Info Dokumen â”€â”€ -->
+    <!-- ── 1. Info Dokumen ── -->
     <div class="form-section">
         <div class="form-section-title">1. Informasi Dokumen</div>
         <div class="form-row">
@@ -81,7 +80,7 @@
                         <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
                             @foreach (var jenis in new[] { "Alokasi", "Peminjaman", "Penarikan", "Lainnya" })
                             {
-                                <div @onclick="() => SelectJenis(jenis)"
+                                <div @onclick="async () => await SelectJenis(jenis)"
                                      style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(model.Jenis == jenis ? "600" : "400");background:@(model.Jenis == jenis ? "var(--primary)" : "transparent");color:@(model.Jenis == jenis ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
                                      onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
                                      onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
@@ -114,18 +113,18 @@
 
     </div>
 
-    <!-- â”€â”€ Card 2â€“5 â”€â”€ -->
+    <!-- ── Card 2–5 ── -->
     @if (model.Jenis != "Lainnya")
     {
-        <!-- â”€â”€ 2. Data Penanggung Jawab â”€â”€ -->
+        <!-- ── 2. Data Pegawai ── -->
         <div class="form-section">
-            <div class="form-section-title">2. Data Penanggung Jawab</div>
+            <div class="form-section-title">2. Data Pegawai</div>
 
             <div class="form-row">
                 <div style="display:flex;flex-direction:column;gap:16px;flex:1;">
                     <!-- Radio: Pekerja vs Tenaga Alih Daya -->
                     <div>
-                        <label class="form-label" style="margin-bottom:8px;display:block;">Tipe Penanggung Jawab</label>
+                        <label class="form-label" style="margin-bottom:8px;display:block;">Status Kepegawaian</label>
                         <div style="display:flex;gap:24px;align-items:center;">
                             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
                                 <input type="radio" name="tipePj" value="Pekerja"
@@ -146,7 +145,7 @@
                     <!-- Field Pengguna: muncul jika TAD -->
                     @if (model.TipePj == "TenagaAlihDaya")
                     {
-                        <div class="form-group">
+                        <div class="form-group" style="margin-bottom:8px;">
                             <label class="form-label">Nama Pengguna <span style="color:var(--danger)">*</span></label>
                             <input type="text" class="form-control"
                                    placeholder="Masukkan nama pengguna TAD"
@@ -232,7 +231,7 @@
             }
         </div>
 
-        <!-- â”€â”€ 3. Daftar Perangkat â”€â”€ -->
+        <!-- ── 3. Daftar Perangkat ── -->
         <div class="form-section">
             <div class="form-section-title">3. Daftar Perangkat</div>
 
@@ -240,18 +239,8 @@
             {
                 <div class="form-row" style="margin-bottom:16px;">
                     <div class="form-group" style="flex:1;">
-                        <label class="form-label">Dasar Alokasi</label>
-                        <InputRadioGroup TValue="string" Value="@model.DasarAlokasi" ValueExpression="@(() => model.DasarAlokasi)" ValueChanged="@((string val) => { model.DasarAlokasi = val; TriggerAutoSave(); })">
-                            <div style="margin-bottom: 8px; display: flex; gap: 16px;">
-                                <label style="display:flex; align-items:center; gap:4px;">
-                                    <InputRadio Value="@("No. Tiket My SSC")" /> No. Tiket My SSC
-                                </label>
-                                <label style="display:flex; align-items:center; gap:4px;">
-                                    <InputRadio Value="@("Nota Dinas")" /> Nota Dinas
-                                </label>
-                            </div>
-                        </InputRadioGroup>
-                        <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="@(model.DasarAlokasi == "Nota Dinas" ? "Contoh: 123/ND/2026" : "Contoh: INC-20240001")" />
+                        <label class="form-label">No. Tiket My SSC/Nota Dinas <span style="color:var(--danger)">*</span></label>
+                        <InputText class="form-control" @bind-Value="model.TiketSscNo" @bind-Value:after="TriggerAutoSave" placeholder="Contoh: INC-20240001 atau No. Nota Dinas" />
                     </div>
                     <div style="flex:1;"></div>
                 </div>
@@ -447,7 +436,7 @@
                         {
                             <span style="font-weight:600;color:var(--text-primary);">
                                 <i class="bi bi-person-check" style="color:var(--success);"></i>
-                                @(adminGudangUsers.FirstOrDefault(u => u.PegawaiId == model.MenyerahkanId)?.Nama ?? currentUserObj?.Nama ?? "Admin Gudang")
+                                @(adminGudangUsers.FirstOrDefault(u => u.Id == model.MenyerahkanId)?.Nama ?? currentUserObj?.Nama ?? "Admin Gudang")
                             </span>
                         }
                     </div>
@@ -608,7 +597,6 @@
             @if (isSaving)
             {
                 <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
-                <span>Menyimpan...</span>
             }
             else
             {
@@ -685,7 +673,7 @@
 
         currentUserObj = adminGudangUsers.FirstOrDefault(u => u.Id == _currentUserId);
         if (currentUserObj != null && !editId.HasValue)
-            model.MenyerahkanId = currentUserObj.PegawaiId ?? 0;
+            model.MenyerahkanId = _currentUserId;
 
         editId = EditIdParam;
         if (editId.HasValue)
@@ -716,12 +704,7 @@
                 model.PengunaAlihDaya = existing.PengunaAlihDaya;
                 model.TipePj = string.IsNullOrEmpty(existing.PengunaAlihDaya) ? "Pekerja" : "TenagaAlihDaya";
 
-                if (adminGudangUsers.Any(u => u.PegawaiId == existing.MenyerahkanId))
-                    model.MenyerahkanId = existing.MenyerahkanId;
-                else if (adminGudangUsers.FirstOrDefault(u => u.Id == existing.MenyerahkanId) is { } oldFormatUser)
-                    model.MenyerahkanId = oldFormatUser.PegawaiId ?? 0;
-                else
-                    model.MenyerahkanId = existing.MenyerahkanId;
+                model.MenyerahkanId = existing.MenyerahkanId ?? _currentUserId;
                 model.MengetahuiId = existing.MengetahuiId;
 
                 selectedPj = allPegawai.FirstOrDefault(p => p.Id == existing.PjId);
@@ -874,7 +857,7 @@
         }
     }
 
-    private void SelectJenis(string jenis)
+    private async Task SelectJenis(string jenis)
     {
         model.Jenis = jenis;
         showJenisDropdown = false;
@@ -914,7 +897,7 @@
                     }
                     catch { }
                 }
-                DbContext.SaveChanges();
+                await DbContext.SaveChangesAsync();
             }
         }
         else
@@ -922,7 +905,7 @@
             // Restore MenyerahkanId ke default (Admin Gudang / current user) jika kosong
             if (model.MenyerahkanId == null || model.MenyerahkanId == 0)
             {
-                model.MenyerahkanId = currentUserObj?.PegawaiId ?? 0;
+                model.MenyerahkanId = _currentUserId;
             }
             if (model.Perangkat.Count == 0)
             {
@@ -1070,6 +1053,14 @@
                     using var ms = new MemoryStream();
                     await stream.CopyToAsync(ms);
                     var bytes = ms.ToArray();
+
+                    // H-5: Validasi magic bytes — pastikan file benar-benar PNG atau JPEG
+                    if (!IsValidImageBytes(bytes))
+                    {
+                        autoSaveStatus = AutoSaveState.Error;
+                        StateHasChanged();
+                        return;
+                    }
                     await File.WriteAllBytesAsync(fullPath, bytes);
 
                     var existingBa = await DbContext.BeritaAcara.FindAsync(editId.Value);
@@ -1112,6 +1103,15 @@
                 catch { }
             }
         }
+    }
+
+    // H-5/H-6: Validasi magic bytes — hanya izinkan PNG (89 50 4E 47) dan JPEG (FF D8 FF)
+    private static bool IsValidImageBytes(byte[] bytes)
+    {
+        if (bytes.Length < 4) return false;
+        if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return true; // PNG
+        if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return true; // JPEG
+        return false;
     }
 
     private void RemoveNewPhoto(int index)
@@ -1157,12 +1157,12 @@
         }
         else
         {
-            if (model.PjId == 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
-            if (model.TipePj == "TenagaAlihDaya" && string.IsNullOrWhiteSpace(model.PengunaAlihDaya)) { errorMessage = "Nama Pengguna TAD wajib diisi."; return; }
+            if (model.PjId is null or 0) { errorMessage = "Pilih Penanggung Jawab (PJ) terlebih dahulu."; return; }
+            if (model.TipePj == "TenagaAlihDaya" && string.IsNullOrWhiteSpace(model.PengunaAlihDaya)) { errorMessage = "Nama Pengguna wajib diisi."; return; }
             if (!string.IsNullOrWhiteSpace(model.PjNoTelp) && (model.PjNoTelp.Length < 9 || model.PjNoTelp.Length > 15)) { errorMessage = "No. Telp/HP PJ tidak valid (9–15 digit)."; return; }
-            if (model.MenyerahkanId == 0 || !adminGudangUsers.Any(u => u.PegawaiId == model.MenyerahkanId)) { errorMessage = "Pilih Admin (Yang Menyerahkan) yang valid (akun mungkin telah dinonaktifkan)."; return; }
-            if (model.MengetahuiId == 0 || !reviewers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Reviewer (Yang Mengetahui) yang valid (akun mungkin telah dinonaktifkan)."; return; }
+            if (model.MengetahuiId == 0 || !reviewers.Any(u => u.Id == model.MengetahuiId)) { errorMessage = "Pilih Reviewer (Yang Mengetahui)"; return; }
 
+            if (string.IsNullOrWhiteSpace(model.TiketSscNo)) { errorMessage = "No. Tiket My SSC/Nota Dinas wajib diisi."; return; }
             if (model.Jenis == "Peminjaman" && !model.TanggalKembali.HasValue) { errorMessage = "Tanggal Kembali wajib diisi untuk Peminjaman."; return; }
             if (!model.Perangkat.Any(p => p.BarangId > 0)) { errorMessage = "Tambahkan minimal satu perangkat."; return; }
             if (model.Jenis == "Peminjaman" && model.TanggalKembali.HasValue && model.TanggalKembali.Value.Date < model.Tanggal.Date)
@@ -1380,7 +1380,7 @@
 
     private void SelectMenyerahkan(ApplicationUser u)
     {
-        model.MenyerahkanId = u.PegawaiId ?? 0;
+        model.MenyerahkanId = u.Id;
         showMenyerahkanSearch = false;
         _ = AutoSaveAsync();
     }

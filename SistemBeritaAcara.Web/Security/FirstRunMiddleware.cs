@@ -27,8 +27,9 @@ public class FirstRunMiddleware(RequestDelegate next)
         "/files/",
     ];
 
-    // Cache in-memory agar tidak query DB setiap request setelah ada user
-    private static bool _hasUsers = false;
+    // Cache in-memory agar tidak query DB setiap request setelah ada user.
+    // volatile: memastikan semua thread membaca nilai terbaru tanpa race condition.
+    private static volatile bool _hasUsers = false;
 
     public async Task InvokeAsync(HttpContext context, IServiceProvider services)
     {

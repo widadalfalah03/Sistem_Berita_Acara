@@ -1,6 +1,7 @@
 using Hangfire;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SistemBeritaAcara.Core.Entities;
 using SistemBeritaAcara.Infrastructure;
@@ -11,6 +12,7 @@ using SistemBeritaAcara.Web.Filters;
 using SistemBeritaAcara.Web.Hubs;
 using SistemBeritaAcara.Web.Services;
 using System.Globalization;
+using System.Threading.RateLimiting;
 
 // ── Atur kultur global ke Bahasa Indonesia ──────────────────────────────────
 // Semua format tanggal (ToString("MMMM"), dll.) otomatis menggunakan nama bulan
@@ -31,13 +33,31 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.Authent
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// M-6: Rate limiting pada endpoint login — maks 10 percobaan per menit per IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("login", limiter =>
+    {
+        limiter.PermitLimit = 10;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiter.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 // Ensure database and initial roles are created before the app (and Hangfire) starts
 using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
 {
     var db = preScope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    var startupLogger = preScope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+
+    try { db.Database.EnsureCreated(); }
+    catch (Exception ex) { startupLogger.LogCritical(ex, "Gagal membuat/memverifikasi database. Pastikan SQL Server berjalan dan connection string benar."); throw; }
 
     // Add columns that may be missing when DB was created before the entity was updated
+    try
+    {
     await db.Database.ExecuteSqlRawAsync(@"
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'ProfilePicPath')
             ALTER TABLE [Users] ADD [ProfilePicPath] nvarchar(500) NULL;
@@ -72,7 +92,62 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
         -- Migrate legacy Approver role to Reviewer
         UPDATE [AspNetRoles] SET [Name] = 'Reviewer', [NormalizedName] = 'REVIEWER' WHERE [Name] = 'Approver';
         UPDATE [Users] SET [Role] = 'Reviewer' WHERE [Role] = 'Approver';
+
+        -- Migrate MenyerahkanId: ubah FK dari Pegawai ke Users
+        -- Cek apakah FK lama (ke Pegawai) masih ada; jika ya, drop dan migrasi data
+        IF EXISTS (
+            SELECT 1 FROM sys.foreign_keys fk
+            INNER JOIN sys.tables t  ON fk.parent_object_id    = t.object_id
+            INNER JOIN sys.tables rt ON fk.referenced_object_id = rt.object_id
+            WHERE t.name = 'BeritaAcara' AND rt.name = 'Pegawai'
+              AND EXISTS (
+                  SELECT 1 FROM sys.foreign_key_columns fkc
+                  INNER JOIN sys.columns c ON fkc.parent_object_id = c.object_id AND fkc.parent_column_id = c.column_id
+                  WHERE fkc.constraint_object_id = fk.object_id AND c.name = 'MenyerahkanId'
+              )
+        )
+        BEGIN
+            -- Drop FK lama ke Pegawai
+            DECLARE @fkMenyerahkan nvarchar(200)
+            SELECT TOP 1 @fkMenyerahkan = fk.name
+            FROM sys.foreign_keys fk
+            INNER JOIN sys.tables t  ON fk.parent_object_id    = t.object_id
+            INNER JOIN sys.tables rt ON fk.referenced_object_id = rt.object_id
+            WHERE t.name = 'BeritaAcara' AND rt.name = 'Pegawai'
+              AND EXISTS (
+                  SELECT 1 FROM sys.foreign_key_columns fkc
+                  INNER JOIN sys.columns c ON fkc.parent_object_id = c.object_id AND fkc.parent_column_id = c.column_id
+                  WHERE fkc.constraint_object_id = fk.object_id AND c.name = 'MenyerahkanId'
+              )
+            IF @fkMenyerahkan IS NOT NULL
+                EXEC('ALTER TABLE [BeritaAcara] DROP CONSTRAINT [' + @fkMenyerahkan + ']')
+
+            -- Normalisasi: set 0 → NULL
+            UPDATE [BeritaAcara] SET [MenyerahkanId] = NULL WHERE [MenyerahkanId] = 0
+
+            -- Konversi PegawaiId → UserId (via Users.PegawaiId)
+            UPDATE ba
+            SET ba.[MenyerahkanId] = u.[Id]
+            FROM [BeritaAcara] ba
+            INNER JOIN [Users] u ON u.[PegawaiId] = ba.[MenyerahkanId]
+            WHERE ba.[MenyerahkanId] IS NOT NULL
+
+            -- Nullify nilai sisa yang tidak cocok dengan Users.Id mana pun
+            UPDATE [BeritaAcara]
+            SET [MenyerahkanId] = NULL
+            WHERE [MenyerahkanId] IS NOT NULL
+              AND [MenyerahkanId] NOT IN (SELECT [Id] FROM [Users])
+
+            -- Tambah FK baru ke Users
+            ALTER TABLE [BeritaAcara] ADD CONSTRAINT [FK_BeritaAcara_Users_MenyerahkanId]
+                FOREIGN KEY ([MenyerahkanId]) REFERENCES [Users]([Id]) ON DELETE NO ACTION
+        END
     ");
+    }
+    catch (Exception ex)
+    {
+        startupLogger.LogError(ex, "Satu atau lebih migrasi SQL startup gagal. Aplikasi tetap berjalan namun beberapa kolom mungkin belum ada.");
+    }
 
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
     var userManager = preScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -126,7 +201,9 @@ if (!app.Environment.IsDevelopment())
 // Baca X-Forwarded-* headers dari reverse proxy/ngrok agar redirect URL pakai host ngrok
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
+    // Hanya terima forwarded headers dari loopback (reverse proxy di server yang sama)
+    KnownProxies = { System.Net.IPAddress.Loopback, System.Net.IPAddress.IPv6Loopback }
 });
 
 // Izinkan ngrok melewati header verifikasi (hanya berpengaruh saat pakai ngrok di development)
@@ -140,6 +217,7 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // ── First-Run Middleware: redirect ke /setup jika belum ada user di DB ──
 app.UseMiddleware<SistemBeritaAcara.Web.Security.FirstRunMiddleware>();
@@ -183,7 +261,7 @@ app.MapPost("/account/login", async (
         return Results.Redirect("/login?error=locked");
 
     return Results.Redirect("/login?error=invalid");
-});
+}).DisableAntiforgery().RequireRateLimiting("login");
 
 app.MapPost("/account/logout", async (
     HttpContext ctx,
@@ -201,6 +279,12 @@ app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
     SistemBeritaAcara.Infrastructure.Data.AppDbContext db,
     SistemBeritaAcara.Core.Interfaces.IDocumentService documentService) =>
 {
+    // Validasi shared secret — cegah request dari luar yang memalsukan callback OnlyOffice
+    var expectedSecret = cfg["OnlyOffice:CallbackSecret"] ?? "";
+    var providedSecret = ctx.Request.Query["secret"].ToString();
+    if (!string.IsNullOrEmpty(expectedSecret) && providedSecret != expectedSecret)
+        return Results.Unauthorized();
+
     try
     {
         var payload = await ctx.Request.ReadFromJsonAsync<System.Text.Json.JsonElement>();
@@ -326,7 +410,7 @@ app.MapGet("/api/ba/{baId:int}/download", async (
 
     var bytes = await File.ReadAllBytesAsync(pdfPath);
     return Results.File(bytes, "application/pdf", filename);
-}).DisableAntiforgery();
+}).RequireAuthorization().DisableAntiforgery();
 
 // Database and roles are ensured earlier before app start
 
