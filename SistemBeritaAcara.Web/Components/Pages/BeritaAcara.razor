@@ -1,4 +1,4 @@
-@page "/buat-ba"
+﻿@page "/buat-ba"
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
@@ -17,9 +17,9 @@
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
-<PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") â€” Sistem Berita Acara</PageTitle>
+<PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") — Sistem Berita Acara</PageTitle>
 
-<!-- â”€â”€ Floating toast: autosave status â”€â”€ -->
+<!-- ── Floating toast: autosave status ── -->
 @if (autoSaveStatus != AutoSaveState.Idle)
 {
     <div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,0.18);font-size:13px;font-weight:500;transition:opacity 0.3s;
@@ -43,7 +43,7 @@
     </div>
 }
 
-<!-- â”€â”€ Floating toast: error submit â”€â”€ -->
+<!-- ── Floating toast: error submit ── -->
 @if (!string.IsNullOrEmpty(errorMessage))
 {
     <div style="position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;max-width:520px;width:90%;background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--radius);padding:14px 20px;display:flex;align-items:flex-start;gap:10px;color:var(--danger);box-shadow:0 6px 24px rgba(0,0,0,0.15);">
@@ -59,7 +59,7 @@
 <EditForm Model="model" OnValidSubmit="SubmitAsync">
     <DataAnnotationsValidator />
 
-    <!-- â”€â”€ 1. Info Dokumen â”€â”€ -->
+    <!-- ── 1. Info Dokumen ── -->
     <div class="form-section">
         <div class="form-section-title">1. Informasi Dokumen</div>
         <div class="form-row">
@@ -113,10 +113,10 @@
 
     </div>
 
-    <!-- â”€â”€ Card 2â€“5 â”€â”€ -->
+    <!-- ── Card 2–5 ── -->
     @if (model.Jenis != "Lainnya")
     {
-        <!-- â”€â”€ 2. Data Penanggung Jawab â”€â”€ -->
+        <!-- ── 2. Data Penanggung Jawab ── -->
         <div class="form-section">
             <div class="form-section-title">2. Data Penanggung Jawab</div>
 
@@ -231,7 +231,7 @@
             }
         </div>
 
-        <!-- â”€â”€ 3. Daftar Perangkat â”€â”€ -->
+        <!-- ── 3. Daftar Perangkat ── -->
         <div class="form-section">
             <div class="form-section-title">3. Daftar Perangkat</div>
 
