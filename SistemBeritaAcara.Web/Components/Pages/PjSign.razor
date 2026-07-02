@@ -485,6 +485,10 @@ else
             if (!string.IsNullOrEmpty(ba.Pj?.Email))
                 await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, true, ba.Id, baseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
 
+            // Email salinan ke Reviewer
+            if (!string.IsNullOrEmpty(ba.Mengetahui?.Email))
+                await EmailService.SendApprovalResultAsync(ba.Mengetahui.Email, ba.Mengetahui.Nama, ba.Jenis, true, ba.Id, baseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
+
             await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
 
             alreadySigned = true;
