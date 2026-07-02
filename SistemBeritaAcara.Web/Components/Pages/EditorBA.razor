@@ -480,103 +480,47 @@
                 }
                 _menyerahkanEmbedded = false;
 
-                bool pjAlreadySigned = !string.IsNullOrEmpty(trackedBa.TtdPjPath) && trackedBa.PjSignedAt.HasValue;
+                trackedBa.Status = "WaitingApproval";
+                trackedBa.SubmittedAt = DateTime.Now;
+                trackedBa.AlasanReject = null; 
+                await DbContext.SaveChangesAsync();
 
-                if (pjAlreadySigned)
+                await NotificationService.SendAsync(
+                    trackedBa.MengetahuiId.Value,
+                    "WAITING_APPROVAL",
+                    $"Berita Acara {trackedBa.Jenis} {(trackedBa.NomorSurat ?? "")} telah diajukan dan membutuhkan persetujuan Anda.".Replace("  ", " ").Trim(),
+                    trackedBa.Id
+                );
+                
+                await NotificationService.SendAsync(
+                    _currentUserId,
+                    "WAITING_APPROVAL",
+                    $"Berita Acara {trackedBa.Jenis} telah diajukan. Menunggu persetujuan Reviewer.",
+                    trackedBa.Id
+                );
+
+                var baseUrlReviewer = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+                var barangListReviewer = trackedBa.Perangkat
+                    .Select(p => {
+                        string nama = p.Barang?.NamaBarang ?? "Perangkat";
+                        string detail = $"{p.Jumlah} {p.Satuan}";
+                        if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                        if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                        return $"{nama} — {detail}";
+                    }).ToList();
+                
+                if (!string.IsNullOrEmpty(trackedBa.Mengetahui?.Email))
                 {
-                    var ttdPjPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", trackedBa.TtdPjPath!.Replace("/", Path.DirectorySeparatorChar.ToString()));
-                    if (System.IO.File.Exists(ttdPjPhysicalPath))
-                    {
-                        await DocumentService.EmbedTtdPjAsync(trackedBa.Id, ttdPjPhysicalPath);
-                    }
-
-                    trackedBa.Status = "WaitingApproval";
-                    trackedBa.SubmittedAt = DateTime.Now;
-                    trackedBa.AlasanReject = null; 
-                    await DbContext.SaveChangesAsync();
-
-                    await NotificationService.SendAsync(
-                        trackedBa.MengetahuiId.Value,
-                        "WAITING_APPROVAL",
-                        $"Berita Acara {trackedBa.Jenis} {(trackedBa.NomorSurat ?? "")} telah direvisi dan membutuhkan persetujuan Anda.".Replace("  ", " ").Trim(),
-                        trackedBa.Id
-                    );
-
-                    var baseUrlReviewer = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
-                    var barangListReviewer = trackedBa.Perangkat
-                        .Select(p => {
-                            string nama = p.Barang?.NamaBarang ?? "Perangkat";
-                            string detail = $"{p.Jumlah} {p.Satuan}";
-                            if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
-                            if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                            return $"{nama} — {detail}";
-                        }).ToList();
-                    
-                    if (!string.IsNullOrEmpty(trackedBa.Mengetahui?.Email))
-                    {
-                        await EmailService.SendApprovalRequestAsync(
-                            trackedBa.Mengetahui.Email,
-                            trackedBa.Mengetahui.Nama ?? "Reviewer",
-                            baseUrlReviewer,
-                            trackedBa.Id,
-                            trackedBa.Jenis ?? "Berita Acara",
-                            barangListReviewer
-                        );
-                    }
-                    Navigation.NavigateTo("/progress");
-                }
-                else
-                {
-                    // M-2: Invalidasi token PJ_SIGNATURE lama yang belum digunakan sebelum buat token baru
-                    var oldTokens = await DbContext.ApprovalToken
-                        .Where(t => t.BaId == trackedBa.Id && t.TokenType == "PJ_SIGNATURE" && t.UsedAt == null)
-                        .ToListAsync();
-                    foreach (var old in oldTokens)
-                        old.UsedAt = DateTime.Now;
-
-                    var tokenValue = Guid.NewGuid().ToString("N");
-                    DbContext.ApprovalToken.Add(new ApprovalToken
-                    {
-                        BaId = trackedBa.Id,
-                        BeritaAcara = trackedBa,
-                        Token = tokenValue,
-                        TokenType = "PJ_SIGNATURE",
-                        ExpiresAt = DateTime.Now.AddDays(7),
-                        CreatedAt = DateTime.Now
-                    });
-
-                    trackedBa.Status = "WaitingPJSign";
-                    trackedBa.SubmittedAt = DateTime.Now;
-                    trackedBa.AlasanReject = null;
-                    await DbContext.SaveChangesAsync();
-
-                    var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
-                    var barangListEditor = trackedBa.Perangkat
-                        .Select(p => {
-                            string nama = p.Barang?.NamaBarang ?? "Perangkat";
-                            string detail = $"{p.Jumlah} {p.Satuan}";
-                            if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
-                            if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                            return $"{nama} — {detail}";
-                        }).ToList();
-                    await EmailService.SendMagicLinkAsync(
-                        trackedBa.Pj!.Email ?? string.Empty,
-                        trackedBa.Pj.Nama,
+                    await EmailService.SendApprovalRequestAsync(
+                        trackedBa.Mengetahui.Email,
+                        trackedBa.Mengetahui.Nama ?? "Reviewer",
+                        baseUrlReviewer,
                         trackedBa.Id,
-                        tokenValue,
-                        baseUrl,
-                        trackedBa.Jenis,
-                        barangListEditor
+                        trackedBa.Jenis ?? "Berita Acara",
+                        barangListReviewer
                     );
-
-                    await NotificationService.SendAsync(
-                        _currentUserId,
-                        "WAITING_PJ_SIGN",
-                        $"Berita Acara {trackedBa.Jenis} telah diajukan. Menunggu tanda tangan PJ ({trackedBa.Pj.Nama}).",
-                        trackedBa.Id
-                    );
-                    Navigation.NavigateTo("/progress");
                 }
+                Navigation.NavigateTo("/progress");
             }
         }
         catch (Exception ex)

@@ -410,7 +410,7 @@ app.MapGet("/api/ba/{baId:int}/download", async (
 
     var bytes = await File.ReadAllBytesAsync(pdfPath);
     return Results.File(bytes, "application/pdf", filename);
-}).RequireAuthorization().DisableAntiforgery();
+}).DisableAntiforgery();
 
 // Database and roles are ensured earlier before app start
 
@@ -419,9 +419,31 @@ RecurringJob.AddOrUpdate<DueDateCheckerJob>(
     job => job.CheckDueDatesAsync(),
     Cron.Daily(7));
 
-RecurringJob.AddOrUpdate<AutoApproveJob>(
-    "cek-auto-approve-pj",
-    job => job.ProcessAutoApproveAsync(),
-    Cron.Hourly());
+
+app.MapGet("/api/test-email", async (string? email, string? type, SistemBeritaAcara.Core.Interfaces.IEmailService emailService) =>
+{
+    var barangList = new List<string> 
+    { 
+        "Laptop Lenovo Thinkpad T14 — 1 Unit", 
+        "Proyektor Epson — 1 Unit" 
+    };
+    
+    string toEmail = !string.IsNullOrEmpty(email) ? email : "test@example.com"; 
+    int daysUntilDue = type == "h1" ? 1 : (type == "hari-ini" ? 0 : -1);
+    
+    await emailService.SendDueDateReminderAsync(
+        toEmail: toEmail, 
+        recipientName: "Admin Test", 
+        nomorSurat: "BA-123/PN/2026", 
+        pjNama: "Bapak Budi", 
+        tanggalKembali: DateTime.Now.AddDays(-1).ToString("dd MMMM yyyy"), 
+        daysUntilDue: daysUntilDue,
+        isForPj: false, 
+        baId: 123, 
+        baseUrl: "http://localhost:5249", 
+        barangList: barangList
+    );
+    return Microsoft.AspNetCore.Http.Results.Ok($"Email pengingat (jenis: {daysUntilDue}) terkirim ke {toEmail}. Cek terminal atau inbox.");
+});
 
 app.Run();

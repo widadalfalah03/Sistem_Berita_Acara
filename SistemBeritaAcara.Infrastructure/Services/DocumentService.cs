@@ -425,7 +425,9 @@ public class DocumentService : IDocumentService
     {
         var ba = await _db.BeritaAcara.FindAsync(baId)
             ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
-        string physicalPath = GetPhysicalPath(ba.DocxPath!);
+            
+        string targetRelativePath = !string.IsNullOrEmpty(ba.DocxFinalPath) ? ba.DocxFinalPath : ba.DocxPath!;
+        string physicalPath = GetPhysicalPath(targetRelativePath);
         EnsureFileExists(physicalPath);
 
         // Ganti semua teks "Draft" (yang merupakan nilai placeholder {{NomorSurat}}
@@ -491,12 +493,15 @@ public class DocumentService : IDocumentService
     public async Task<string> EmbedTtdPjAsync(int baId, string ttdPath)
     {
         var ba = await _db.BeritaAcara.FindAsync(baId) ?? throw new InvalidOperationException($"BA {baId} tidak ditemukan.");
-        if (string.IsNullOrEmpty(ba.DocxPath))
-            throw new InvalidOperationException($"BA {baId} belum memiliki dokumen (DocxPath kosong).");
-        string physicalPath = GetPhysicalPath(ba.DocxPath);
+        if (string.IsNullOrEmpty(ba.DocxPath) && string.IsNullOrEmpty(ba.DocxFinalPath))
+            throw new InvalidOperationException($"BA {baId} belum memiliki dokumen (DocxPath/DocxFinalPath kosong).");
+            
+        string targetRelativePath = !string.IsNullOrEmpty(ba.DocxFinalPath) ? ba.DocxFinalPath : ba.DocxPath!;
+        string physicalPath = GetPhysicalPath(targetRelativePath);
         EnsureFileExists(physicalPath);
 
         await EmbedSignatureSpireAsync(physicalPath, ttdPath, "{{SIG_PJ}}");
+        await ConvertDocxToPdfAsync(physicalPath);
 
         if (ttdPath.Contains("auto_approve_stamp.png"))
         {
@@ -524,6 +529,7 @@ public class DocumentService : IDocumentService
         File.Copy(draftPhysicalPath, finalPhysicalPath, true);
 
         await EmbedSignatureSpireAsync(finalPhysicalPath, ttdPath, "{{SIG_REVIEWER}}");
+        await ConvertDocxToPdfAsync(finalPhysicalPath);
 
         ba.DocxFinalPath = finalRelativePath;
         await _db.SaveChangesAsync();
