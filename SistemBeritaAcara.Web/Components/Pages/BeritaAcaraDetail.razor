@@ -25,19 +25,24 @@
 @* ── Fullscreen overlay saat reviewer memproses Setuju / Tolak ── *@
 @if (isProcessing && isReviewerAction)
 {
-    <div style="position:fixed;inset:0;z-index:10000;background:var(--bg-overlay);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-        <div class="spinner" style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
+    <div
+        style="position:fixed;inset:0;z-index:10000;background:var(--bg-overlay);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+        <div class="spinner"
+             style="width:56px;height:56px;border-width:5px;border-color:var(--primary);border-top-color:transparent;"></div>
     </div>
 }
 
 @if (isLoading)
 {
-    <div class="loading-spinner"><div class="spinner"></div></div>
+    <div class="loading-spinner">
+        <div class="spinner"></div>
+    </div>
 }
 else if (loadError is not null)
 {
     <div style="text-align:center;padding:60px;color:var(--text-muted);">
-        <i class="bi bi-exclamation-triangle" style="font-size:48px;display:block;margin-bottom:16px;color:var(--danger);"></i>
+        <i class="bi bi-exclamation-triangle"
+           style="font-size:48px;display:block;margin-bottom:16px;color:var(--danger);"></i>
         <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Gagal memuat halaman</div>
         <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">@loadError</div>
         <button class="btn btn-primary" @onclick="() => Navigation.NavigateTo(Navigation.Uri, true)">Muat Ulang</button>
@@ -59,7 +64,8 @@ else
 
     @if (!string.IsNullOrEmpty(actionMessage))
     {
-        <div style="background:@(actionIsError ? "var(--danger-light)" : "#F0FDF4");border:1px solid @(actionIsError ? "var(--danger)" : "#22C55E");border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:@(actionIsError ? "var(--danger)" : "#16A34A");">
+        <div
+            style="background:@(actionIsError ? "var(--danger-light)" : "#F0FDF4");border:1px solid @(actionIsError ? "var(--danger)" : "#22C55E");border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;color:@(actionIsError ? "var(--danger)" : "#16A34A");">
             <i class="bi @(actionIsError ? "bi-exclamation-circle-fill" : "bi-check-circle-fill")"></i>
             @actionMessage
         </div>
@@ -73,9 +79,13 @@ else
                 {
                     var docPath = !string.IsNullOrEmpty(ba.DocxFinalPath) ? ba.DocxFinalPath : ba.DocxPath;
                     var pdfPath = "/" + docPath!.Replace(".docx", ".pdf") + "?v=" + pdfVersion;
-                    <div class="pdf-preview-container" style="background:#E8EAF0;border-radius:var(--radius);width:100%;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.05);">
-                        <iframe class="hide-on-mobile" @key="pdfVersion" src="@pdfPath#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
-                        <div id="pdf-render-container-detail" class="show-on-mobile" style="width:100%;height:100%;overflow-y:auto;"></div>
+                    <div class="pdf-preview-container"
+                         style="background:#E8EAF0;border-radius:var(--radius);width:100%;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.05);">
+                        <iframe class="hide-on-mobile" @key="pdfVersion" src="@pdfPath#toolbar=1&navpanes=0"
+                                style="width:100%;height:100%;border:none;border-radius:var(--radius);"
+                                title="Pratinjau Dokumen"></iframe>
+                        <div id="pdf-render-container-detail" class="show-on-mobile"
+                             style="width:100%;height:100%;overflow-y:auto;"></div>
                     </div>
                 }
                 else
@@ -93,238 +103,285 @@ else
                 <div class="review-info">
                     <div class="review-info-item">
                         <span class="review-info-label">No. Surat</span>
-                        <span class="review-info-value" style="color:var(--text-muted);font-style:italic;font-size:12px;">dibuat saat PJ tanda tangan</span>
+                        <span class="review-info-value" style="color:var(--text-muted);font-style:italic;font-size:12px;">dibuat
+                            saat PJ tanda tangan</span>
+                        </div>
+                        <div class="review-info-item">
+                            <span class="review-info-label">Jenis Berita Acara</span>
+                            <span class="review-info-value">@ba.Jenis</span>
+                        </div>
+                        <div class="review-info-item">
+                            <span class="review-info-label">Penanggung Jawab</span>
+                            <span class="review-info-value">@ba.Pj?.Nama</span>
+                        </div>
+                        <div class="review-info-item">
+                            <span class="review-info-label">Fungsi</span>
+                            <span class="review-info-value">@ba.Pj?.FungsiDirektorat</span>
+                        </div>
+                        <div class="review-info-item">
+                            <span class="review-info-label">Tanggal</span>
+                            <span class="review-info-value">@ba.Tanggal.ToString("dd MMM yyyy")</span>
+                        </div>
                     </div>
-                    <div class="review-info-item">
-                        <span class="review-info-label">Jenis Berita Acara</span>
-                        <span class="review-info-value">@ba.Jenis</span>
-                    </div>
-                    <div class="review-info-item">
-                        <span class="review-info-label">Penanggung Jawab</span>
-                        <span class="review-info-value">@ba.Pj?.Nama</span>
-                    </div>
-                    <div class="review-info-item">
-                        <span class="review-info-label">Fungsi</span>
-                        <span class="review-info-value">@ba.Pj?.FungsiDirektorat</span>
-                    </div>
-                    <div class="review-info-item">
-                        <span class="review-info-label">Tanggal</span>
-                        <span class="review-info-value">@ba.Tanggal.ToString("dd MMM yyyy")</span>
-                    </div>
-                </div>
 
-                <div class="timeline">
-                    <div class="timeline-item">
-                        <div class="timeline-dot completed"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-title">Dokumen Dibuat</div>
-                            <div class="timeline-desc">@ba.CreatedAt.ToString("dd MMM yyyy HH:mm")</div>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-dot completed"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Dokumen Dibuat</div>
+                                <div class="timeline-desc">@ba.CreatedAt.ToString("dd MMM yyyy HH:mm")</div>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot pending"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-title pending">Menunggu Tanda Tangan Anda</div>
+                                <div class="timeline-desc">Harap review dokumen dan berikan keputusan</div>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot" style="background-color: var(--border);"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-title" style="color:var(--text-muted);">Tanda Tangan PJ</div>
+                                <div class="timeline-desc" style="color:var(--text-muted);">Setelah Anda menandatangani dokumen ini
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="timeline-item">
-                        <div class="timeline-dot pending"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-title pending">Menunggu Tanda Tangan Anda</div>
-                            <div class="timeline-desc">Harap review dokumen dan berikan keputusan</div>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-dot" style="background-color: var(--border);"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-title" style="color:var(--text-muted);">Tanda Tangan PJ</div>
-                            <div class="timeline-desc" style="color:var(--text-muted);">Setelah Anda menandatangani dokumen ini</div>
-                        </div>
-                    </div>
-                </div>
 
-                <div style="display:flex;gap:10px;margin-top:24px;">
-                    <button class="btn @(isProcessing ? "btn-loading" : "")"
-                            style="flex:0 0 auto;padding:10px 20px;border:1.5px solid var(--danger);color:var(--danger);background:transparent;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s,color .15s;"
-                            onmouseover="if(!this.disabled){this.style.background='var(--danger)';this.style.color='white';}"
-                            onmouseout="this.style.background='transparent';this.style.color='var(--danger)';"
-                            @onclick="() => showRejectModal = true" disabled="@isProcessing">
-                        <i class="bi bi-x-lg"></i> Tolak
-                    </button>
-                    <button class="btn @(isProcessing ? "btn-loading" : "")"
-                            style="flex:1;padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:opacity .15s;"
-                            onmouseover="if(!this.disabled)this.style.opacity='.85';"
-                            onmouseout="this.style.opacity='1';"
-                            @onclick="ApproveAsync" disabled="@isProcessing">
-                        <i class="bi bi-pen-fill"></i> Tandatangani
-                    </button>
+                    <div style="display:flex;gap:10px;margin-top:24px;">
+                        <button class="btn @(isProcessing ? "btn-loading" : "")"
+                                style="flex:0 0 auto;padding:10px 20px;border:1.5px solid var(--danger);color:var(--danger);background:transparent;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s,color .15s;"
+                                onmouseover="if(!this.disabled){this.style.background='var(--danger)';this.style.color='white';}"
+                                onmouseout="this.style.background='transparent';this.style.color='var(--danger)';"
+                                @onclick="() => showRejectModal = true" disabled="@isProcessing">
+                            <i class="bi bi-x-lg"></i> Tolak
+                        </button>
+                        <button class="btn @(isProcessing ? "btn-loading" : "")"
+                                style="flex:1;padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:opacity .15s;"
+                                onmouseover="if(!this.disabled)this.style.opacity='.85';" onmouseout="this.style.opacity='1';"
+                                @onclick="ApproveAsync" disabled="@isProcessing">
+                            <i class="bi bi-pen-fill"></i> Tandatangani
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    }
+        }
     else
-    {
-        <div class="page-header d-flex align-center justify-between" style="flex-wrap:wrap; gap:12px;">
-            <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h1 class="page-title" style="word-break:break-word;">@(ba.NomorSurat ?? "Draft BA")</h1>
-                    <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
-                        @if (_initialFrom != "archive" && ba.Status != "Archived" && ba.Status != "Approved")
-                        {
-                            <span class="pill @GetStatusPill(ba.Status)">@GetStatusLabel(ba.Status)</span>
-                        }
-                        <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
+        {
+            <div class="page-header d-flex align-center justify-between" style="flex-wrap:wrap; gap:12px;">
+                <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h1 class="page-title" style="word-break:break-word;">@(ba.NomorSurat ?? "Draft BA")</h1>
+                        <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
+                            @if (_initialFrom != "archive" && ba.Status != "Archived" && ba.Status != "Approved")
+                            {
+                                <span class="pill @GetStatusPill(ba.Status)">@GetStatusLabel(ba.Status)</span>
+                            }
+                            <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="info-grid-2">
-            <div class="card">
-                <div class="card-header"><h3>Informasi Dokumen</h3></div>
-                <div class="card-body">
-                    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
-                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">No. Surat</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.NomorSurat ?? "Belum dibuat")</td></tr>
-                        <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@ba.Tanggal.ToString("dd MMMM yyyy")</td></tr>
-                        @if (ba.Jenis == "Lainnya")
-                        {
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Judul Berita Acara</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.JenisCustom ?? "-")</td></tr>
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Keterangan</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.Keterangan ?? "-")</td></tr>
-                        }
-                        @if (ba.Jenis != "Lainnya")
-                        {
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">No. Tiket My SSC/Nota Dinas</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ?? "-")</td></tr>
-                        }
-                        @if (ba.Jenis == "Peminjaman")
-                        {
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal Kembali</td><td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TanggalKembali?.ToString("dd MMMM yyyy") ?? "-")</td></tr>
-                        }
-                    </table>
-                </div>
-            </div>
-
-            @if (ba.Jenis != "Lainnya")
-            {
+            <div class="info-grid-2">
                 <div class="card">
-                    <div class="card-header"><h3>Pihak Terkait</h3></div>
+                    <div class="card-header">
+                        <h3>Informasi Dokumen</h3>
+                    </div>
                     <div class="card-body">
-                        <table style="width:100%;border-collapse:collapse;">
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">Yang Menerima</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Pj?.Nama</td></tr>
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Yang Menyerahkan</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Menyerahkan?.Nama</td></tr>
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Yang Mengetahui</td><td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Mengetahui?.Nama</td></tr>
-                        </table>
-                    </div>
-                </div>
-            }
-        </div>
-
-        @if (ba.Jenis != "Lainnya" && ba.Perangkat?.Any() == true)
-        {
-            <div class="card" style="margin-bottom:24px;">
-                <div class="card-header"><h3>Daftar Perangkat</h3></div>
-                <div class="table-responsive perangkat-table">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Perangkat</th>
-                            <th>Jumlah</th>
-                            <th>Satuan</th>
-                            <th>No. Serial</th>
-                            <th>Keterangan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in ba.Perangkat)
-                        {
+                        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
                             <tr>
-                                <td class="fw-semibold">@p.Barang?.NamaBarang</td>
-                                <td>@p.Jumlah</td>
-                                <td>@p.Satuan</td>
-                                <td>@(p.NoSerial ?? "-")</td>
-                                <td>@(p.Keterangan ?? "-")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-                </div>
-                
-                <div class="perangkat-mobile-list" style="padding:16px;">
-                    @foreach (var p in ba.Perangkat)
-                    {
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
-                            <div>
-                                <div style="font-weight:700;color:var(--text-primary);margin-bottom:4px;font-size:14px;">@p.Barang?.NamaBarang</div>
-                                @if (!string.IsNullOrEmpty(p.NoSerial))
-                                {
-                                    <div style="color:var(--text-secondary);margin-bottom:2px;">SN: @p.NoSerial</div>
-                                }
-                                @if (!string.IsNullOrEmpty(p.Keterangan))
-                                {
-                                    <div style="color:var(--text-muted);">@p.Keterangan</div>
-                                }
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:18px;font-weight:800;color:var(--primary);">@p.Jumlah</div>
-                                <div style="font-size:12px;color:var(--text-secondary);text-transform:uppercase;">@p.Satuan</div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        }
+                                <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">No. Surat</td>
+                                <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.NomorSurat ??
+                                                            "Belum dibuat")</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal</td>
+                                    <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">
+                                        @ba.Tanggal.ToString("dd MMMM yyyy")</td>
+                                    </tr>
+                                    @if (ba.Jenis == "Lainnya")
+                                    {
+                                        <tr>
+                                            <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Judul Berita Acara</td>
+                                            <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.JenisCustom ??
+                                                           "-")</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Keterangan</td>
+                                                <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.Keterangan ??
+                                                           "-")</td>
+                                                </tr>
+                                            }
+                                            @if (ba.Jenis != "Lainnya")
+                                            {
+                                                <tr>
+                                                    <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">No. Tiket My SSC/Nota Dinas
+                                                    </td>
+                                                    <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ??
+                                                                 "-")</td>
+                                                    </tr>
+                                                }
+                                                @if (ba.Jenis == "Peminjaman")
+                                                {
+                                                    <tr>
+                                                        <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal Kembali</td>
+                                                        <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">
+                                                            @(ba.TanggalKembali?.ToString("dd MMMM yyyy") ?? "-")</td>
+                                                        </tr>
+                                                    }
+                                                </table>
+                                            </div>
+                                        </div>
 
-        @if (currentRole == "AdminGudangBarang")
-        {
-            <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                @if (ba.Status == "Draft")
-                {
-                    <button class="btn btn-primary @(isProcessing ? "btn-loading" : "")" @onclick="SendMagicLinkAsync" disabled="@isProcessing">
-                        <i class="bi bi-send"></i> Kirim Notifikasi ke PJ
-                    </button>
-                }
-                else if (ba.Status == "WaitingPJSign")
-                {
-                    <div style="background:var(--primary-light);border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:10px;color:var(--primary);">
-                        <i class="bi bi-hourglass-split"></i>
-                        Menunggu PJ menandatangani dokumen
-                    </div>
-                }
-                else if (ba.Status == "Rejected")
-                {
-                    <div style="background:var(--danger-light);border-radius:var(--radius);padding:14px 20px;flex:1;">
-                        <div style="color:var(--danger);font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
-                            <i class="bi bi-x-circle-fill"></i> Ditolak
-                        </div>
-                        <div style="font-size:14px;color:var(--text-secondary);">@ba.AlasanReject</div>
-                    </div>
-                }
-            </div>
-        }
-    }
-}
+                                        @if (ba.Jenis != "Lainnya")
+                                        {
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h3>Pihak Terkait</h3>
+                                                </div>
+                                                <div class="card-body">
+                                                    <table style="width:100%;border-collapse:collapse;">
+                                                        <tr>
+                                                            <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">Yang Menerima</td>
+                                                            <td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Pj?.Nama</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Yang Menyerahkan</td>
+                                                            <td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Menyerahkan?.Nama</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Yang Mengetahui</td>
+                                                            <td style="padding:8px 0;font-weight:600;font-size:14px;">@ba.Mengetahui?.Nama</td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
 
-@if (showRejectModal)
-{
-    <div class="modal-overlay" @onclick="() => showRejectModal = false">
-        <div class="modal-content" @onclick:stopPropagation>
-            <button class="modal-close" @onclick="() => showRejectModal = false">
-                <i class="bi bi-x-lg"></i>
-            </button>
-            <div style="margin-bottom:20px;">
-                <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Tolak Berita Acara</div>
-                <div style="font-size:14px;color:var(--text-secondary);">Berikan alasan penolakan yang jelas</div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Alasan Penolakan <span style="color:var(--danger)">*</span></label>
-                <textarea class="form-control" rows="4" @bind="rejectReason" style="resize:none;"
-                          placeholder="Contoh: Dokumen tidak lengkap, nomor serial tidak sesuai..."></textarea>
-            </div>
-            @if (!string.IsNullOrEmpty(rejectError))
-            {
-                <div class="login-error" style="margin-bottom:12px;">@rejectError</div>
-            }
-            <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
-                <button class="btn btn-danger @(isProcessing ? "btn-loading" : "")" @onclick="RejectAsync" disabled="@isProcessing">
-                    <i class="bi bi-x-lg"></i> Tolak
-                </button>
-            </div>
-        </div>
-    </div>
-}
+                                    @if (ba.Jenis != "Lainnya" && ba.Perangkat?.Any() == true)
+                                    {
+                                        <div class="card" style="margin-bottom:24px;">
+                                            <div class="card-header">
+                                                <h3>Daftar Perangkat</h3>
+                                            </div>
+                                            <div class="table-responsive perangkat-table">
+                                                <table class="data-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Perangkat</th>
+                                                            <th>Jumlah</th>
+                                                            <th>Satuan</th>
+                                                            <th>No. Serial</th>
+                                                            <th>Keterangan</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var p in ba.Perangkat)
+                                                        {
+                                                            <tr>
+                                                                <td class="fw-semibold">@p.Barang?.NamaBarang</td>
+                                                                <td>@p.Jumlah</td>
+                                                                <td>@p.Satuan</td>
+                                                                <td>@(p.NoSerial ?? "-")</td>
+                                                                <td>@(p.Keterangan ?? "-")</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <div class="perangkat-mobile-list" style="padding:16px;">
+                                                @foreach (var p in ba.Perangkat)
+                                                {
+                                                    <div
+                                                        style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-light);font-size:13px;">
+                                                        <div>
+                                                            <div style="font-weight:700;color:var(--text-primary);margin-bottom:4px;font-size:14px;">
+                                                                @p.Barang?.NamaBarang</div>
+                                                                @if (!string.IsNullOrEmpty(p.NoSerial))
+                                                                {
+                                                                    <div style="color:var(--text-secondary);margin-bottom:2px;">SN: @p.NoSerial</div>
+                                                                }
+                                                                @if (!string.IsNullOrEmpty(p.Keterangan))
+                                                                {
+                                                                    <div style="color:var(--text-muted);">@p.Keterangan</div>
+                                                                }
+                                                            </div>
+                                                            <div style="text-align:right;">
+                                                                <div style="font-size:18px;font-weight:800;color:var(--primary);">@p.Jumlah</div>
+                                                                <div style="font-size:12px;color:var(--text-secondary);text-transform:uppercase;">@p.Satuan</div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+
+                                        @if (currentRole == "AdminGudangBarang")
+                                        {
+                                            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                                                @if (ba.Status == "Draft")
+                                                {
+                                                    <button class="btn btn-primary @(isProcessing ? "btn-loading" : "")" @onclick="SendMagicLinkAsync"
+                                                            disabled="@isProcessing">
+                                                        <i class="bi bi-send"></i> Kirim Notifikasi ke PJ
+                                                    </button>
+                                                }
+                                                else if (ba.Status == "WaitingPJSign")
+                                                {
+                                                    <div
+                                                        style="background:var(--primary-light);border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:10px;color:var(--primary);">
+                                                        <i class="bi bi-hourglass-split"></i>
+                                                        Menunggu PJ menandatangani dokumen
+                                                    </div>
+                                                }
+                                                else if (ba.Status == "Rejected")
+                                                {
+                                                    <div style="background:var(--danger-light);border-radius:var(--radius);padding:14px 20px;flex:1;">
+                                                        <div style="color:var(--danger);font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+                                                            <i class="bi bi-x-circle-fill"></i> Ditolak
+                                                        </div>
+                                                        <div style="font-size:14px;color:var(--text-secondary);">@ba.AlasanReject</div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                }
+
+                                @if (showRejectModal)
+                                {
+                                    <div class="modal-overlay" @onclick="() => showRejectModal = false">
+                                        <div class="modal-content" @onclick:stopPropagation>
+                                            <button class="modal-close" @onclick="() => showRejectModal = false">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                            <div style="margin-bottom:20px;">
+                                                <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">Tolak Berita Acara
+                                                </div>
+                                                <div style="font-size:14px;color:var(--text-secondary);">Berikan alasan penolakan yang jelas</div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">Alasan Penolakan <span style="color:var(--danger)">*</span></label>
+                                                <textarea class="form-control" rows="4" @bind="rejectReason" style="resize:none;"
+                                                          placeholder="Contoh: Dokumen tidak lengkap, nomor serial tidak sesuai..."></textarea>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(rejectError))
+                                            {
+                                                <div class="login-error" style="margin-bottom:12px;">@rejectError</div>
+                                            }
+                                            <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
+                                                <button class="btn btn-danger @(isProcessing ? "btn-loading" : "")" @onclick="RejectAsync"
+                                                        disabled="@isProcessing">
+                                                    <i class="bi bi-x-lg"></i> Tolak
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
 
 @code {
     [Parameter] public int Id { get; set; }
@@ -413,26 +470,40 @@ else
                 old.UsedAt = DateTime.Now;
 
             var tokenValue = Guid.NewGuid().ToString("N");
-            var newToken = new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) };
+            var newToken = new ApprovalToken
+            {
+                BaId = ba!.Id,
+                Token = tokenValue,
+                TokenType = "PJ_SIGNATURE",
+                ExpiresAt =
+DateTime.Now.AddDays(7)
+            };
             DbContext.ApprovalToken.Add(newToken);
             ba!.Status = "WaitingPJSign";
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
-            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ??
+Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangListMagic = ba.Perangkat
-                .Select(p => {
+                .Select(p =>
+                {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
                     if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
                     return $"{nama} — {detail}";
                 }).ToList();
-            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis, barangListMagic);
+            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis,
+barangListMagic);
             await NotificationService.SendToRoleAsync("AdminGudangBarang", "WAITING_PJ_SIGN", $"Berita Acara {ba.Jenis} {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
             actionIsError = false; actionMessage = "Magic link berhasil dikirim ke email PJ.";
             await LoadAsync();
         }
-        catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " + ex.InnerException.Message : "")}"; }
+        catch (Exception ex)
+        {
+            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " +
+ex.InnerException.Message : "")}";
+        }
         finally { isProcessing = false; }
     }
 
@@ -456,7 +527,8 @@ else
             var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
             var reviewerTtdPhysical = string.IsNullOrWhiteSpace(currentUser?.TtdPath)
                 ? null
-                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.TrimStart('/').Replace('/',
+Path.DirectorySeparatorChar));
             if (currentUser is null || reviewerTtdPhysical is null || !File.Exists(reviewerTtdPhysical))
             {
                 actionIsError = true; actionMessage = "Gagal: Reviewer belum memiliki file TTD yang valid. Silakan setup TTD di halaman Profil terlebih dahulu.";
@@ -473,7 +545,14 @@ else
                 old.UsedAt = DateTime.Now;
 
             var tokenValue = Guid.NewGuid().ToString("N");
-            var newToken = new ApprovalToken { BaId = ba!.Id, Token = tokenValue, TokenType = "PJ_SIGNATURE", ExpiresAt = DateTime.Now.AddDays(7) };
+            var newToken = new ApprovalToken
+            {
+                BaId = ba!.Id,
+                Token = tokenValue,
+                TokenType = "PJ_SIGNATURE",
+                ExpiresAt =
+DateTime.Now.AddDays(7)
+            };
             DbContext.ApprovalToken.Add(newToken);
 
             ba.Status = "WaitingPJSign";
@@ -481,28 +560,35 @@ else
 
             Hangfire.BackgroundJob.Schedule<SistemBeritaAcara.Infrastructure.Jobs.AutoApproveJob>(
                 job => job.ProcessSingleAutoApproveAsync(ba.Id),
-                TimeSpan.FromMinutes(2)
+                TimeSpan.FromHours(24)
             );
 
-            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ??
+Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangList = ba.Perangkat
-                .Select(p => {
+                .Select(p =>
+                {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
                     if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
                     return $"{nama} — {detail}";
                 }).ToList();
-                
-            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis, barangList);
-            
+
+            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis,
+            barangList);
+
             await NotificationService.SendAsync(ba.CreatedBy, "WAITING_PJ_SIGN", $"Berita Acara {ba.Jenis} telah disetujui Reviewer dan diteruskan ke PJ.", ba.Id);
 
             actionIsError = false; actionMessage = "Berita Acara disetujui. Menunggu TTD PJ.";
             await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
             await LoadAsync();
         }
-        catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " + ex.InnerException.Message : "")}"; }
+        catch (Exception ex)
+        {
+            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " +
+ex.InnerException.Message : "")}";
+        }
         finally { isProcessing = false; isReviewerAction = false; }
     }
 
@@ -549,9 +635,11 @@ else
             var text = $"Berita Acara {ba.Jenis} {label} ditolak: {rejectReason}".Replace("  ", " ").Trim();
             await NotificationService.SendAsync(ba.CreatedBy, "BA_REJECTED", text, ba.Id);
 
-            var baseUrlReject = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+            var baseUrlReject = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ??
+Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangListReject = ba.Perangkat
-                .Select(p => {
+                .Select(p =>
+                {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
                     if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
@@ -561,7 +649,9 @@ else
 
             var creatorUserReject = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
             if (!string.IsNullOrEmpty(creatorUserReject?.Email))
-                await EmailService.SendApprovalResultAsync(creatorUserReject.Email, creatorUserReject.Nama ?? creatorUserReject.Email, ba.Jenis, false, ba.Id, baseUrlReject, isForPj: false, nomorSurat: ba.NomorSurat, alasan: rejectReason, barangList: barangListReject);
+                await EmailService.SendApprovalResultAsync(creatorUserReject.Email, creatorUserReject.Nama ?? creatorUserReject.Email,
+ba.Jenis, false, ba.Id, baseUrlReject, isForPj: false, nomorSurat: ba.NomorSurat, alasan: rejectReason, barangList:
+barangListReject);
 
             showRejectModal = false;
             rejectReason = string.Empty;
@@ -607,7 +697,7 @@ else
                  : From == "notifikasi_unread" ? "/notifikasi?tab=unread"
                  : From == "notifikasi" ? "/notifikasi"
                  : "/draft";
-                 
+
         if (currentRole == "Reviewer" && string.IsNullOrEmpty(From))
             dest = "/dashboard";
 
@@ -639,10 +729,10 @@ else
             if (pdfPath != _lastRenderedPdfUrl)
             {
                 _lastRenderedPdfUrl = pdfPath;
-                try 
+                try
                 {
                     await JSRuntime.InvokeVoidAsync("pdfViewer.renderPdf", "pdf-render-container-detail", pdfPath);
-                } 
+                }
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine("Error invoking pdfViewer: " + ex.Message);
