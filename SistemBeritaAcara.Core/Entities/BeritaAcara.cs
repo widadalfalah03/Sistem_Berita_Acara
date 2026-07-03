@@ -11,7 +11,6 @@ public class BeritaAcara
     public string? Keterangan { get; set; }
     public int? PjId { get; set; }
     public string? PjNoTelp { get; set; }
-    /// <summary>Diisi jika tipe PJ adalah Tenaga Alih Daya (TAD). Nama pengguna/user TAD.</summary>
     public string? PengunaAlihDaya { get; set; }
     public int? MenyerahkanId { get; set; }
     public int? MengetahuiId { get; set; }

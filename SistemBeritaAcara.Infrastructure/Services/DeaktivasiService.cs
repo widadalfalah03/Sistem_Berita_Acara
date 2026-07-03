@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SistemBeritaAcara.Core.Interfaces;
 using SistemBeritaAcara.Infrastructure.Data;
 
@@ -13,8 +13,6 @@ public class DeaktivasiService(AppDbContext db, INotificationService notificatio
 
         pegawai.IsAktif = false;
 
-        // AdminIT tidak boleh ikut dideaktivasi — akun AdminIT dibuat manual
-        // dan NoPekerja-nya tidak ada di file Excel import HR/ERP.
         var linkedUsers = await db.Users
             .Where(u => u.PegawaiId == pegawaiId && !u.IsDeleted && u.Role != "AdminIT")
             .ToListAsync();

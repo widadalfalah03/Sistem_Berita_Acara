@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SistemBeritaAcara.Core.Entities;
@@ -9,7 +9,6 @@ namespace SistemBeritaAcara.Infrastructure.Services;
 
 public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService, IConfiguration configuration) : IExcelService
 {
-    // H-7: Mutex untuk cegah concurrent write ke file Excel arsip
     private static readonly SemaphoreSlim _archiveLock = new(1, 1);
 
     public async Task<(int added, int updated, int deactivated, List<string> errors)> ImportPegawaiAsync(
@@ -131,7 +130,6 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
 
         foreach (var row in rows)
         {
-            // Hanya menggunakan Kolom 1 sebagai Nama Barang
             string nama = row.Cell(1).Value.ToString().Trim();
 
             if (string.IsNullOrEmpty(nama)) continue;
@@ -188,7 +186,6 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
 
     public async Task AppendBeritaAcaraToArsipAsync(BeritaAcara ba)
     {
-        // H-7: Gunakan semaphore agar hanya satu proses yang membaca+menulis file Excel secara bersamaan
         await _archiveLock.WaitAsync();
         try
         {
@@ -265,7 +262,6 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
             var docCell = sheet.Cell(row, 4);
             if (!string.IsNullOrEmpty(docPath))
             {
-                // PDF path is usually the docx path with .pdf extension, assuming they are converted
                 string pdfPath = docPath.Replace(".docx", ".pdf");
                 string pdfName = Path.GetFileName(pdfPath);
                 string fileUrl = $"{baseUrl.TrimEnd('/')}/{pdfPath.TrimStart('/')}";

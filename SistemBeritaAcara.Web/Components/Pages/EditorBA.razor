@@ -45,7 +45,6 @@
     }
     else
     {
-    <!-- ── Topbar Editor ── -->
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:16px;">
         <div style="display:flex; align-items:center; gap:24px;">
             <button class="btn btn-outline" @onclick="GoBack" style="display:flex; align-items:center; gap:8px; border-radius:var(--radius-full); padding:8px 16px;">
@@ -100,16 +99,13 @@
         </div>
     }
 
-    <!-- ── Layout: Area Editor kiri + Panel Ringkasan kanan ── -->
     <div class="review-layout" style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
 
-        <!-- ── Area Dokumen / Editor ── -->
         <div class="pdf-preview-container" style="background:#E8EAF0;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:inset 0 2px 10px rgba(0,0,0,.05);">
             @if (!string.IsNullOrEmpty(ba.DocxPath) && pdfExists)
             {
                 <iframe class="hide-on-mobile" @key="pdfVersion" src="/api/preview/pdf/@ba.Id?v=@pdfVersion#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;border-radius:var(--radius);" title="Pratinjau Dokumen"></iframe>
                 <div id="pdf-render-container-editor" class="show-on-mobile" style="width:100%;height:100%;overflow-y:auto;">
-                    <!-- canvas di-inject ke sini oleh JS -->
                 </div>
             }
             else if (!string.IsNullOrEmpty(ba.DocxPath) && !pdfExists)
@@ -131,7 +127,6 @@
             }
         </div>
 
-        <!-- ── Panel Ringkasan BA ── -->
         <div>
             <div class="card" style="margin-bottom:16px;">
                 <div class="card-header"><h3 style="font-size:15px;">Ringkasan Dokumen</h3></div>
@@ -222,17 +217,12 @@
     private string errorMessage = string.Empty;
     private int _currentUserId;
     private bool _menyerahkanEmbedded = false;
-    // pdfVersion hanya naik saat kita sengaja refresh data dari DB.
-    // Digunakan sebagai @key pada iframe sehingga browser memuat ulang PDF
-    // tepat satu kali setiap kali kita kembali dari ONLYOFFICE editor.
     private long pdfVersion = 0;
     private bool pdfExists = false;
     private int _loadedId = 0; // Id terakhir yang sudah di-load
 
     protected override void OnInitialized()
     {
-        // Subscribe ke LocationChanged agar saat Blazor navigasi kembali ke
-        // halaman ini dari OnlyOfficeEditor, kita bisa refresh data & PDF.
         Navigation.LocationChanged += OnLocationChanged;
     }
 
@@ -270,8 +260,6 @@
 
         await LoadBaAsync();
 
-        // Guard prerender: jangan set isLoading=false saat static render agar prerender
-        // menampilkan spinner, bukan iframe dengan PDF lama.
         if (!RendererInfo.IsInteractive) return;
 
         isLoading = false;
@@ -291,7 +279,6 @@
 
         if (ba != null)
         {
-            // Skip regen jika kembali dari OnlyOffice (oo=1) — jangan timpa hasil edit manual
             bool skipRegen = OoParam == "1";
             if (!skipRegen) try
             {
@@ -327,10 +314,6 @@
                 errorMessage = "Gagal memuat pratinjau dokumen: " + ex.Message;
             }
 
-            // Jika BA pernah ditandatangani oleh PJ (kasus BA rejected lalu direvisi),
-            // selalu pastikan TTD PJ tertempel di dokumen — baik setelah regenerasi maupun
-            // saat membuka dokumen lama. EmbedTtdPjAsync aman dipanggil berkali-kali:
-            // jika placeholder sudah diganti gambar, tidak ada yang dilakukan selain update PDF.
             if (ba?.Status == "Rejected" && !string.IsNullOrEmpty(ba.TtdPjPath) && ba.PjSignedAt.HasValue)
             {
                 try
@@ -349,7 +332,6 @@
             }
         }
 
-        // Cek apakah file PDF benar-benar ada di disk setelah proses generate/embed
         if (!string.IsNullOrEmpty(ba?.DocxPath))
         {
             var pdfPhysicalPath = Path.Combine(
@@ -360,14 +342,11 @@
                 errorMessage = "Pratinjau PDF tidak dapat ditampilkan — server konversi tidak tersedia atau gagal. Dokumen DOCX berhasil dibuat dan dapat di-edit manual.";
         }
 
-        // Naikkan versi agar iframe di-recreate oleh Blazor
         pdfVersion = DateTime.UtcNow.Ticks;
     }
 
-    // Dipanggil saat kembali dari OnlyOfficeEditor — refresh data segar dari DB
     private async Task RefreshBaAsync()
     {
-        // Buat DbContext context baru agar tidak ada entity tracking lama
         ba = await DbContext.Set<BeritaAcaraEntity>()
             .AsNoTracking()
             .Include(b => b.Pj)
@@ -377,7 +356,6 @@
             .Include(b => b.BuktiFotos)
             .FirstOrDefaultAsync(b => b.Id == Id && (b.Status == "Draft" || b.Status == "Rejected") && b.CreatedBy == _currentUserId);
 
-        // Re-check PDF existence
         if (!string.IsNullOrEmpty(ba?.DocxPath))
         {
             var pdfPhysicalPath = Path.Combine(
@@ -386,7 +364,6 @@
             pdfExists = File.Exists(pdfPhysicalPath);
         }
 
-        // Naikkan versi agar iframe di-recreate oleh Blazor (memuat PDF baru)
         pdfVersion = DateTime.UtcNow.Ticks;
         errorMessage = string.Empty;
     }
@@ -400,7 +377,6 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // JSRuntime hanya tersedia setelah render pertama — tidak boleh dipanggil saat prerender.
         if (firstRender)
             await JSRuntime.InvokeVoidAsync("appLoading.hide");
 
@@ -430,7 +406,6 @@
 
         try
         {
-            // Lainnya tidak perlu TTD sama sekali — cek TTD hanya untuk jenis lain
             ApplicationUser? currentUser = null;
             if (ba.Jenis != "Lainnya")
             {
@@ -443,7 +418,6 @@
                 }
             }
 
-            // Muat ulang entity BA dengan tracking agar EF bisa melacak perubahan.
             DbContext.ChangeTracker.Clear();
             var trackedBa = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Pj)
@@ -466,7 +440,6 @@
 
             if (trackedBa.Jenis == "Lainnya")
             {
-                // Lainnya: langsung ke Arsip tanpa TTD, nomor surat di-generate dan di-patch
                 var (counterValue, nomorSurat) = await BACounterService.GetNextNomorSuratAsync(trackedBa.Tanggal, trackedBa.Jenis);
                 trackedBa.NomorSurat = nomorSurat;
                 trackedBa.CounterValue = counterValue;
@@ -480,8 +453,6 @@
             }
             else
             {
-                // Embed TTD Menyerahkan (Admin GB) untuk BA selain Lainnya
-                // Lewati jika sudah di-embed saat LoadBaAsync pada sesi ini
                 var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser!.TtdPath!.Replace("/", Path.DirectorySeparatorChar.ToString()));
                 if (!_menyerahkanEmbedded)
                 {
@@ -534,8 +505,6 @@
         }
         catch (Exception ex)
         {
-            // Bersihkan change tracker agar entitas yang pending (misal ApprovalToken)
-            // tidak ikut disimpan saat SaveChanges berikutnya dari halaman lain.
             DbContext.ChangeTracker.Clear();
             errorMessage = $"Gagal submit: {ex.Message}";
         }

@@ -76,7 +76,6 @@ else
     }
     else
     {
-        <!-- Container untuk ONLYOFFICE Editor -->
         <div class="onlyoffice-container">
             <div id="onlyoffice-placeholder"></div>
         </div>
@@ -93,7 +92,6 @@ else
     private string _currentUserName = "";
     private bool _editorInitialized = false;
     private bool isSaving = false;
-    // Kunci dokumen ONLYOFFICE — disimpan agar bisa digunakan saat memanggil Command Service
     private string _docKey = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -156,7 +154,6 @@ else
                 ? $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}"
                 : $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}?secret={Uri.EscapeDataString(callbackSecret)}";
 
-            // Key unik per sesi editor — disimpan untuk dipakai di Command Service saat forceSave
             _docKey = $"{ba.Id}-{DateTime.Now.Ticks}";
 
             var config = new
@@ -201,7 +198,6 @@ else
         {
             await JSRuntime.InvokeVoidAsync("appLoading.show", "Menyimpan dokumen...", "Sedang mengkonversi ke PDF, harap tunggu");
 
-            // Snapshot timestamp SEBELUM save sebagai baseline perbandingan
             string docxPhysical = string.Empty, pdfPhysical = string.Empty;
             DateTime beforeDocx = DateTime.MinValue, beforePdf = DateTime.MinValue;
             if (ba?.DocxPath is not null)
@@ -213,7 +209,6 @@ else
                 if (File.Exists(pdfPhysical))  beforePdf  = File.GetLastWriteTimeUtc(pdfPhysical);
             }
 
-            // ── Strategi 1: ONLYOFFICE Command Service (server → server, paling andal) ──
             var commandServiceUsed = false;
             if (!string.IsNullOrEmpty(_docKey))
             {
@@ -237,16 +232,13 @@ else
                 }
             }
 
-            // ── Strategi 2: Fallback — client-side editor.forceSave() via JS ──
             if (!commandServiceUsed)
             {
                 await JSRuntime.InvokeVoidAsync("onlyoffice.forceSave");
             }
 
-            // ── Poll: tunggu ONLYOFFICE callback masuk dan PDF terbarui di disk ──
             if (!string.IsNullOrEmpty(docxPhysical) && beforeDocx > DateTime.MinValue)
             {
-                // Tahap 1: tunggu DOCX diperbarui (max 60 detik)
                 var docxDeadline = DateTime.UtcNow.AddSeconds(60);
                 bool docxUpdated = false;
                 while (DateTime.UtcNow < docxDeadline)
@@ -258,7 +250,6 @@ else
 
                 if (docxUpdated)
                 {
-                    // Tahap 2: tunggu PDF diperbarui (max 30 detik)
                     var pdfDeadline = DateTime.UtcNow.AddSeconds(30);
                     while (DateTime.UtcNow < pdfDeadline)
                     {

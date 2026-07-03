@@ -1,4 +1,4 @@
-﻿@page "/tambah-pengguna"
+@page "/tambah-pengguna"
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using PegawaiEntity = SistemBeritaAcara.Core.Entities.Pegawai
@@ -65,7 +65,6 @@
         </div>
     }
 
-    <!-- Setup Role Form (after selecting) -->
     @if (selectedPegawai is not null && !formSaved)
     {
         <div style="border-top:1px solid var(--border);margin-top:24px;padding-top:24px;">

@@ -81,7 +81,6 @@ else if (alreadySigned)
 else
 {
     <div class="pj-layout">
-        <!-- ═══ LEFT: PDF Preview ═══ -->
         <div class="pj-preview">
             @if (!string.IsNullOrEmpty(pdfPath))
             {
@@ -97,7 +96,6 @@ else
             }
         </div>
 
-        <!-- ═══ RIGHT: Form TTD ═══ -->
         <div class="pj-form-wrap">
             <div class="pj-header">
                 <img src="/images/PT_Pertamina_Patra_Niaga.svg.png" style="height: 48px; width: auto; margin-bottom: 24px;" alt="Pertamina Patra Niaga" />
@@ -111,7 +109,6 @@ else
                 <div class="error-box"><i class="bi bi-exclamation-circle-fill"></i> @actionMessage</div>
             }
 
-            <!-- Tab bar -->
             <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;">
                 <button @onclick='() => SwitchPjMode("draw")'
                         style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:@(pjTtdMode=="draw"?"var(--primary)":"transparent");color:@(pjTtdMode=="draw"?"white":"var(--text-secondary)");">
@@ -123,7 +120,6 @@ else
                 </button>
             </div>
 
-            <!-- MODE: GAMBAR -->
             <div style="display:@(pjTtdMode == "draw" ? "block" : "none")">
                 <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">Gambar tanda tangan Anda di kotak ini:</div>
                 <div class="canvas-wrap">
@@ -144,7 +140,6 @@ else
                 </div>
             </div>
 
-            <!-- MODE: UPLOAD -->
             <div style="display:@(pjTtdMode == "upload" ? "block" : "none");margin-bottom:16px;">
                 <label for="pj-ul-input" style="cursor:pointer;display:block;">
                     <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg);padding:18px;text-align:center;transition:border-color .15s;"

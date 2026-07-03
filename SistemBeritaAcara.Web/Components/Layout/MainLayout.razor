@@ -20,7 +20,6 @@ else
 
     <div class="app-layout">
         <header class="topbar">
-            <!-- Brand Logo -->
             <div class="brand-logo-container" style="display:flex;align-items:center;gap:12px;">
                 <button type="button" class="hamburger-menu" onclick="toggleSidebar()" title="Menu" style="background:none;border:none;color:var(--text-primary);font-size:24px;cursor:pointer;">
                     <i class="bi bi-list"></i>
@@ -71,7 +70,6 @@ else
 
         <aside id="main-sidebar" class="sidebar">
 
-            <!-- CTA Buat BA (hanya AdminGudangBarang) -->
             @if (currentRole == "AdminGudangBarang")
             {
                 <div class="sidebar-cta">
@@ -82,7 +80,6 @@ else
                 </div>
             }
 
-            <!-- Navigation -->
             <div class="sidebar-nav-card">
             <nav class="sidebar-nav">
                 @if (currentRole == "AdminGudangBarang")
@@ -207,7 +204,6 @@ else
                 }
             </style>
 
-            <!-- Content -->
             <div class="content-area">
                 @Body
             </div>
@@ -235,7 +231,6 @@ else
             if (dropdown && dropdown.classList.contains('show')) {
                 var container = document.querySelector('.topbar-profile-container');
                 
-                // Close if clicked outside, OR if clicked on a link inside the dropdown
                 var isClickInsideDropdownLink = dropdown.contains(e.target) && (e.target.tagName === 'A' || e.target.closest('a'));
                 
                 if (!container || !container.contains(e.target) || isClickInsideDropdownLink) {
@@ -314,11 +309,9 @@ else
     {
         if (!firstRender || isLoginPage || _currentUserId == 0) return;
 
-        // Load badge counts (tetap cepat — query DB lokal)
         await RefreshCountsAsync();
         StateHasChanged();
 
-        // Fire-and-forget SignalR — tidak memblokir, koneksi terjadi di latar belakang
         _ = ConnectSignalRAsync();
     }
 
@@ -345,7 +338,6 @@ else
         }
         catch
         {
-            // SignalR gagal connect — badge tetap muncul, hanya tidak real-time
         }
     }
 

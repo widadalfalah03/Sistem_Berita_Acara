@@ -25,11 +25,9 @@
     </div>
 }
 
-<!-- Filter Panel -->
 <div class="card" style="margin-bottom:16px;overflow:visible;padding:0;">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;align-items:start;">
 
-        <!-- No. Surat -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">No. Surat</div>
             <div style="display:flex;align-items:center;gap:8px;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
@@ -40,7 +38,6 @@
             </div>
         </div>
 
-        <!-- Nama Pihak (popover) -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;position:relative;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Pihak Terkait</div>
             <button @onclick="ToggleNamePopover"
@@ -92,7 +89,6 @@
             }
         </div>
 
-        <!-- Keterangan -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Keterangan</div>
             <div style="display:flex;align-items:center;gap:8px;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
@@ -103,7 +99,6 @@
             </div>
         </div>
 
-        <!-- Tanggal -->
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Tanggal</div>
             <div style="display:flex;align-items:center;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
@@ -113,7 +108,6 @@
             </div>
         </div>
 
-        <!-- Jenis BA -->
         <div style="padding:10px 14px;position:relative;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Jenis Berita Acara</div>
             <div @onclick="() => showJenisDropdown = !showJenisDropdown"

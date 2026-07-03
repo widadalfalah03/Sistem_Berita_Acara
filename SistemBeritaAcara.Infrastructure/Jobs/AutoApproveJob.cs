@@ -21,7 +21,6 @@ public class AutoApproveJob(
 
     public async Task ProcessSingleAutoApproveAsync(int baId)
     {
-        // Cari BA spesifik
         var ba = await db.BeritaAcara
             .Include(b => b.Pj)
             .Include(b => b.Menyerahkan)
@@ -33,7 +32,6 @@ public class AutoApproveJob(
 
         if (ba == null) return;
         
-        // Cek status apakah masih WaitingPJSign
         if (ba.Status != "WaitingPJSign")
         {
             logger.LogInformation($"[AutoApproveJob] BA {baId} tidak jadi di-auto-approve karena status sudah berubah menjadi {ba.Status}.");
@@ -45,11 +43,9 @@ public class AutoApproveJob(
         try
         {
 
-                // 1. Set info stempel
                 ba.TtdPjPath = "images/auto_approve_stamp.png";
                 ba.PjSignedAt = DateTime.Now;
 
-                // 2. Generate Nomor Surat
                 if (string.IsNullOrEmpty(ba.NomorSurat))
                 {
                     var next = await baCounterService.GetNextNomorSuratAsync(ba.Tanggal, ba.Jenis);
@@ -57,7 +53,6 @@ public class AutoApproveJob(
                     ba.NomorSurat = next.nomorSurat;
                 }
 
-                // 3. Patch Nomor Surat atau Generate
                 var docxPhysicalPath = string.IsNullOrEmpty(ba.DocxPath)
                     ? null
                     : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
@@ -72,7 +67,6 @@ public class AutoApproveJob(
                     ba.DocxPath = await documentService.GenerateDocxAsync(ba);
                 }
 
-                // 4. Embed stempel "Automatically Approved"
                 var stampPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "auto_approve_stamp.png");
                 if (File.Exists(stampPhysicalPath))
                 {
@@ -84,7 +78,6 @@ public class AutoApproveJob(
                     logger.LogWarning($"[AutoApproveJob] File stempel tidak ditemukan di {stampPhysicalPath}. Dokumen BA {ba.Id} tidak akan memiliki stempel.");
                 }
 
-                // 5. Transaksi database & Ekspor Excel
                 await using var tx = await db.Database.BeginTransactionAsync();
                 ba.Status = "Approved";
                 ba.ApprovedAt = DateTime.Now;
@@ -98,11 +91,9 @@ public class AutoApproveJob(
                 await db.SaveChangesAsync();
                 await tx.CommitAsync();
 
-                // 6. Kirim notifikasi ke Admin Gudang (Creator)
                 string msgInbox = $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah selesai secara otomatis (PJ melewati batas waktu).";
                 await notificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", msgInbox, ba.Id);
 
-                // 7. Kirim email ke Admin Gudang dan PJ
                 var barangList = ba.Perangkat
                     .Select(p =>
                     {
@@ -126,7 +117,6 @@ public class AutoApproveJob(
 
                 if (ba.Mengetahui != null && !string.IsNullOrEmpty(ba.Mengetahui.Email))
                 {
-                    // Mengetahui juga dapat notifikasi (dianalogikan isForPj: true karena Reviewer juga tidak butuh tombol-tombol lain)
                     await emailService.SendApprovalResultAsync(ba.Mengetahui.Email, ba.Mengetahui.Nama, ba.Jenis, true, ba.Id, BaseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
                 }
 

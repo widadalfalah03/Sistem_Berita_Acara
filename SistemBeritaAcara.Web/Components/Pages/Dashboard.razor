@@ -69,9 +69,7 @@
 }
 else if (currentRole == "AdminGudangBarang")
 {
-    <!-- ════ DASHBOARD ADMIN GUDANG ════ -->
     <div class="dashboard-fill">
-    <!-- Stat Cards -->
     <div class="stat-cards">
         <div class="stat-card">
             <div class="stat-card-icon draft"><i class="bi bi-file-earmark-text"></i></div>
@@ -107,9 +105,7 @@ else if (currentRole == "AdminGudangBarang")
         </div>
     </div>
 
-    <!-- Charts row -->
     <div class="dashboard-grid">
-        <!-- Line chart -->
         <div class="chart-card">
             <div class="chart-header">
                 <span class="chart-title">Tren Pembuatan Berita Acara</span>
@@ -120,7 +116,6 @@ else if (currentRole == "AdminGudangBarang")
             </div>
         </div>
 
-        <!-- Donut chart -->
         <div class="chart-card">
             <div class="chart-header">
                 <span class="chart-title">Status Berita Acara Saat Ini</span>
@@ -131,9 +126,7 @@ else if (currentRole == "AdminGudangBarang")
         </div>
     </div>
 
-    <!-- Jenis BA + Due Date row -->
     <div class="dashboard-grid">
-        <!-- Jenis BA progress bars -->
         <div class="jenis-card">
             <div class="jenis-title">Jenis Berita Acara</div>
             @{
@@ -189,7 +182,6 @@ else if (currentRole == "AdminGudangBarang")
               </div>
         </div>
 
-        <!-- Peminjaman card -->
         <div class="due-section">
             <div class="due-header">
                 <div class="due-title">
@@ -234,12 +226,10 @@ else if (currentRole == "AdminGudangBarang")
     </div>
 }
 
-<!-- ═══ MODAL DETAIL PEMINJAMAN ═══ -->
 @if (modalBA is not null)
 {
     <div class="loan-modal-overlay" @onclick="CloseModal">
         <div class="loan-modal" @onclick:stopPropagation="true">
-            <!-- Modal Header -->
             <div class="loan-modal-header">
                 <div style="flex:1;">
                     <div class="loan-modal-label">Detail Peminjaman</div>
@@ -254,9 +244,7 @@ else if (currentRole == "AdminGudangBarang")
                 <button class="loan-modal-close" style="align-self:flex-start;" @onclick="CloseModal"><i class="bi bi-x-lg"></i></button>
             </div>
 
-            <!-- Modal Body -->
             <div class="loan-modal-body" style="overflow-y:auto;max-height:calc(100vh - 200px);display:block;">
-                <!-- Info Dokumen -->
                 <div class="card" style="margin-bottom:16px;box-shadow:none;border:1px solid #cbd5e1;">
                     <div class="card-header" style="padding:16px;border-bottom:1px solid #cbd5e1;">
                         <h3 style="margin:0;font-size:15px;color:var(--text-primary);font-weight:700;">Informasi Dokumen</h3>
@@ -281,7 +269,6 @@ else if (currentRole == "AdminGudangBarang")
 
 
 
-                <!-- Perpanjangan Waktu -->
                 <div class="card" style="margin-bottom:16px;box-shadow:none;border:1px solid #cbd5e1;">
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #cbd5e1;">
                         <div style="display:flex;align-items:center;gap:10px;">
@@ -373,7 +360,6 @@ else if (currentRole == "AdminGudangBarang")
                     }
                 </div>
 
-                <!-- Daftar Perangkat -->
                 @if (modalBA.Perangkat.Any())
                 {
                     <div class="card" style="margin-bottom:16px;box-shadow:none;border:1px solid #cbd5e1;">
@@ -415,7 +401,6 @@ else if (currentRole == "AdminGudangBarang")
                 }
             </div>
 
-            <!-- Modal Footer -->
             <div class="loan-modal-footer">
                 @if (isReturning)
                 {
@@ -446,7 +431,6 @@ else if (currentRole == "AdminGudangBarang")
 }
 else if (currentRole == "Reviewer")
 {
-    <!-- ════ DASHBOARD REVIEWER ════ -->
     <div class="dashboard-fill">
     <div class="stat-cards">
         <div class="stat-card">
@@ -504,7 +488,6 @@ else if (currentRole == "Reviewer")
     </div>
 
     <div class="dashboard-grid">
-        <!-- Jenis BA Progress (Left Column) -->
         <div class="jenis-card">
             <div class="jenis-title">Berita Acara Direview</div>
             @{
@@ -560,7 +543,6 @@ else if (currentRole == "Reviewer")
               </div>
         </div>
 
-        <!-- Antrean List (Right Column) -->
         <div class="due-section">
             <div class="due-header">
                 <div class="due-title">
@@ -612,8 +594,6 @@ else if (currentRole == "Reviewer")
 }
 else if (currentRole == "AdminIT")
 {
-    <!-- ════ DASHBOARD ADMIN IT ════ -->
-    <!-- Stat Cards row 1: Pengguna -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;">
         <div class="stat-card">
             <div class="stat-card-icon total"><i class="bi bi-people-fill"></i></div>
@@ -672,20 +652,17 @@ else if (currentRole == "AdminIT")
     private int currentUserId;
     private bool chartsRendered = false;
 
-    // Gudang stats
     private (int Draft, int Progress, int Approved, int Rejected) stat;
     private (int Alokasi, int Peminjaman, int Penarikan, int Lainnya) jenisData;
     private List<int> reviewerTrendApproved = new();
     private List<BAEntity> activePeminjaman = new();
     private List<int[]> trendData = new(); // [month-6..month-0]
 
-    // Return action state
     private int? confirmReturnId = null;
     private string confirmReturnNomorSurat = string.Empty;
     private bool isReturning = false;
     private BAEntity? modalBA = null;
 
-    // Perpanjangan state
     private List<SistemBeritaAcara.Core.Entities.PerpanjanganBA> riwayatPerpanjangan = new();
     private bool showPerpanjanganForm = false;
     private DateTime? inputTanggalPerpanjangan = null;
@@ -693,11 +670,9 @@ else if (currentRole == "AdminIT")
     private bool isSavingPerpanjangan = false;
     private string? perpanjanganError = null;
 
-    // Reviewer stats
     private (int Pending, int Total, int ApprovedThisMonth, int RejectedThisMonth, int ApprovedAlokasi, int ApprovedPeminjaman, int ApprovedPenarikan, int ApprovedLainnya) reviewerStat;
     private List<BAEntity> reviewerQueue = new();
 
-    // AdminIT stats
     private (int Total, int AdminIT, int AdminGudang, int Reviewer) userStats;
     private AdminITStats itStats = new();
 
@@ -824,7 +799,6 @@ else if (currentRole == "AdminIT")
 
         reviewerStat.Total = myQueue.Count(b => b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected");
         reviewerStat.ApprovedThisMonth = approvedBA.Count(b => b.ApprovedAt?.Month == currentMonth && b.ApprovedAt?.Year == currentYear);
-        // We use CreatedAt or Tanggal if RejectedAt doesn't exist. Actually, let's just use simple current month filter for rejected. (Wait, let's see if there is RejectedAt or just use simple comparison)
         reviewerStat.RejectedThisMonth = rejectedBA.Count; // Simplification, or let's use Tanggal as a proxy for this month if there's no RejectedAt
         
         reviewerStat.ApprovedAlokasi = myQueue.Count(b => b.Jenis == "Alokasi" && (b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected"));
@@ -921,7 +895,6 @@ else if (currentRole == "AdminIT")
         _ => status
     };
 
-    // Modal actions
     private async Task OpenDetailModal(int baId)
     {
         modalBA = activePeminjaman.FirstOrDefault(b => b.Id == baId);
@@ -981,7 +954,6 @@ else if (currentRole == "AdminIT")
             DbCtx.Set<SistemBeritaAcara.Core.Entities.PerpanjanganBA>().Add(perpanjangan);
             await DbCtx.SaveChangesAsync();
 
-            // Update local list
             modalBA.TanggalKembali = newDate;
             var localBa = activePeminjaman.FirstOrDefault(b => b.Id == modalBA.Id);
             if (localBa is not null) localBa.TanggalKembali = newDate;
@@ -997,7 +969,6 @@ else if (currentRole == "AdminIT")
         }
     }
 
-    // Return actions
     private void InitiateReturn(int baId, string nomorSurat)
     {
         confirmReturnId = baId;
@@ -1035,7 +1006,6 @@ else if (currentRole == "AdminIT")
         }
     }
 
-    // Reviewer sort
     private string sortAppCol = "Tanggal Submit";
     private bool sortAppAsc = true;
     private void SortReviewer(string col) { if (sortAppCol == col) sortAppAsc = !sortAppAsc; else { sortAppCol = col; sortAppAsc = true; } }

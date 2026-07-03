@@ -1,4 +1,4 @@
-﻿@page "/setup"
+@page "/setup"
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @layout EmptyLayout
 @rendermode InteractiveServer
@@ -108,7 +108,6 @@
 
 
 
-<!-- Form tersembunyi untuk auto-login setelah akun dibuat -->
 <form id="autoLoginForm" method="post" action="/account/login" style="display:none;">
     <input type="hidden" name="email" value="@email" />
     <input type="hidden" name="password" value="@password" />

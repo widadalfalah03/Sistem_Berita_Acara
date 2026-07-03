@@ -13,10 +13,8 @@ public class EmailService(IConfiguration config) : IEmailService
     private readonly string _user = config["Email:Username"] ?? "";
     private readonly string _pass = config["Email:Password"] ?? "";
     private readonly string _from = config["Email:From"] ?? "noreply@pertamina.com";
-    // PublicUrl digunakan untuk link di email agar bisa diakses browser (bukan Docker-internal)
     private readonly string _baseUrl = config["App:PublicUrl"] ?? config["App:BaseUrl"] ?? "http://localhost:5000";
 
-    // Helper: render daftar barang sebagai tabel HTML
     private static string RenderBarangTable(List<string> barangList)
     {
         if (barangList == null || barangList.Count == 0)
@@ -44,7 +42,6 @@ public class EmailService(IConfiguration config) : IEmailService
             """;
     }
 
-    // ── Email #1: Magic Link Tanda Tangan ke PJ ──────────────────────────────
     public async Task SendMagicLinkAsync(string toEmail, string toPjName, int baId, string token, string baseUrl, string jenisBA, List<string> barangList)
     {
         string link = $"{baseUrl.TrimEnd('/')}/pj/sign/{token}";
@@ -73,7 +70,6 @@ public class EmailService(IConfiguration config) : IEmailService
     public async Task SendNotificationAsync(string toEmail, string subject, string htmlBody)
         => await SendEmailAsync(toEmail, subject, htmlBody);
 
-    // ── Email #2: Undangan Pengguna Baru ─────────────────────────────────────
     public async Task SendUserInvitationAsync(string toEmail, string userName, string token, string baseUrl)
     {
         var encodedToken = Uri.EscapeDataString(token);
@@ -97,7 +93,6 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, "Undangan: Setup Akun Sistem Berita Acara", body);
     }
 
-    // ── Email #3: Reset Password ──────────────────────────────────────────────
     public async Task SendPasswordResetLinkAsync(string toEmail, string userName, string token, string baseUrl)
     {
         var encodedToken = Uri.EscapeDataString(token);
@@ -121,7 +116,6 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, "Permintaan Reset Password - Sistem Berita Acara", body);
     }
 
-    // ── Email #4: Notifikasi Keamanan Penggunaan Tanda Tangan ─────────────────
     public async Task SendTtdUsedNotificationAsync(string toEmail, string pegawaiNama, string nomorSurat)
     {
         string body = $"""
@@ -136,7 +130,6 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, $"Notifikasi Keamanan: Tanda Tangan Digunakan ({nomorSurat})", body);
     }
 
-    // ── Email #5: Permintaan Persetujuan ke Reviewer ──────────────────────────
     public async Task SendApprovalRequestAsync(string toEmail, string reviewerName, string baseUrl, int baId, string jenisBA, List<string> barangList)
     {
         var returnUrl = Uri.EscapeDataString($"/berita-acara/{baId}");
@@ -161,7 +154,6 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, $"Tindakan Diperlukan: Persetujuan Berita Acara {jenisBA}", body);
     }
 
-    // ── Email #6: Hasil Keputusan Dokumen (Disetujui / Ditolak) ──────────────
     public async Task SendApprovalResultAsync(string toEmail, string recipientName, string jenisBA, bool approved, int baId, string baseUrl, bool isForPj, string? nomorSurat = null, string? alasan = null, List<string>? barangList = null)
     {
         string statusText = approved ? "Disetujui" : "Ditolak";
@@ -173,7 +165,6 @@ public class EmailService(IConfiguration config) : IEmailService
             ? RenderBarangTable(barangList)
             : string.Empty;
 
-        // Teks biasa untuk alasan penolakan, bukan card
         string alasanSection = (!approved && !string.IsNullOrEmpty(alasan))
             ? $"<p><strong>Alasan Penolakan:</strong> {alasan}</p>"
             : string.Empty;
@@ -207,7 +198,6 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, subject, body);
     }
 
-    // ── Email #7: Pengingat Jatuh Tempo Peminjaman ────────────────────────────
     public async Task SendDueDateReminderAsync(string toEmail, string recipientName, string nomorSurat, string pjNama, string tanggalKembali, int daysUntilDue, bool isForPj, int baId, string baseUrl, List<string>? barangList = null)
     {
         bool isOverdue = daysUntilDue < 0;
@@ -247,9 +237,7 @@ public class EmailService(IConfiguration config) : IEmailService
             ? RenderBarangTable(barangList)
             : string.Empty;
 
-        // Judul hitam seperti yang diminta
         string headingColor = "#000000";
-        // Teks alert merah
         string actionTextColor = isOverdue ? "#cc0000" : "#000000";
 
         string body = $"""
@@ -292,11 +280,9 @@ public class EmailService(IConfiguration config) : IEmailService
         message.To.Add(MailboxAddress.Parse(toEmail));
         message.Subject = subject;
 
-        // Buat Fallback Plain Text
         var plainText = System.Text.RegularExpressions.Regex.Replace(htmlBody, "<.*?>", String.Empty);
         plainText = plainText.Replace("&nbsp;", " ").Trim();
 
-        // Template HTML standar lengkap dengan head dan body
         var fullHtml = $@"
 <!DOCTYPE html>
 <html>
@@ -330,8 +316,6 @@ public class EmailService(IConfiguration config) : IEmailService
         message.Body = builder.ToMessageBody();
 
         using var client = new SmtpClient();
-        // Nonaktifkan pengecekan CRL (Certificate Revocation List) saja — tetap validasi sertifikat.
-        // CRL server Gmail tidak selalu bisa dijangkau dari jaringan korporat/VPN.
         client.CheckCertificateRevocation = false;
         await client.ConnectAsync(_host, _port, SecureSocketOptions.StartTls);
         await client.AuthenticateAsync(_user, _pass);

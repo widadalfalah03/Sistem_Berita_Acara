@@ -32,7 +32,6 @@
     </div>
 </div>
 
-<!-- Stat Card -->
 <div class="stat-cards" style="grid-template-columns:repeat(1,1fr);max-width:220px;margin-bottom:24px;">
     <div class="stat-card">
         <div class="stat-card-icon total"><i class="bi bi-box-seam"></i></div>
@@ -43,7 +42,6 @@
     </div>
 </div>
 
-<!-- Alert -->
 @if (!string.IsNullOrEmpty(alertMessage))
 {
     <div style="background:@(alertIsError ? "var(--danger-light)" : "#F0FDF4");border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;color:@(alertIsError ? "var(--danger)" : "#16A34A");font-size:14px;display:flex;align-items:center;gap:8px;">
@@ -52,7 +50,6 @@
     </div>
 }
 
-<!-- Search + Tambah -->
 <div class="search-bar" style="justify-content:space-between;">
     <div style="display:flex;align-items:center;gap:12px;">
         <div class="search-input" style="max-width:320px;">
@@ -130,7 +127,6 @@ else
     }
 }
 
-<!-- ── Modal Tambah / Edit ── -->
 @if (showForm)
 {
     <div class="modal-overlay" @onclick="CloseForm">
@@ -162,7 +158,6 @@ else
     </div>
 }
 
-<!-- ── Modal Konfirmasi Hapus ── -->
 @if (showHapus && hapusTarget != null)
 {
     <div class="modal-overlay" @onclick="() => showHapus = false">
@@ -184,7 +179,6 @@ else
     </div>
 }
 
-<!-- ── Modal Import Excel ── -->
 @if (showUpload)
 {
     <div class="modal-overlay" @onclick="() => showUpload = false">

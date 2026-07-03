@@ -1,4 +1,4 @@
-﻿using SistemBeritaAcara.Core.Entities;
+using SistemBeritaAcara.Core.Entities;
 
 namespace SistemBeritaAcara.Core.Interfaces;
 

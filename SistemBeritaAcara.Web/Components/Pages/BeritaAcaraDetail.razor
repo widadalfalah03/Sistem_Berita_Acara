@@ -52,7 +52,6 @@ else if (notFound || ba is null)
 }
 else
 {
-    <!-- Breadcrumb -->
     <button class="breadcrumb-back" @onclick="GoBack">
         <i class="bi bi-arrow-left"></i>
         Kembali
@@ -68,9 +67,7 @@ else
 
     @if (isReviewer && ba.Status == "WaitingApproval")
     {
-        <!-- ════ REVIEW LAYOUT (Reviewer) ════ -->
         <div class="review-layout">
-            <!-- Preview area -->
             <div class="review-preview">
                 @if (!string.IsNullOrEmpty(ba.DocxPath) || !string.IsNullOrEmpty(ba.DocxFinalPath))
                 {
@@ -90,7 +87,6 @@ else
                 }
             </div>
 
-            <!-- Review Panel -->
             <div class="review-panel">
                 <h3>Review & Status</h3>
 
@@ -117,7 +113,6 @@ else
                     </div>
                 </div>
 
-                <!-- Timeline -->
                 <div class="timeline">
                     <div class="timeline-item">
                         <div class="timeline-dot completed"></div>
@@ -142,7 +137,6 @@ else
                     </div>
                 </div>
 
-                <!-- Action buttons -->
                 <div style="display:flex;gap:10px;margin-top:24px;">
                     <button class="btn @(isProcessing ? "btn-loading" : "")"
                             style="flex:0 0 auto;padding:10px 20px;border:1.5px solid var(--danger);color:var(--danger);background:transparent;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s,color .15s;"
@@ -164,7 +158,6 @@ else
     }
     else
     {
-        <!-- ════ STANDARD DETAIL VIEW ════ -->
         <div class="page-header d-flex align-center justify-between" style="flex-wrap:wrap; gap:12px;">
             <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
                 <div>
@@ -181,7 +174,6 @@ else
         </div>
 
         <div class="info-grid-2">
-            <!-- Info Dokumen -->
             <div class="card">
                 <div class="card-header"><h3>Informasi Dokumen</h3></div>
                 <div class="card-body">
@@ -205,7 +197,6 @@ else
                 </div>
             </div>
 
-            <!-- Pihak Terkait -->
             @if (ba.Jenis != "Lainnya")
             {
                 <div class="card">
@@ -221,7 +212,6 @@ else
             }
         </div>
 
-        <!-- Perangkat -->
         @if (ba.Jenis != "Lainnya" && ba.Perangkat?.Any() == true)
         {
             <div class="card" style="margin-bottom:24px;">
@@ -252,7 +242,6 @@ else
                 </table>
                 </div>
                 
-                <!-- MOBILE LIST -->
                 <div class="perangkat-mobile-list" style="padding:16px;">
                     @foreach (var p in ba.Perangkat)
                     {
@@ -278,7 +267,6 @@ else
             </div>
         }
 
-        <!-- Action buttons for AdminGudang -->
         @if (currentRole == "AdminGudangBarang")
         {
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
@@ -309,7 +297,6 @@ else
     }
 }
 
-<!-- Reject Modal -->
 @if (showRejectModal)
 {
     <div class="modal-overlay" @onclick="() => showRejectModal = false">
@@ -373,9 +360,6 @@ else
 
     private async Task LoadAsync()
     {
-        // Cegah dua LoadAsync berjalan bersamaan pada DbContext yang sama.
-        // Ini bisa terjadi saat RejectAsync/ApproveAsync memanggil LoadAsync()
-        // tepat saat SignalR BaDetailUpdated juga men-trigger LoadAsync() via InvokeAsync.
         if (_loadingInProgress) return;
         _loadingInProgress = true;
         try
@@ -422,7 +406,6 @@ else
         isProcessing = true;
         try
         {
-            // M-2: Invalidasi semua token PJ_SIGNATURE lama yang belum digunakan untuk BA ini
             var oldTokens = await DbContext.ApprovalToken
                 .Where(t => t.BaId == ba!.Id && t.TokenType == "PJ_SIGNATURE" && t.UsedAt == null)
                 .ToListAsync();
@@ -462,8 +445,6 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
-            // H-1: Re-fetch status langsung dari DB (bukan dari memori) untuk cegah double-approve
-            // jika dua reviewer membuka BA yang sama secara bersamaan.
             await DbContext.Entry(ba!).ReloadAsync();
             if (ba!.Status != "WaitingApproval")
             {
@@ -483,10 +464,8 @@ else
                 return;
             }
 
-            // Embed TTD Yang Mengetahui (Reviewer)
             await DocumentService.EmbedTtdMengetahuiAsync(ba.Id, reviewerTtdPhysical);
 
-            // Invalidasi token PJ_SIGNATURE lama
             var oldTokens = await DbContext.ApprovalToken
                 .Where(t => t.BaId == ba!.Id && t.TokenType == "PJ_SIGNATURE" && t.UsedAt == null)
                 .ToListAsync();
@@ -498,11 +477,8 @@ else
             DbContext.ApprovalToken.Add(newToken);
 
             ba.Status = "WaitingPJSign";
-            // ApprovedAt and NomorSurat will be generated when PJ signs
             await DbContext.SaveChangesAsync();
 
-            // Schedule Auto-Approve Job (Real-time delay)
-            // TESTING: 2 menit (Production: 24 jam)
             Hangfire.BackgroundJob.Schedule<SistemBeritaAcara.Infrastructure.Jobs.AutoApproveJob>(
                 job => job.ProcessSingleAutoApproveAsync(ba.Id),
                 TimeSpan.FromMinutes(2)
@@ -540,7 +516,6 @@ else
         await InvokeAsync(StateHasChanged);
         try
         {
-            // H-1: Re-fetch status dari DB untuk cegah reject pada BA yang sudah di-approve
             await DbContext.Entry(ba!).ReloadAsync();
             if (ba!.Status != "WaitingApproval")
             {
@@ -548,7 +523,6 @@ else
                 isProcessing = false; isReviewerAction = false; return;
             }
 
-            // H-2: Gunakan transaction agar reject + history tersimpan bersama-sama
             await using var txReject = await DbContext.Database.BeginTransactionAsync();
             ba!.Status = "Rejected";
             ba.AlasanReject = rejectReason;
@@ -556,7 +530,6 @@ else
             ba.ApprovedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
 
-            // Catat ke tabel history permanen agar tidak hilang saat Inbox dihapus
             var history = new SistemBeritaAcara.Core.Entities.BeritaAcaraHistory
             {
                 BaId = ba.Id,
@@ -586,7 +559,6 @@ else
                     return $"{nama} — {detail}";
                 }).ToList();
 
-            // Email ke Admin Gudang & Barang (creator) — PJ tidak mendapat notifikasi penolakan
             var creatorUserReject = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
             if (!string.IsNullOrEmpty(creatorUserReject?.Email))
                 await EmailService.SendApprovalResultAsync(creatorUserReject.Email, creatorUserReject.Nama ?? creatorUserReject.Email, ba.Jenis, false, ba.Id, baseUrlReject, isForPj: false, nomorSurat: ba.NomorSurat, alasan: rejectReason, barangList: barangListReject);
@@ -657,7 +629,6 @@ else
         if (firstRender)
         {
             await JSRuntime.InvokeVoidAsync("appLoading.hide");
-            // Fire-and-forget: sambungkan SignalR di latar belakang
             _ = ConnectSignalRAsync();
         }
 
@@ -691,7 +662,6 @@ else
                 .WithAutomaticReconnect()
                 .Build();
 
-            // Saat ada perubahan detail BA ini, reload
             _hubConnection.On("BaDetailUpdated", async () =>
             {
                 await InvokeAsync(async () =>
@@ -702,13 +672,11 @@ else
             });
 
             await _hubConnection.StartAsync();
-            // Masuk ke group khusus BA ini agar hanya notif yang relevan
             if (ba is not null)
                 await _hubConnection.InvokeAsync("JoinBaGroup", ba.Id);
         }
         catch
         {
-            // SignalR gagal — halaman tetap berjalan normal
         }
     }
 
