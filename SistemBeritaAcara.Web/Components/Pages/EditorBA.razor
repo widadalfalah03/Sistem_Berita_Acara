@@ -54,22 +54,29 @@
             <div style="font-weight:700; font-size:14px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Pratinjau Dokumen</div>
         </div>
 
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:#16A34A; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:20px; padding:6px 14px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#16A34A; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:20px; padding:5px 12px; white-space:nowrap;">
                 <i class="bi bi-check-circle-fill"></i> Draft tersimpan
             </div>
-            
+
             @if (!string.IsNullOrEmpty(ba.DocxPath))
             {
-                <NavLink href="@($"/onlyoffice-editor/{ba.Id}")" class="btn btn-outline" style="display:flex; align-items:center; gap:8px; border-radius:var(--radius-full); padding:8px 16px; color:var(--primary); border-color:var(--primary);">
-                    <i class="bi bi-pencil"></i> Edit Manual
+                <NavLink href="@($"/onlyoffice-editor/{ba.Id}")"
+                         style="display:flex;align-items:center;justify-content:center;gap:8px;min-width:150px;padding:10px 20px;border-radius:var(--radius-full);border:1.5px solid var(--primary);color:var(--primary);background:transparent;font-weight:600;font-size:14px;text-decoration:none;white-space:nowrap;transition:background .15s,color .15s;"
+                         onmouseover="this.style.background='var(--primary)';this.style.color='white';"
+                         onmouseout="this.style.background='transparent';this.style.color='var(--primary)';">
+                    <i class="bi bi-pencil-fill"></i> Edit Manual
                 </NavLink>
             }
 
-            <button class="btn btn-primary" @onclick="SubmitForApprovalAsync" disabled="@isSubmitting" style="display:flex; align-items:center; gap:8px; border-radius:var(--radius-full); padding:8px 16px;">
+            <button @onclick="SubmitForApprovalAsync" disabled="@isSubmitting"
+                    style="display:flex;align-items:center;justify-content:center;gap:8px;min-width:150px;padding:10px 20px;border-radius:var(--radius-full);border:none;background:var(--primary);color:white;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;transition:opacity .15s;"
+                    onmouseover="if(!this.disabled)this.style.opacity='.88';"
+                    onmouseout="this.style.opacity='1';">
                 @if (isSubmitting)
                 {
                     <span class="spinner" style="width:16px;height:16px;border-width:2px;border-color:white;border-top-color:transparent;"></span>
+                    <span>Mengirim...</span>
                 }
                 else if (ba.Jenis == "Lainnya")
                 {
@@ -207,6 +214,7 @@
 
 @code {
     [Parameter] public int Id { get; set; }
+    [SupplyParameterFromQuery(Name = "oo")] private string? OoParam { get; set; }
 
     private BeritaAcaraEntity? ba;
     private bool isLoading = true;
@@ -283,8 +291,9 @@
 
         if (ba != null)
         {
-            // Selalu regenerate agar perubahan data/template selalu tercermin di pratinjau
-            try
+            // Skip regen jika kembali dari OnlyOffice (oo=1) — jangan timpa hasil edit manual
+            bool skipRegen = OoParam == "1";
+            if (!skipRegen) try
             {
                 DbContext.ChangeTracker.Clear();
 

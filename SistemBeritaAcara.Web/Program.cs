@@ -142,6 +142,28 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             ALTER TABLE [BeritaAcara] ADD CONSTRAINT [FK_BeritaAcara_Users_MenyerahkanId]
                 FOREIGN KEY ([MenyerahkanId]) REFERENCES [Users]([Id]) ON DELETE NO ACTION
         END
+
+        -- Hapus kolom BeritaAcaraId dari ApprovalToken yang di-generate otomatis oleh EF Core sebelumnya
+        IF EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'BeritaAcaraId' AND Object_ID = Object_ID(N'ApprovalToken'))
+        BEGIN
+            -- Hapus FK constraint dulu (EF Core buat FK_ApprovalToken_BeritaAcara_BeritaAcaraId)
+            DECLARE @fkApprToken nvarchar(200)
+            SELECT TOP 1 @fkApprToken = fk.name
+            FROM sys.foreign_keys fk
+            INNER JOIN sys.foreign_key_columns fkc ON fk.object_id = fkc.constraint_object_id
+            INNER JOIN sys.columns c ON fkc.parent_object_id = c.object_id AND fkc.parent_column_id = c.column_id
+            WHERE fkc.parent_object_id = OBJECT_ID(N'ApprovalToken') AND c.name = N'BeritaAcaraId'
+            IF @fkApprToken IS NOT NULL
+                EXEC('ALTER TABLE [ApprovalToken] DROP CONSTRAINT [' + @fkApprToken + ']')
+
+            -- Hapus index yang bergantung pada kolom tersebut jika ada
+            IF EXISTS (SELECT 1 FROM sys.indexes WHERE Name = N'IX_ApprovalToken_BeritaAcaraId' AND Object_ID = Object_ID(N'ApprovalToken'))
+            BEGIN
+                EXEC('DROP INDEX [IX_ApprovalToken_BeritaAcaraId] ON [ApprovalToken]')
+            END
+
+            EXEC('ALTER TABLE [ApprovalToken] DROP COLUMN [BeritaAcaraId]')
+        END
     ");
     }
     catch (Exception ex)
@@ -410,7 +432,7 @@ app.MapGet("/api/ba/{baId:int}/download", async (
 
     var bytes = await File.ReadAllBytesAsync(pdfPath);
     return Results.File(bytes, "application/pdf", filename);
-}).DisableAntiforgery();
+}).RequireAuthorization().DisableAntiforgery();
 
 // Database and roles are ensured earlier before app start
 
@@ -418,32 +440,5 @@ RecurringJob.AddOrUpdate<DueDateCheckerJob>(
     "cek-jatuh-tempo",
     job => job.CheckDueDatesAsync(),
     Cron.Daily(7));
-
-
-app.MapGet("/api/test-email", async (string? email, string? type, SistemBeritaAcara.Core.Interfaces.IEmailService emailService) =>
-{
-    var barangList = new List<string> 
-    { 
-        "Laptop Lenovo Thinkpad T14 — 1 Unit", 
-        "Proyektor Epson — 1 Unit" 
-    };
-    
-    string toEmail = !string.IsNullOrEmpty(email) ? email : "test@example.com"; 
-    int daysUntilDue = type == "h1" ? 1 : (type == "hari-ini" ? 0 : -1);
-    
-    await emailService.SendDueDateReminderAsync(
-        toEmail: toEmail, 
-        recipientName: "Admin Test", 
-        nomorSurat: "BA-123/PN/2026", 
-        pjNama: "Bapak Budi", 
-        tanggalKembali: DateTime.Now.AddDays(-1).ToString("dd MMMM yyyy"), 
-        daysUntilDue: daysUntilDue,
-        isForPj: false, 
-        baId: 123, 
-        baseUrl: "http://localhost:5249", 
-        barangList: barangList
-    );
-    return Microsoft.AspNetCore.Http.Results.Ok($"Email pengingat (jenis: {daysUntilDue}) terkirim ke {toEmail}. Cek terminal atau inbox.");
-});
 
 app.Run();

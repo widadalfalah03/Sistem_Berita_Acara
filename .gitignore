@@ -91,13 +91,6 @@ _ReSharper*/
 *.DotSettings.user
 SistemBeritaAcara.Web/data/ArsipBeritaAcara.xlsx
 
-# Claude Code & AI tools
-.claude/
-.agents/
-skills-lock.json
-AGENTS.md
-PRODUCT.md
-
 # Scratch & temp folders
 scratch_*/
 TestDocx/

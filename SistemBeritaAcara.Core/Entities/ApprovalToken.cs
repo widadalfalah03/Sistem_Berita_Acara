@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace SistemBeritaAcara.Core.Entities;
 
 public class ApprovalToken
@@ -10,5 +12,6 @@ public class ApprovalToken
     public DateTime? UsedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
+    [ForeignKey("BaId")]
     public BeritaAcara BeritaAcara { get; set; } = null!;
 }

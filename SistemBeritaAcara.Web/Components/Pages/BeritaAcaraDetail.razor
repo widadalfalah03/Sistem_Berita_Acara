@@ -526,7 +526,7 @@ else
             await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
             await LoadAsync();
         }
-        catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}"; }
+        catch (Exception ex) { actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " + ex.InnerException.Message : "")}"; }
         finally { isProcessing = false; isReviewerAction = false; }
     }
 

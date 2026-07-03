@@ -269,9 +269,9 @@ else
                 }
             }
 
-            Navigation.NavigateTo($"/editor/{Id}");
+            Navigation.NavigateTo($"/editor/{Id}?oo=1");
         }
-        catch { Navigation.NavigateTo($"/editor/{Id}"); }
+        catch { Navigation.NavigateTo($"/editor/{Id}?oo=1"); }
     }
 
     public async ValueTask DisposeAsync()
