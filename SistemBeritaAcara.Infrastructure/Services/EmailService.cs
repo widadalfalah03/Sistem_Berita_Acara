@@ -81,7 +81,7 @@ public class EmailService(IConfiguration config) : IEmailService
         string link = $"{baseUrl.TrimEnd('/')}/invitation?email={encodedEmail}&token={encodedToken}";
 
         string body = $"""
-            <h2 style="color:#000000;">Undangan: Setup Akun Sistem Informasi Berita Acara</h2>
+            <h2 style="color:#000000;">Undangan: Setup Akun Sistem Informasi Manajemen Berita Acara</h2>
             <p>Yth. <strong>{userName}</strong>,</p>
             <p>Akun Anda telah didaftarkan oleh Administrator IT. Untuk mulai menggunakan sistem, silakan selesaikan pengaturan akun Anda melalui tautan berikut:</p>
 
@@ -288,7 +288,7 @@ public class EmailService(IConfiguration config) : IEmailService
         }
 
         var message = new MimeMessage();
-        message.From.Add(new MailboxAddress("Sistem Informasi Berita Acara", _from));
+        message.From.Add(new MailboxAddress("Sistem Informasi Manajemen Berita Acara", _from));
         message.To.Add(MailboxAddress.Parse(toEmail));
         message.Subject = subject;
 
@@ -314,7 +314,7 @@ public class EmailService(IConfiguration config) : IEmailService
     <div class='container'>
         {htmlBody}
         <div class='footer'>
-            <p>Email ini dihasilkan secara otomatis oleh <strong>Sistem Informasi Berita Acara</strong> PT Pertamina Patra Niaga.</p>
+            <p>Email ini dihasilkan secara otomatis oleh <strong>Sistem Informasi Manajemen Berita Acara</strong> PT Pertamina Patra Niaga.</p>
             <p>Mohon tidak membalas email ini.</p>
         </div>
     </div>
