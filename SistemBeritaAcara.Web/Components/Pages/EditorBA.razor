@@ -69,9 +69,9 @@
             }
 
             <button @onclick="SubmitForApprovalAsync" disabled="@isSubmitting"
-                    style="display:flex;align-items:center;justify-content:center;gap:8px;min-width:150px;padding:10px 20px;border-radius:var(--radius-full);border:none;background:var(--primary);color:white;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;transition:opacity .15s;"
-                    onmouseover="if(!this.disabled)this.style.opacity='.88';"
-                    onmouseout="this.style.opacity='1';">
+                    style="display:flex;align-items:center;justify-content:center;gap:8px;min-width:160px;padding:11px 24px;border-radius:var(--radius-full);border:none;background:var(--primary);color:white;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;transition:opacity .2s,transform .15s;"
+                    onmouseover="if(!this.disabled){this.style.opacity='.9';this.style.transform='translateY(-1px)';}"
+                    onmouseout="this.style.opacity='1';this.style.transform='';">
                 @if (isSubmitting)
                 {
                     <span class="spinner" style="width:16px;height:16px;border-width:2px;border-color:white;border-top-color:transparent;"></span>
@@ -209,7 +209,7 @@
 
 @code {
     [Parameter] public int Id { get; set; }
-    [SupplyParameterFromQuery(Name = "oo")] private string? OoParam { get; set; }
+    [SupplyParameterFromQuery(Name = "oo")] public string? OoParam { get; set; }
 
     private BeritaAcaraEntity? ba;
     private bool isLoading = true;

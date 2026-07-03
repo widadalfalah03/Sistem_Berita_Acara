@@ -90,10 +90,3 @@ $RECYCLE.BIN/
 _ReSharper*/
 *.DotSettings.user
 SistemBeritaAcara.Web/data/ArsipBeritaAcara.xlsx
-
-# Scratch & temp folders
-scratch_*/
-TestDocx/
-lainnya_extracted/
-UI_UX*/
-UIUX_*/
