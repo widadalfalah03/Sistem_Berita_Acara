@@ -1,4 +1,5 @@
 using Hangfire;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -19,6 +20,10 @@ CultureInfo.DefaultThreadCurrentCulture   = idCulture;
 CultureInfo.DefaultThreadCurrentUICulture = idCulture;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new System.IO.DirectoryInfo(@"C:\BeritaAcaraData\DataProtectionKeys"))
+    .SetApplicationName("SistemBeritaAcara");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
