@@ -930,6 +930,25 @@ a:hover { color: var(--primary-hover); }
 
 .form-control::placeholder { color: var(--text-muted); }
 
+.perangkat-search-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-size: 13px;
+    color: var(--text-primary);
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color .18s, box-shadow .18s;
+}
+.perangkat-search-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.1);
+}
+.perangkat-search-input::placeholder { color: var(--text-muted); }
+
 .form-control.readonly {
     background: var(--bg);
     color: var(--text-secondary);

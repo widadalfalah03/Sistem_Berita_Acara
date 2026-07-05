@@ -256,44 +256,27 @@
                     {
                         <tr>
                             <td style="position:relative;">
-                                <div @onclick="() => OpenBarangSearchForRow(p)"
-                                     style="padding:6px 10px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
-                                     onmouseover="this.style.background='var(--primary-light)'"
-                                     onmouseout="this.style.background='var(--surface)'">
-                                    <span style="@(p.BarangId == 0 ? "color:var(--text-muted);" : "")">
-                                        @(p.BarangId > 0 ? (barangOptions.FirstOrDefault(b => b.Id == p.BarangId)?.NamaBarang ??
-                 "Pilih...") : "Cari perangkat...")
-                                    </span>
-                                    <i class="bi bi-search" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i>
-                                </div>
+                                <input type="text" class="perangkat-search-input"
+                                       value="@(activeSearchRow == p ? barangSearchQuery : (p.BarangId > 0 ? (barangOptions.FirstOrDefault(b => b.Id == p.BarangId)?.NamaBarang ?? "") : ""))"
+                                       placeholder="Cari perangkat"
+                                       @onfocus="() => OnBarangSearchFocus(p)"
+                                       @oninput="OnBarangSearchInput"
+                                       @onblur="OnBarangSearchBlur" />
                                 @if (showBarangSearch && activeSearchRow == p)
                                 {
-                                    <div @onclick="CloseBarangSearch" style="position:fixed;inset:0;z-index:99;"></div>
-                                    <div
-                                        style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;">
-                                        <div style="padding:6px 8px;border-bottom:1px solid var(--border-light);">
-                                            <div
-                                                style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;">
-                                                <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);"></i>
-                                                <input type="text" placeholder="Cari perangkat..." @ref="barangSearchRef"
-                                                       value="@barangSearchQuery" @onchange="OnBarangSearchInput"
-                                                       @oninput="OnBarangSearchInput"
-                                                       style="border:none;outline:none;background:transparent;font-size:13px;width:100%;" />
-                                            </div>
-                                        </div>
+                                    <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:220px;max-height:320px;overflow-y:auto;margin-top:2px;"
+                                         @onmousedown:preventDefault>
                                         @if (barangSearchResults.Any())
                                         {
-                                            <div style="max-height:320px;overflow-y:auto;">
-                                                @foreach (var b in barangSearchResults)
-                                                {
-                                                    <div @onclick="() => SelectBarangForRow(b)"
-                                                         style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:13px;font-weight:500;"
-                                                         onmouseover="this.style.background='var(--primary-light)'"
-                                                         onmouseout="this.style.background='transparent'">
-                                                        @b.NamaBarang
-                                                    </div>
-                                                }
-                                            </div>
+                                            @foreach (var b in barangSearchResults)
+                                            {
+                                                <div @onclick="() => SelectBarangForRow(b)"
+                                                     style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:13px;font-weight:500;"
+                                                     onmouseover="this.style.background='var(--primary-light)'"
+                                                     onmouseout="this.style.background='transparent'">
+                                                    @b.NamaBarang
+                                                </div>
+                                            }
                                         }
                                         else
                                         {
@@ -329,41 +312,33 @@
                             <div class="perangkat-mobile-card">
                                 <div style="position:relative;">
                                     <div class="pm-label">Jenis Perangkat <span style="color:var(--danger)">*</span></div>
-                                    <div @onclick="() => OpenBarangSearchForRow(p)"
-                                         style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                                        <span style="@(p.BarangId == 0 ? "color:var(--text-muted);" : "")">@(p.BarangId > 0 ?
-                                                                        (barangOptions.FirstOrDefault(b => b.Id == p.BarangId)?.NamaBarang ?? "Pilih...") : "Cari perangkat...")</span>
-                                            <i class="bi bi-search" style="font-size:11px;color:var(--text-muted);flex-shrink:0;"></i>
+                                    <input type="text" class="perangkat-search-input"
+                                           value="@(activeSearchRow == p ? barangSearchQuery : (p.BarangId > 0 ? (barangOptions.FirstOrDefault(b => b.Id == p.BarangId)?.NamaBarang ?? "") : ""))"
+                                           placeholder="Cari perangkat"
+                                           @onfocus="() => OnBarangSearchFocus(p)"
+                                           @oninput="OnBarangSearchInput"
+                                           @onblur="OnBarangSearchBlur" />
+                                    @if (showBarangSearch && activeSearchRow == p)
+                                    {
+                                        <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);margin-top:2px;max-height:260px;overflow-y:auto;"
+                                             @onmousedown:preventDefault>
+                                            @if (barangSearchResults.Any())
+                                            {
+                                                @foreach (var b in barangSearchResults)
+                                                {
+                                                    <div @onclick="() => SelectBarangForRow(b)"
+                                                         style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;">
+                                                        @b.NamaBarang
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <div style="padding:12px 16px;font-size:13px;color:var(--text-muted);">Tidak ada hasil</div>
+                                            }
                                         </div>
-                                        @if (showBarangSearch && activeSearchRow == p)
-                                        {
-                                            <div @onclick="CloseBarangSearch" style="position:fixed;inset:0;z-index:99;"></div>
-                                            <div
-                                                style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);margin-top:4px;">
-                                                <div style="padding:8px;border-bottom:1px solid var(--border-light);">
-                                                    <input type="text" placeholder="Cari perangkat..." value="@barangSearchQuery"
-                                                           @onchange="OnBarangSearchInput" @oninput="OnBarangSearchInput"
-                                                           style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;" />
-                                                </div>
-                                                <div style="max-height:260px;overflow-y:auto;">
-                                                    @if (barangSearchResults.Any())
-                                                    {
-                                                        @foreach (var b in barangSearchResults)
-                                                        {
-                                                            <div @onclick="() => SelectBarangForRow(b)"
-                                                                 style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;">
-                                                                @b.NamaBarang
-                                                            </div>
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        <div style="padding:12px 16px;font-size:13px;color:var(--text-muted);">Tidak ada hasil</div>
-                                                    }
-                                                </div>
-                                            </div>
-                                        }
-                                    </div>
+                                    }
+                                </div>
                                     <div class="pm-row">
                                         <div class="pm-col">
                                             <div class="pm-label">Jumlah <span style="color:var(--danger)">*</span></div>
@@ -438,43 +413,27 @@
                             <div class="ttd-col">
                                 <div class="ttd-label">Yang Mengetahui</div>
                                 <div class="form-group" style="position:relative;">
-                                    <div @onclick="OpenMengetahuiSearch"
-                                         style="padding:8px 12px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;"
-                                         onmouseover="this.style.background='var(--primary-light)'"
-                                         onmouseout="this.style.background='var(--surface)'">
-                                        <span style="@(model.MengetahuiId == 0 ? "color:var(--text-muted);" : "")">
-                                            @(model.MengetahuiId > 0 ? (reviewers.FirstOrDefault(u => u.Id == model.MengetahuiId)?.Nama
-                                        ?? "Pilih Reviewer...") : "Cari reviewer...")
-                                        </span>
-                                        <i class="bi bi-search" style="font-size:12px;color:var(--text-muted);flex-shrink:0;"></i>
-                                    </div>
+                                    <input type="text" class="form-control"
+                                           value="@(isMengetahuiActive ? mengetahuiSearchQuery : (model.MengetahuiId > 0 ? (reviewers.FirstOrDefault(u => u.Id == model.MengetahuiId)?.Nama ?? "") : ""))"
+                                           placeholder="Ketik nama reviewer"
+                                           @onfocus="OnMengetahuiSearchFocus"
+                                           @oninput="OnMengetahuiSearchInput"
+                                           @onblur="OnMengetahuiSearchBlur" />
                                     @if (showMengetahuiSearch)
                                     {
-                                        <div @onclick="CloseMengetahuiSearch" style="position:fixed;inset:0;z-index:99;"></div>
-                                        <div
-                                            style="position:absolute;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);width:100%;left:0;right:0;margin-top:4px;">
-                                            <div style="padding:8px;border-bottom:1px solid var(--border-light);">
-                                                <div
-                                                    style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;">
-                                                    <i class="bi bi-search" style="font-size:13px;color:var(--text-muted);"></i>
-                                                    <input type="text" placeholder="Cari nama..." value="@mengetahuiSearchQuery"
-                                                           @onchange="OnMengetahuiSearchInput" @oninput="OnMengetahuiSearchInput"
-                                                           style="border:none;outline:none;background:transparent;font-size:14px;width:100%;" />
-                                                </div>
-                                            </div>
+                                        <div style="position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);margin-top:2px;max-height:260px;overflow-y:auto;"
+                                             @onmousedown:preventDefault>
                                             @if (mengetahuiSearchResults.Any())
                                             {
-                                                <div style="max-height:200px;overflow-y:auto;">
-                                                    @foreach (var u in mengetahuiSearchResults)
-                                                    {
-                                                        <div @onclick="() => SelectMengetahui(u)"
-                                                             style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;color:var(--text-primary);"
-                                                             onmouseover="this.style.background='var(--primary-light)'"
-                                                             onmouseout="this.style.background='transparent'">
-                                                            @u.Nama
-                                                        </div>
-                                                    }
-                                                </div>
+                                                @foreach (var u in mengetahuiSearchResults)
+                                                {
+                                                    <div @onclick="() => SelectMengetahui(u)"
+                                                         style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border-light);font-size:14px;font-weight:500;color:var(--text-primary);"
+                                                         onmouseover="this.style.background='var(--primary-light)'"
+                                                         onmouseout="this.style.background='transparent'">
+                                                        @u.Nama
+                                                    </div>
+                                                }
                                             }
                                             else
                                             {
@@ -590,17 +549,16 @@
 
                             <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;">
                                 <button type="button" class="btn btn-outline" @onclick="ResetForm">
-                                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                                    Reset
                                 </button>
-                                <button type="submit" class="btn btn-primary" disabled="@isSaving" style="min-width:160px;">
+                                <button type="submit" class="btn btn-primary" disabled="@isSaving" style="min-width:120px;">
                                     @if (isSaving)
                                     {
                                         <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
                                     }
                                     else
                                     {
-                                        <span>Simpan &amp; Lanjutkan</span>
-                                        <i class="bi bi-arrow-right"></i>
+                                        <span>Simpan</span>
                                     }
                                 </button>
                             </div>
@@ -642,13 +600,13 @@
     private string barangSearchQuery = string.Empty;
     private List<MasterBarangEntity> barangSearchResults = new();
     private PerangkatRow? activeSearchRow = null;
-    private ElementReference barangSearchRef;
 
     private bool showMenyerahkanSearch;
     private string menyerahkanSearchQuery = string.Empty;
     private List<ApplicationUser> menyerahkanSearchResults = new();
 
     private bool showMengetahuiSearch;
+    private bool isMengetahuiActive;
     private string mengetahuiSearchQuery = string.Empty;
     private List<ApplicationUser> mengetahuiSearchResults = new();
     private ApplicationUser? currentUserObj;
@@ -954,12 +912,20 @@ Path.DirectorySeparatorChar));
         TriggerAutoSave();
     }
 
-    private void OpenBarangSearchForRow(PerangkatRow row)
+    private void OnBarangSearchFocus(PerangkatRow row)
     {
         activeSearchRow = row;
         barangSearchQuery = string.Empty;
-        barangSearchResults = barangOptions.ToList();
-        showBarangSearch = true;
+        showBarangSearch = false;
+        barangSearchResults.Clear();
+    }
+
+    private void OnBarangSearchBlur()
+    {
+        showBarangSearch = false;
+        barangSearchQuery = string.Empty;
+        barangSearchResults.Clear();
+        activeSearchRow = null;
     }
 
     private void ResetForm()
@@ -977,6 +943,7 @@ Path.DirectorySeparatorChar));
         menyerahkanSearchQuery = string.Empty;
         menyerahkanSearchResults = new();
         showMengetahuiSearch = false;
+        isMengetahuiActive = false;
         mengetahuiSearchQuery = string.Empty;
         mengetahuiSearchResults = new();
         photoFiles = new();
@@ -1000,10 +967,18 @@ Path.DirectorySeparatorChar));
     private void OnBarangSearchInput(ChangeEventArgs e)
     {
         barangSearchQuery = e.Value?.ToString() ?? string.Empty;
-        barangSearchResults = string.IsNullOrWhiteSpace(barangSearchQuery)
-            ? barangOptions.ToList()
-            : barangOptions.Where(b => b.NamaBarang?.Contains(barangSearchQuery, StringComparison.OrdinalIgnoreCase) ??
-false).ToList();
+        if (barangSearchQuery.Length >= 1)
+        {
+            showBarangSearch = true;
+            barangSearchResults = barangOptions
+                .Where(b => b.NamaBarang?.StartsWith(barangSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false)
+                .ToList();
+        }
+        else
+        {
+            showBarangSearch = false;
+            barangSearchResults.Clear();
+        }
     }
 
     private void SelectBarangForRow(MasterBarangEntity b)
@@ -1391,28 +1366,38 @@ false).Take(8).ToList();
         _ = AutoSaveAsync();
     }
 
-    private void OpenMengetahuiSearch()
+    private void OnMengetahuiSearchFocus()
     {
+        isMengetahuiActive = true;
         mengetahuiSearchQuery = string.Empty;
-        mengetahuiSearchResults = reviewers.Take(8).ToList();
+        mengetahuiSearchResults = reviewers.ToList();
         showMengetahuiSearch = true;
     }
 
-    private void CloseMengetahuiSearch() => showMengetahuiSearch = false;
+    private void OnMengetahuiSearchBlur()
+    {
+        isMengetahuiActive = false;
+        showMengetahuiSearch = false;
+        mengetahuiSearchQuery = string.Empty;
+        mengetahuiSearchResults.Clear();
+    }
 
     private void OnMengetahuiSearchInput(ChangeEventArgs e)
     {
         mengetahuiSearchQuery = e.Value?.ToString() ?? string.Empty;
-        mengetahuiSearchResults = string.IsNullOrWhiteSpace(mengetahuiSearchQuery)
-            ? reviewers.Take(8).ToList()
-            : reviewers.Where(u => u.Nama?.Contains(mengetahuiSearchQuery, StringComparison.OrdinalIgnoreCase) ??
-false).Take(8).ToList();
+        showMengetahuiSearch = true;
+        mengetahuiSearchResults = string.IsNullOrEmpty(mengetahuiSearchQuery)
+            ? reviewers.ToList()
+            : reviewers.Where(u => u.Nama?.StartsWith(mengetahuiSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false).ToList();
     }
 
     private void SelectMengetahui(ApplicationUser u)
     {
         model.MengetahuiId = u.Id;
+        isMengetahuiActive = false;
         showMengetahuiSearch = false;
+        mengetahuiSearchQuery = string.Empty;
+        mengetahuiSearchResults.Clear();
         _ = AutoSaveAsync();
     }
 
