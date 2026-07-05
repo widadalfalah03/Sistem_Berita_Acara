@@ -112,11 +112,11 @@ else
             <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;">
                 <button @onclick='() => SwitchPjMode("draw")'
                         style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:@(pjTtdMode=="draw"?"var(--primary)":"transparent");color:@(pjTtdMode=="draw"?"white":"var(--text-secondary)");">
-                    <i class="bi bi-pen-fill" style="margin-right:5px;"></i>Gambar
+                    Gambar
                 </button>
                 <button @onclick='() => SwitchPjMode("upload")'
                         style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(pjTtdMode=="upload"?"var(--primary)":"transparent");color:@(pjTtdMode=="upload"?"white":"var(--text-secondary)");">
-                    <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload TTD
+                    Upload TTD
                 </button>
             </div>
 
@@ -135,7 +135,7 @@ else
                 </div>
                 <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
                     <button type="button" class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
-                        <i class="bi bi-eraser"></i> Bersihkan
+                        Bersihkan
                     </button>
                 </div>
             </div>
@@ -166,7 +166,6 @@ else
                 }
                 else
                 {
-                    <i class="bi bi-send-fill" style="margin-right:8px;"></i>
                     <span>Kirim Tanda Tangan</span>
                 }
             </button>
