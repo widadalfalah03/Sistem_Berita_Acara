@@ -140,6 +140,12 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
                 FOREIGN KEY ([MenyerahkanId]) REFERENCES [Users]([Id]) ON DELETE NO ACTION
         END
 
+        -- Tambah kolom IsSuperAdmin ke Users jika belum ada
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'IsSuperAdmin')
+        BEGIN
+            ALTER TABLE [Users] ADD [IsSuperAdmin] BIT NOT NULL DEFAULT 0
+        END
+
         -- Hapus kolom BeritaAcaraId dari ApprovalToken yang di-generate otomatis oleh EF Core sebelumnya
         IF EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'BeritaAcaraId' AND Object_ID = Object_ID(N'ApprovalToken'))
         BEGIN
@@ -188,6 +194,20 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     {
         if (!string.IsNullOrEmpty(u.Role) && !await userManager.IsInRoleAsync(u, u.Role))
             await userManager.AddToRoleAsync(u, u.Role);
+    }
+
+    // Tandai AdminIT pertama sebagai SuperAdmin jika belum ada SuperAdmin
+    if (!db.Users.Any(u => u.IsSuperAdmin))
+    {
+        var firstAdminIT = db.Users
+            .Where(u => u.Role == "AdminIT" && !u.IsDeleted && u.EmailConfirmed)
+            .OrderBy(u => u.Id)
+            .FirstOrDefault();
+        if (firstAdminIT != null)
+        {
+            firstAdminIT.IsSuperAdmin = true;
+            await db.SaveChangesAsync();
+        }
     }
 }
 

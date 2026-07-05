@@ -17,16 +17,14 @@
     <div></div>
     <div style="display:flex;gap:8px;">
         <button @onclick="ExportExcelAsync" disabled="@isExporting"
-                style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:var(--radius);border:none;background:#16A34A;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;"
+                style="display:inline-flex;align-items:center;padding:8px 16px;border-radius:var(--radius);border:none;background:#16A34A;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;"
                 onmouseover="if(!this.disabled)this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-            <i class="bi bi-file-earmark-excel-fill" style="font-size:15px;"></i>
             @(isExporting ? "Mengexport..." : "Export Excel")
         </button>
         <button @onclick="() => showUpload = true"
-                style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
+                style="display:inline-flex;align-items:center;padding:8px 16px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
                 onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)';this.style.background='var(--primary-light)'"
                 onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)';this.style.background='var(--surface)'">
-            <i class="bi bi-file-earmark-arrow-up" style="font-size:15px;"></i>
             Import Excel
         </button>
     </div>

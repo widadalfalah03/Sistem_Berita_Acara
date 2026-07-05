@@ -16,8 +16,8 @@
 
 <PageTitle>Setup Awal — Sistem Berita Acara</PageTitle>
 
-<div class="login-page">
-    <div class="login-card" style="max-width:420px;width:100%;">
+<div class="login-page" style="overflow-y:auto;align-items:flex-start;padding:32px 24px;">
+    <div class="login-card" style="max-width:420px;width:100%;margin:auto;">
         <div class="login-card-body" style="padding:24px 32px;">
 
             <div class="login-logo" style="display:flex;flex-direction:column;align-items:center;margin-bottom:8px;">
@@ -27,7 +27,7 @@
             <div style="margin-bottom:16px;text-align:center;">
                     <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Setup Awal Sistem</h3>
                     <p style="font-size:12px;color:var(--text-secondary);line-height:1.4;margin:0;">
-                        Buat akun <strong>Admin IT</strong> untuk memulai menggunakan aplikasi.
+                        Buat akun <strong>Super Admin</strong> untuk memulai menggunakan aplikasi.
                     </p>
                 </div>
 
@@ -39,6 +39,7 @@
                     </div>
                 }
 
+                <form @onsubmit="HandleSubmit" @onsubmit:preventDefault>
                 <div style="display:flex;flex-direction:column;gap:12px;">
 
                     <div>
@@ -95,12 +96,13 @@
 
                 <div style="margin-top:10px;padding:8px 12px;background:color-mix(in srgb,var(--info) 10%,transparent);border:1px solid color-mix(in srgb,var(--info) 30%,transparent);border-radius:var(--radius);font-size:11px;color:var(--text-secondary);">
                     <i class="bi bi-info-circle" style="color:var(--info);margin-right:5px;"></i>
-                    Halaman ini hanya muncul <strong>sekali</strong>. Setelah akun Admin IT dibuat, halaman ini tidak dapat diakses kembali.
+                    Halaman ini hanya muncul <strong>sekali</strong>. Setelah akun Super Admin dibuat, halaman ini tidak dapat diakses kembali.
                 </div>
 
-                <button class="login-btn" style="margin-top:14px;" @onclick="HandleSubmit">
-                    <span><i class="bi bi-person-plus-fill"></i> Buat Akun Admin IT</span>
+                <button type="submit" class="login-btn" style="margin-top:14px;">
+                    Buat Akun
                 </button>
+                </form>
 
         </div>
     </div>
@@ -173,7 +175,7 @@
             Db.Pegawai.Add(pegawai);
             await Db.SaveChangesAsync();
 
-            // ── 3. Buat ApplicationUser (Admin IT) ───────────────────────
+            // ── 3. Buat ApplicationUser (Super Admin) ────────────────────
             var user = new CoreEntities.ApplicationUser
             {
                 UserName       = email.Trim().ToLower(),
@@ -181,7 +183,8 @@
                 EmailConfirmed = true,
                 Nama           = namaLengkap.Trim(),
                 Role           = "AdminIT",
-                PegawaiId      = pegawai.Id
+                PegawaiId      = pegawai.Id,
+                IsSuperAdmin   = true
             };
 
             var result = await UserManager.CreateAsync(user, password);
