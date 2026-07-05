@@ -4,9 +4,9 @@
 
     @* Input trigger *@
     <div @onclick="Toggle"
-         style="display:flex;align-items:center;gap:8px;border:1px solid @(isOpen ? "var(--primary)" : "var(--border)");border-radius:var(--radius);background:var(--surface);padding:@InputPadding;cursor:pointer;transition:border-color .15s;min-height:38px;box-sizing:border-box;">
+         style="display:flex;align-items:center;gap:8px;border:@(isOpen ? "2px solid var(--primary)" : "1.5px solid var(--border)");border-radius:var(--radius);background:var(--surface);padding:@InputPadding;cursor:pointer;transition:border-color .15s,border-width .15s;min-height:38px;box-sizing:border-box;">
         <i class="bi bi-calendar3" style="font-size:14px;color:@(Value.HasValue ? "var(--primary)" : "var(--text-muted)");flex-shrink:0;"></i>
-        <span style="flex:1;font-size:13px;color:@(Value.HasValue ? "var(--text-primary)" : "var(--text-muted)");">
+        <span style="flex:1;font-size:14px;color:@(Value.HasValue ? "var(--text-primary)" : "var(--text-muted)");">
             @(Value.HasValue ? Value.Value.ToString("dd MMMM yyyy", CultureId) : Placeholder)
         </span>
         @if (Value.HasValue)

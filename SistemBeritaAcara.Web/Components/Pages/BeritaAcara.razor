@@ -66,7 +66,7 @@
                 <div class="form-group" style="position:relative;">
                     <label class="form-label">Jenis Berita Acara <span style="color:var(--danger)">*</span></label>
                     <div @onclick="() => showJenisDropdown = !showJenisDropdown"
-                         style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">
+                         style="padding:10px 14px;cursor:pointer;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">
                         <span style="font-weight:500;">@model.Jenis</span>
                         <i class="bi bi-chevron-down"
                            style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showJenisDropdown ? "transform:rotate(180deg);" : "")"></i>
@@ -97,7 +97,8 @@
                     <DatePicker Value="model.TanggalKembali"
                                 ValueChanged="v => { model.TanggalKembali = v; TriggerAutoSave(); }"
                                 Placeholder="Pilih tanggal kembali..."
-                                MinDate="model.Tanggal" />
+                                MinDate="model.Tanggal"
+                                InputPadding="10px 14px" />
                 </div>
             }
             else if (model.Jenis == "Lainnya")
@@ -126,28 +127,22 @@
                 <div style="display:flex;flex-direction:column;gap:16px;flex:1;">
                     <div>
                         <label class="form-label" style="margin-bottom:8px;display:block;">Status Kepegawaian</label>
-                        <div style="display:flex;gap:24px;align-items:center;">
-                            <label
-                                style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
-                                <input type="radio" name="tipePj" value="Pekerja" checked="@(model.TipePj == "Pekerja")"
-                                       @onchange="OnSelectPekerja"
-                                       style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;" />
+                        <div style="display:inline-flex;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);padding:3px;gap:2px;">
+                            <button type="button" @onclick="OnSelectPekerja"
+                                    style="padding:7px 20px;border:none;border-radius:calc(var(--radius) - 2px);font-size:14px;font-weight:@(model.TipePj == "Pekerja" ? "600" : "400");cursor:pointer;transition:background .15s,color .15s,box-shadow .15s;background:@(model.TipePj == "Pekerja" ? "var(--surface)" : "transparent");color:@(model.TipePj == "Pekerja" ? "var(--primary)" : "var(--text-muted)");box-shadow:@(model.TipePj == "Pekerja" ? "0 1px 4px rgba(0,0,0,0.14)" : "none");">
                                 Pekerja
-                            </label>
-                            <label
-                                style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:500;">
-                                <input type="radio" name="tipePj" value="TenagaAlihDaya"
-                                       checked="@(model.TipePj == "TenagaAlihDaya")" @onchange="OnSelectTenagaAlihDaya"
-                                       style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;" />
+                            </button>
+                            <button type="button" @onclick="OnSelectTenagaAlihDaya"
+                                    style="padding:7px 20px;border:none;border-radius:calc(var(--radius) - 2px);font-size:14px;font-weight:@(model.TipePj == "TenagaAlihDaya" ? "600" : "400");cursor:pointer;transition:background .15s,color .15s,box-shadow .15s;background:@(model.TipePj == "TenagaAlihDaya" ? "var(--surface)" : "transparent");color:@(model.TipePj == "TenagaAlihDaya" ? "var(--primary)" : "var(--text-muted)");box-shadow:@(model.TipePj == "TenagaAlihDaya" ? "0 1px 4px rgba(0,0,0,0.14)" : "none");">
                                 Tenaga Alih Daya
-                            </label>
+                            </button>
                         </div>
                     </div>
                     @if (model.TipePj == "TenagaAlihDaya")
                     {
                         <div class="form-group" style="margin-bottom:8px;">
                             <label class="form-label">Nama Pengguna <span style="color:var(--danger)">*</span></label>
-                            <input type="text" class="form-control" placeholder="Masukkan nama pengguna TAD"
+                            <input type="text" class="form-control" placeholder="Ketik nama pengguna atau tenaga alih daya"
                                    value="@model.PengunaAlihDaya"
                                    @oninput="@(e => { model.PengunaAlihDaya = e.Value?.ToString(); TriggerAutoSave(); })" />
                         </div>
@@ -157,7 +152,7 @@
                         <label class="form-label">Penanggung Jawab <span style="color:var(--danger)">*</span></label>
                         <div class="search-input">
                             <i class="bi bi-search"></i>
-                            <input type="text" placeholder="Ketik nama atau no. pekerja..." value="@pjSearch"
+                            <input type="text" placeholder="Ketik nama atau no. pekerja" value="@pjSearch"
                                    @onchange="OnPjSearchInput" @oninput="OnPjSearchInput" />
                         </div>
                         @if (pjResults.Any())
@@ -920,8 +915,8 @@ Path.DirectorySeparatorChar));
         TriggerAutoSave();
     }
 
-    private void OnSelectPekerja(ChangeEventArgs e) => SelectTipePj("Pekerja");
-    private void OnSelectTenagaAlihDaya(ChangeEventArgs e) => SelectTipePj("TenagaAlihDaya");
+    private void OnSelectPekerja() => SelectTipePj("Pekerja");
+    private void OnSelectTenagaAlihDaya() => SelectTipePj("TenagaAlihDaya");
 
     private void SelectTipePj(string tipe)
     {
