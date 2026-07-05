@@ -1825,8 +1825,6 @@ a:hover { color: var(--primary-hover); }
 .login-input::placeholder { color: var(--text-muted); }
 
 .login-input:hover {
-    border-color: var(--primary);
-    border-width: 1.5px;
     background: var(--primary-light);
 }
 

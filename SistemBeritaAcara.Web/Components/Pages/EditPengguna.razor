@@ -54,10 +54,13 @@ else
                     <div>
                         <div style="font-size:20px;font-weight:800;color:var(--text-primary);">@appUser.Nama</div>
                         <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
-                            <span class="pill @GetRolePill(appUser.Role)" style="font-size:12px;">@GetRoleLabel(appUser.Role)</span>
                             @if (appUser.IsSuperAdmin)
                             {
                                 <span class="pill" style="font-size:12px;background:#7c3aed;color:white;">Super Admin</span>
+                            }
+                            else
+                            {
+                                <span class="pill @GetRolePill(appUser.Role)" style="font-size:12px;">@GetRoleLabel(appUser.Role)</span>
                             }
                         </div>
                     </div>
@@ -78,7 +81,7 @@ else
                 {
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">No. Pekerja / NIP</label>
+                            <label class="form-label">No. Pekerja</label>
                             <input class="form-control readonly" readonly value="@pegawai.NoPekerja" />
                         </div>
                         <div class="form-group">
@@ -98,34 +101,50 @@ else
                     </div>
                 }
             </div>
-
-            <div class="card">
-                <div class="card-header"><h3>Pengaturan Akun</h3></div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label class="form-label">Role</label>
-                        @if (appUser.IsSuperAdmin)
-                        {
-                            <input class="form-control readonly" readonly value="@GetRoleLabel(appUser.Role)" />
-                            <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">
-                                <i class="bi bi-shield-lock-fill" style="color:#7c3aed;margin-right:4px;"></i>
-                                Role Super Admin tidak dapat diubah.
-                            </div>
-                        }
-                        else
-                        {
-                            <select class="form-control form-select" value="@editRole" @onchange="OnRoleChanged">
-                                <option value="AdminIT">Admin IT</option>
-                                <option value="AdminGudangBarang">Admin Gudang &amp; Barang</option>
-                                <option value="Reviewer">Reviewer</option>
-                            </select>
-                        }
-                    </div>
-                </div>
-            </div>
         </div>
 
         <div class="side-cards">
+            <!-- Pengaturan Akun (dipindah ke kanan, di atas Status Akun) -->
+            <div class="side-card">
+                <h4>Pengaturan Akun</h4>
+                <div class="form-group" style="margin-top:12px;">
+                    <label class="form-label">Role</label>
+                    @if (appUser.IsSuperAdmin)
+                    {
+                        <input class="form-control readonly" readonly value="Super Admin" />
+                        <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">
+                            <i class="bi bi-shield-lock-fill" style="color:#7c3aed;margin-right:4px;"></i>
+                            Role Super Admin tidak dapat diubah.
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="position:relative;">
+                            <div @onclick="() => showRoleDropdown = !showRoleDropdown"
+                                 style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                <span style="font-weight:500;">@GetRoleLabel(editRole)</span>
+                                <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showRoleDropdown ? "transform:rotate(180deg);" : "")"></i>
+                            </div>
+                            @if (showRoleDropdown)
+                            {
+                                <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
+                                <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
+                                    @foreach (var roleOpt in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
+                                    {
+                                        <div @onclick="@(() => SelectRole(roleOpt))"
+                                             style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(editRole == roleOpt ? "600" : "400");background:@(editRole == roleOpt ? "var(--primary)" : "transparent");color:@(editRole == roleOpt ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
+                                             onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
+                                             onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
+                                            @GetRoleLabel(roleOpt)
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
             <div class="side-card">
                 <h4>Status Akun</h4>
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -166,6 +185,7 @@ else
     private SistemBeritaAcara.Core.Entities.Pegawai? pegawai;
     private bool isLoading = true;
     private bool isSaving = false;
+    private bool showRoleDropdown = false;
     private string editRole = string.Empty;
     private string successMsg = string.Empty;
     private string errorMsg = string.Empty;
@@ -181,13 +201,12 @@ else
         isLoading = false;
     }
 
-    private async Task OnRoleChanged(ChangeEventArgs e)
+    private async Task SelectRole(string newRole)
     {
-        if (appUser is null) return;
-        if (appUser.IsSuperAdmin) return;
-        var newRole = e.Value?.ToString();
+        showRoleDropdown = false;
+        if (appUser is null || appUser.IsSuperAdmin) return;
         if (string.IsNullOrEmpty(newRole) || newRole == editRole) return;
-        
+
         isSaving = true;
         errorMsg = string.Empty;
         try

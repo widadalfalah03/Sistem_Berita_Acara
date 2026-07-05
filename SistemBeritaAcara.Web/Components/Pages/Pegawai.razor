@@ -22,9 +22,9 @@
             @(isExporting ? "Mengexport..." : "Export Excel")
         </button>
         <button @onclick="() => showUpload = true"
-                style="display:inline-flex;align-items:center;padding:8px 16px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
-                onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)';this.style.background='var(--primary-light)'"
-                onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)';this.style.background='var(--surface)'">
+                style="display:inline-flex;align-items:center;padding:8px 16px;border-radius:var(--radius);border:none;background:var(--surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
+                onmouseover="this.style.color='var(--primary)';this.style.background='var(--primary-light)'"
+                onmouseout="this.style.color='var(--text-secondary)';this.style.background='var(--surface)'">
             Import Excel
         </button>
     </div>
