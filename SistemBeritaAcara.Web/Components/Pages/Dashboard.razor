@@ -689,27 +689,35 @@ else if (currentRole == "AdminIT")
 
     protected override async Task OnInitializedAsync()
     {
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var email = auth.User.Identity?.Name;
-        if (email is null) { Navigation.NavigateTo("/login", true); return; }
-
-        var appUser = await UserManager.FindByEmailAsync(email);
-        if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
-
-        currentRole = appUser.Role;
-        currentUserId = appUser.Id;
-
-        if (currentRole == "AdminIT")
+        try
         {
-            Navigation.NavigateTo("/pengguna");
-            return;
-        }
-        else if (currentRole == "AdminGudangBarang")
-            await LoadGudangDataAsync();
-        else if (currentRole == "Reviewer")
-            await LoadReviewerDataAsync();
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var email = auth.User.Identity?.Name;
+            if (email is null) { Navigation.NavigateTo("/login", true); return; }
 
-        isLoading = false;
+            var appUser = await UserManager.FindByEmailAsync(email);
+            if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
+
+            currentRole = appUser.Role;
+            currentUserId = appUser.Id;
+
+            if (currentRole == "AdminIT")
+            {
+                Navigation.NavigateTo("/pengguna");
+                return;
+            }
+            else if (currentRole == "AdminGudangBarang")
+                await LoadGudangDataAsync();
+            else if (currentRole == "Reviewer")
+                await LoadReviewerDataAsync();
+
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Dashboard] OnInitializedAsync error: {ex}");
+            isLoading = false;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -717,41 +725,48 @@ else if (currentRole == "AdminIT")
         if (isLoading || chartsRendered) return;
         chartsRendered = true;
 
-        if (currentRole == "AdminGudangBarang")
+        try
         {
-            var months = GetLast6MonthLabels();
-            var monthData = GetMonthlyData();
-            await JS.InvokeVoidAsync("chartInterop.createLineChart", "trendChart",
-                months,
-                new[] { new { label = "Berita Acara Dibuat", data = monthData, color = "#1D4ED8" } });
+            if (currentRole == "AdminGudangBarang")
+            {
+                var months = GetLast6MonthLabels();
+                var monthData = GetMonthlyData();
+                await JS.InvokeVoidAsync("chartInterop.createLineChart", "trendChart",
+                    months,
+                    new[] { new { label = "Berita Acara Dibuat", data = monthData, color = "#1D4ED8" } });
 
-            await JS.InvokeVoidAsync("chartInterop.createDonutChart", "statusChart",
-                new[] { "Selesai", "Proses", "Ditolak", "Draft" },
-                new[] { stat.Approved, stat.Progress, stat.Rejected, stat.Draft },
-                new[] { "#22C55E", "#3B82F6", "#EF4444", "#94A3B8" });
+                await JS.InvokeVoidAsync("chartInterop.createDonutChart", "statusChart",
+                    new[] { "Selesai", "Proses", "Ditolak", "Draft" },
+                    new[] { stat.Approved, stat.Progress, stat.Rejected, stat.Draft },
+                    new[] { "#22C55E", "#3B82F6", "#EF4444", "#94A3B8" });
+            }
+            else if (currentRole == "Reviewer")
+            {
+                var reviewerTrendLabels = GetLast6MonthLabels();
+
+                await JS.InvokeVoidAsync("chartInterop.createLineChart", "reviewerTrendChart",
+                    reviewerTrendLabels,
+                    new[]
+                    {
+                        new { label = "Disetujui", data = reviewerTrendApproved, color = "#22C55E" }
+                    });
+
+                await JS.InvokeVoidAsync("chartInterop.createDonutChart", "reviewerDonut",
+                    new[] { "Alokasi", "Peminjaman", "Penarikan", "Lainnya" },
+                    new[] { reviewerStat.ApprovedAlokasi, reviewerStat.ApprovedPeminjaman, reviewerStat.ApprovedPenarikan, reviewerStat.ApprovedLainnya },
+                    new[] { "#3B82F6", "#8B5CF6", "#F59E0B", "#64748B" });
+            }
+            else if (currentRole == "AdminIT")
+            {
+                await JS.InvokeVoidAsync("chartInterop.createDonutChart", "adminITDonut",
+                    new[] { "Admin IT", "Admin Gudang & Barang", "Reviewer" },
+                    new[] { userStats.AdminIT, userStats.AdminGudang, userStats.Reviewer },
+                    new[] { "#64748B", "#22C55E", "#3B82F6" });
+            }
         }
-        else if (currentRole == "Reviewer")
+        catch (Exception ex)
         {
-            var reviewerTrendLabels = GetLast6MonthLabels();
-
-            await JS.InvokeVoidAsync("chartInterop.createLineChart", "reviewerTrendChart",
-                reviewerTrendLabels,
-                new[]
-                {
-                    new { label = "Disetujui", data = reviewerTrendApproved, color = "#22C55E" }
-                });
-
-            await JS.InvokeVoidAsync("chartInterop.createDonutChart", "reviewerDonut",
-                new[] { "Alokasi", "Peminjaman", "Penarikan", "Lainnya" },
-                new[] { reviewerStat.ApprovedAlokasi, reviewerStat.ApprovedPeminjaman, reviewerStat.ApprovedPenarikan, reviewerStat.ApprovedLainnya },
-                new[] { "#3B82F6", "#8B5CF6", "#F59E0B", "#64748B" });
-        }
-        else if (currentRole == "AdminIT")
-        {
-            await JS.InvokeVoidAsync("chartInterop.createDonutChart", "adminITDonut",
-                new[] { "Admin IT", "Admin Gudang & Barang", "Reviewer" },
-                new[] { userStats.AdminIT, userStats.AdminGudang, userStats.Reviewer },
-                new[] { "#64748B", "#22C55E", "#3B82F6" });
+            Console.Error.WriteLine($"[Dashboard] Chart render error: {ex.Message}");
         }
     }
 

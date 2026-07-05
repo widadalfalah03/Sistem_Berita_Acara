@@ -718,7 +718,8 @@ barangListReject);
     {
         if (firstRender)
         {
-            await JSRuntime.InvokeVoidAsync("appLoading.hide");
+            try { await JSRuntime.InvokeVoidAsync("appLoading.hide"); }
+            catch (Exception ex) { Console.Error.WriteLine("[BADetail] appLoading.hide: " + ex.Message); }
             _ = ConnectSignalRAsync();
         }
 

@@ -88,6 +88,35 @@
             ripple.addEventListener('animationend', () => ripple.remove());
         });
 
+        // Auto-reload when Blazor circuit error occurs (blazor-error-ui becomes visible)
+        (function () {
+            let reloadTimer = null;
+            function startErrorMonitor() {
+                const errorEl = document.getElementById('blazor-error-ui');
+                if (!errorEl) return;
+                function onAttrChange() {
+                    const visible = window.getComputedStyle(errorEl).display !== 'none';
+                    if (visible && !reloadTimer) {
+                        let secs = 5;
+                        const cd = document.getElementById('blazor-error-countdown');
+                        if (cd) cd.textContent = secs;
+                        reloadTimer = setInterval(function () {
+                            secs--;
+                            if (cd) cd.textContent = secs;
+                            if (secs <= 0) { clearInterval(reloadTimer); location.reload(); }
+                        }, 1000);
+                    } else if (!visible && reloadTimer) {
+                        clearInterval(reloadTimer);
+                        reloadTimer = null;
+                    }
+                }
+                new MutationObserver(onAttrChange).observe(errorEl, {
+                    attributes: true, attributeFilter: ['style', 'class']
+                });
+            }
+            document.addEventListener('DOMContentLoaded', startErrorMonitor);
+        })();
+
         // Update icon after DOM loads
         window.addEventListener('DOMContentLoaded', () => {
             updateThemeIcon();

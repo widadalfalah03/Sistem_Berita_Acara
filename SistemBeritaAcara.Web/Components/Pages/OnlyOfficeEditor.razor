@@ -43,20 +43,18 @@ else
             <button class="btn btn-outline btn-sm" @onclick="GoBack" style="display:flex;align-items:center;gap:6px;">
                 <i class="bi bi-arrow-left"></i> Kembali ke Pratinjau
             </button>
-            <div>
-                <div style="font-weight:700;font-size:16px;">Edit Dokumen: @(ba.NomorSurat ?? "Draft")</div>
-            </div>
         </div>
-        <button class="btn btn-primary" @onclick="SaveAndGoBackAsync" disabled="@isSaving"
-                style="display:flex;align-items:center;gap:8px;">
+        <button @onclick="SaveAndGoBackAsync" disabled="@isSaving"
+                style="display:flex;align-items:center;justify-content:center;min-width:150px;padding:10px 20px;border-radius:var(--radius-full);border:none;background:var(--primary);color:white;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;transition:opacity .2s,transform .15s;"
+                onmouseover="if(!this.disabled){this.style.opacity='.9';this.style.transform='translateY(-1px)';}"
+                onmouseout="this.style.opacity='1';this.style.transform='';">
             @if (isSaving)
             {
                 <span class="spinner" style="width:16px;height:16px;border-width:2px;border-color:white;border-top-color:transparent;"></span>
             }
             else
             {
-                <i class="bi bi-save-fill"></i>
-                <span>Simpan & Pratinjau</span>
+                <span>Simpan</span>
             }
         </button>
     </div>
@@ -139,56 +137,69 @@ else
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            await JSRuntime.InvokeVoidAsync("appLoading.hide");
+        {
+            try { await JSRuntime.InvokeVoidAsync("appLoading.hide"); }
+            catch (Exception ex) { Console.Error.WriteLine("[OOEditor] appLoading.hide: " + ex.Message); }
+        }
 
         if (!_editorInitialized && ba != null && !string.IsNullOrEmpty(ba.DocxPath) && string.IsNullOrEmpty(errorMessage))
         {
             _editorInitialized = true;
-            var onlyOfficeServerUrl = Configuration["OnlyOffice:ServerUrl"] ?? "http://localhost:8081";
-            var apiScriptUrl = $"{onlyOfficeServerUrl}/web-apps/apps/api/documents/api.js";
-
-            var appBaseUrl = (Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
-            var docUrl = $"{appBaseUrl}/{ba.DocxPath}";
-            var callbackSecret = Configuration["OnlyOffice:CallbackSecret"] ?? "";
-            var callbackUrl = string.IsNullOrEmpty(callbackSecret)
-                ? $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}"
-                : $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}?secret={Uri.EscapeDataString(callbackSecret)}";
-
-            _docKey = $"{ba.Id}-{DateTime.Now.Ticks}";
-
-            var config = new
+            try
             {
-                document = new
-                {
-                    fileType = "docx",
-                    key = _docKey,
-                    title = $"Berita Acara - {(ba.NomorSurat ?? ba.Id.ToString())}.docx",
-                    url = docUrl
-                },
-                documentType = "word",
-                editorConfig = new
-                {
-                    callbackUrl = callbackUrl,
-                    user = new
-                    {
-                        id = _currentUserId.ToString(),
-                        name = _currentUserName
-                    },
-                    mode = "edit",
-                    lang = "id-ID",
-                    customization = new
-                    {
-                        forcesave = true,
-                        autosave = true
-                    }
-                }
-            };
+                var onlyOfficeServerUrl = Configuration["OnlyOffice:ServerUrl"] ?? "http://localhost:8081";
+                var apiScriptUrl = $"{onlyOfficeServerUrl}/web-apps/apps/api/documents/api.js";
 
-            await JSRuntime.InvokeVoidAsync("onlyoffice.init", apiScriptUrl, config);
+                // OnlyOffice server (Docker) cannot reach localhost — use PublicUrl which is accessible externally
+                var appBaseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+                var docUrl = $"{appBaseUrl}/{ba.DocxPath}";
+                var callbackSecret = Configuration["OnlyOffice:CallbackSecret"] ?? "";
+                var callbackUrl = string.IsNullOrEmpty(callbackSecret)
+                    ? $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}"
+                    : $"{appBaseUrl}/api/onlyoffice/callback/{ba.Id}?secret={Uri.EscapeDataString(callbackSecret)}";
+
+                _docKey = $"{ba.Id}-{DateTime.Now.Ticks}";
+
+                var config = new
+                {
+                    document = new
+                    {
+                        fileType = "docx",
+                        key = _docKey,
+                        title = $"Berita Acara - {(ba.NomorSurat ?? ba.Id.ToString())}.docx",
+                        url = docUrl
+                    },
+                    documentType = "word",
+                    editorConfig = new
+                    {
+                        callbackUrl = callbackUrl,
+                        user = new
+                        {
+                            id = _currentUserId.ToString(),
+                            name = _currentUserName
+                        },
+                        mode = "edit",
+                        lang = "id-ID",
+                        customization = new
+                        {
+                            forcesave = true,
+                            autosave = true
+                        }
+                    }
+                };
+
+                await JSRuntime.InvokeVoidAsync("onlyoffice.init", apiScriptUrl, config);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[OOEditor] onlyoffice.init error: {ex.Message}");
+                errorMessage = "Gagal memuat editor OnlyOffice. Pastikan server OnlyOffice aktif.";
+                _editorInitialized = false;
+            }
         }
     }
 
-    private void GoBack() => Navigation.NavigateTo($"/editor/{Id}");
+    private void GoBack() => Navigation.NavigateTo($"/editor/{Id}?oo=1");
 
     private async Task SaveAndGoBackAsync()
     {

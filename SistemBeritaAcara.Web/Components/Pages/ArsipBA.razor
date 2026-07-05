@@ -367,21 +367,29 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
-        currentRole = appUser!.Role;
-        currentUserId = appUser.Id;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var appUser = await UserManager.FindByEmailAsync(auth.User.Identity?.Name ?? "");
+            if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
+            currentRole = appUser.Role;
+            currentUserId = appUser.Id;
 
-        IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
-            .Include(b => b.Pj)
-            .Include(b => b.Menyerahkan)
-            .Include(b => b.Mengetahui)
-            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
-            .Where(b => b.Status == "Approved" || b.Status == "Archived");
+            IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Pj)
+                .Include(b => b.Menyerahkan)
+                .Include(b => b.Mengetahui)
+                .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
+                .Where(b => b.Status == "Approved" || b.Status == "Archived");
 
-
-        allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();
-        isLoading = false;
+            allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ArsipBA] OnInitializedAsync error: {ex.Message}");
+            isLoading = false;
+        }
     }
 
     private void ClearFilters()

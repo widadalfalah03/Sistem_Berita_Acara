@@ -242,7 +242,8 @@ else
 }
 
 <div id="blazor-error-ui" data-nosnippet>
-    Terjadi kesalahan. <a href="." class="reload">Muat ulang</a>
+    Terjadi kesalahan. Memuat ulang dalam <span id="blazor-error-countdown">5</span> detik...
+    <a href="." class="reload">Muat ulang sekarang</a>
     <span class="dismiss">🗙</span>
 </div>
 
@@ -260,48 +261,53 @@ else
     private int _currentUserId;
     private Microsoft.AspNetCore.SignalR.Client.HubConnection? _hubConnection;
 
-    [Inject] private AppDbContext DbContext { get; set; } = null!;
-
     protected override async Task OnInitializedAsync()
     {
-        var uri = Navigation.Uri;
-        isLoginPage = uri.Contains("/login") || uri.Contains("/logout") || uri.Contains("/pj/sign");
-
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var principal = auth.User;
-
-        if (principal.Identity?.IsAuthenticated == true)
+        try
         {
-            currentUserName = principal.FindFirst("nama")?.Value
-                           ?? principal.Identity.Name
+            var uri = Navigation.Uri;
+            isLoginPage = uri.Contains("/login") || uri.Contains("/logout") || uri.Contains("/pj/sign");
+
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var principal = auth.User;
+
+            if (principal.Identity?.IsAuthenticated == true)
+            {
+                currentUserName = principal.FindFirst("nama")?.Value
+                               ?? principal.Identity.Name
+                               ?? string.Empty;
+
+                currentRole = principal.FindFirst("app_role")?.Value
+                           ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
                            ?? string.Empty;
 
-            currentRole = principal.FindFirst("app_role")?.Value
-                       ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
-                       ?? string.Empty;
-
-            var userIdStr = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(userIdStr, out _currentUserId))
-            {
-                using var scope = ServiceProvider.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var appUser = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == _currentUserId);
-                if (appUser is not null)
+                var userIdStr = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(userIdStr, out _currentUserId))
                 {
-                    profilePicPath = appUser.ProfilePicPath;
+                    using var scope = ServiceProvider.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    var appUser = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == _currentUserId);
+                    if (appUser is not null)
+                    {
+                        profilePicPath = appUser.ProfilePicPath;
+                    }
                 }
+
+                initials = GetInitials(currentUserName);
+                currentRoleLabel = currentRole switch
+                {
+                    "AdminIT"            => "Admin IT",
+                    "AdminGudangBarang"  => "Admin Gudang & Barang",
+                    "Reviewer"           => "Reviewer",
+                    _                    => currentRole
+                };
+
+                pageTitle = GetPageTitle(Navigation.Uri);
             }
-
-            initials = GetInitials(currentUserName);
-            currentRoleLabel = currentRole switch
-            {
-                "AdminIT"            => "Admin IT",
-                "AdminGudangBarang"  => "Admin Gudang & Barang",
-                "Reviewer"           => "Reviewer",
-                _                    => currentRole
-            };
-
-            pageTitle = GetPageTitle(Navigation.Uri);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[MainLayout] OnInitializedAsync error: {ex.Message}");
         }
     }
 
@@ -309,8 +315,15 @@ else
     {
         if (!firstRender || isLoginPage || _currentUserId == 0) return;
 
-        await RefreshCountsAsync();
-        StateHasChanged();
+        try
+        {
+            await RefreshCountsAsync();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[MainLayout] OnAfterRenderAsync error: {ex.Message}");
+        }
 
         _ = ConnectSignalRAsync();
     }
@@ -329,8 +342,15 @@ else
             {
                 await InvokeAsync(async () =>
                 {
-                    await RefreshCountsAsync();
-                    StateHasChanged();
+                    try
+                    {
+                        await RefreshCountsAsync();
+                        StateHasChanged();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"[MainLayout] Hub BaListUpdated error: {ex.Message}");
+                    }
                 });
             });
 
@@ -344,20 +364,27 @@ else
     private async Task RefreshCountsAsync()
     {
         if (_currentUserId == 0) return;
-        unreadCount = await DbContext.Notification
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        unreadCount = await db.Notification
+            .AsNoTracking()
             .CountAsync(n => n.UserId == _currentUserId && !n.IsRead);
 
         if (currentRole == "AdminGudangBarang")
         {
-            draftCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+            draftCount = await db.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+                .AsNoTracking()
                 .CountAsync(ba => ba.CreatedBy == _currentUserId && (ba.Status == "Draft" || ba.Status == "Rejected"));
-            progressCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+            progressCount = await db.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+                .AsNoTracking()
                 .CountAsync(ba => ba.CreatedBy == _currentUserId &&
                     (ba.Status == "WaitingPJSign" || ba.Status == "WaitingApproval"));
         }
         else if (currentRole == "Reviewer")
         {
-            progressCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+            progressCount = await db.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+                .AsNoTracking()
                 .CountAsync(ba => ba.MengetahuiId == _currentUserId && ba.Status == "WaitingApproval");
         }
     }

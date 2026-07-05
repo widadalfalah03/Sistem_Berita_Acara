@@ -23,6 +23,26 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
 
         using var workbook = new XLWorkbook(ms);
         var sheet = workbook.Worksheet(1);
+
+        // Validasi kolom wajib Data Pegawai (normalisasi: lowercase, hanya alfanumerik+spasi)
+        static string Norm(string s) => new string(s.ToLowerInvariant().Where(c => char.IsLetterOrDigit(c) || c == ' ').ToArray()).Trim();
+        // Kolom 4 (Fungsi/Direktorat) boleh ditulis "Fungsi" saja
+        string[][] acceptedNorm =
+        [
+            ["nama"],
+            ["no pekerja"],
+            ["jabatan"],
+            ["fungsi direktorat", "fungsi"],
+            ["email"],
+            ["cost center"]
+        ];
+        for (int col = 1; col <= acceptedNorm.Length; col++)
+        {
+            var cellNorm = Norm(sheet.Cell(1, col).Value.ToString());
+            if (!acceptedNorm[col - 1].Contains(cellNorm))
+                return (0, 0, 0, [$"Format file tidak valid. Kolom ke-{col} harus '{acceptedNorm[col - 1][0]}', ditemukan '{cellNorm}'. Pastikan menggunakan template Data Pekerja yang benar."]);
+        }
+
         var rows = sheet.RowsUsed().Skip(1).ToList();
 
         var noPekerjaInExcel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -124,6 +144,13 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
 
         using var workbook = new XLWorkbook(ms);
         var sheet = workbook.Worksheet(1);
+
+        // Validasi kolom wajib Data Barang (normalisasi: lowercase, hanya alfanumerik+spasi)
+        static string NormB(string s) => new string(s.ToLowerInvariant().Where(c => char.IsLetterOrDigit(c) || c == ' ').ToArray()).Trim();
+        var col1Norm = NormB(sheet.Cell(1, 1).Value.ToString());
+        if (col1Norm != "nama barang")
+            return (0, 0, 0, [$"Format file tidak valid. Kolom pertama harus 'Nama Barang', ditemukan '{col1Norm}'. Pastikan menggunakan template Data Barang yang benar."]);
+
         var rows = sheet.RowsUsed().Skip(1).ToList();
 
         var namaInExcel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
