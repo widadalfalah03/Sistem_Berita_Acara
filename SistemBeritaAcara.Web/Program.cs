@@ -417,9 +417,9 @@ app.MapGet("/api/ba/{baId:int}/download", async (
 
     if (!File.Exists(pdfPath)) return Results.NotFound();
 
-    string filename = !string.IsNullOrEmpty(ba.NomorSurat) 
-        ? $"Berita_Acara_{ba.NomorSurat.Replace("/", "_")}.pdf" 
-        : $"Berita_Acara_{ba.Id}.pdf";
+    string filename = !string.IsNullOrEmpty(ba.NomorSurat)
+        ? $"{ba.NomorSurat.Replace("/", "_")}.pdf"
+        : $"{ba.Id}.pdf";
 
     var bytes = await File.ReadAllBytesAsync(pdfPath);
     return Results.File(bytes, "application/pdf", filename);
