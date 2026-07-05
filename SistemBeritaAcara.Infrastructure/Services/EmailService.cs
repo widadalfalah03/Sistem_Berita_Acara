@@ -179,7 +179,7 @@ public class EmailService(IConfiguration config) : IEmailService
         }
         else
         {
-            string rejectedLink = $"{baseUrl}/berita-acara/{baId}";
+            string rejectedLink = $"{baseUrl}/berita-acara/{baId}?from=rejected";
             actionButtons = $"""
                 <div style="text-align:center;margin:32px 0;">
                     <a href="{rejectedLink}" style="background-color:#dc2626;color:#ffffff;padding:14px 28px;text-decoration:none;font-weight:bold;font-size:15px;border-radius:6px;display:inline-block;">Lihat Dokumen Ditolak</a>

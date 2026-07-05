@@ -150,18 +150,15 @@ else
                     </div>
 
                     <div style="display:flex;gap:10px;margin-top:24px;">
-                        <button class="btn @(isProcessing ? "btn-loading" : "")"
-                                style="flex:0 0 auto;padding:10px 20px;border:1.5px solid var(--danger);color:var(--danger);background:transparent;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s,color .15s;"
-                                onmouseover="if(!this.disabled){this.style.background='var(--danger)';this.style.color='white';}"
-                                onmouseout="this.style.background='transparent';this.style.color='var(--danger)';"
+                        <button class="btn btn-danger @(isProcessing ? "btn-loading" : "")"
+                                style="flex:0 0 auto;"
                                 @onclick="() => showRejectModal = true" disabled="@isProcessing">
-                            <i class="bi bi-x-lg"></i> Tolak
+                            Tolak
                         </button>
-                        <button class="btn @(isProcessing ? "btn-loading" : "")"
-                                style="flex:1;padding:10px 20px;background:var(--primary);color:white;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:opacity .15s;"
-                                onmouseover="if(!this.disabled)this.style.opacity='.85';" onmouseout="this.style.opacity='1';"
+                        <button class="btn btn-primary @(isProcessing ? "btn-loading" : "")"
+                                style="flex:1;"
                                 @onclick="ApproveAsync" disabled="@isProcessing">
-                            <i class="bi bi-pen-fill"></i> Tandatangani
+                            Tandatangani
                         </button>
                     </div>
                 </div>
@@ -172,7 +169,7 @@ else
             <div class="page-header d-flex align-center justify-between" style="flex-wrap:wrap; gap:12px;">
                 <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <h1 class="page-title" style="word-break:break-word;">@(ba.NomorSurat ?? "Draft BA")</h1>
+                        <h1 class="page-title" style="word-break:break-word;">@(ba.NomorSurat ?? "Draft Berita Acara")</h1>
                         <div style="display:flex;align-items:center;gap:12px;margin-top:4px;flex-wrap:wrap;">
                             @if (_initialFrom != "archive" && ba.Status != "Archived" && ba.Status != "Approved")
                             {
@@ -181,8 +178,25 @@ else
                             <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
                         </div>
                     </div>
+                    @if (ba.Status == "Rejected" && currentRole == "AdminGudangBarang")
+                    {
+                        <button class="btn btn-primary" @onclick="() => Navigation.NavigateTo($"/buat-ba?edit={ba.Id}")">
+                            Revisi
+                        </button>
+                    }
                 </div>
             </div>
+
+            @if (ba.Status == "Rejected" && currentRole == "AdminGudangBarang")
+            {
+                <div style="background:var(--danger-light);border-radius:var(--radius);padding:14px 20px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;">
+                    <i class="bi bi-x-circle-fill" style="color:var(--danger);margin-top:2px;flex-shrink:0;"></i>
+                    <div>
+                        <div style="color:var(--danger);font-weight:700;margin-bottom:4px;">Ditolak</div>
+                        <div style="font-size:14px;color:var(--text-secondary);">@ba.AlasanReject</div>
+                    </div>
+                </div>
+            }
 
             <div class="info-grid-2">
                 <div class="card">
@@ -194,7 +208,7 @@ else
                             <tr>
                                 <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;width:40%;">No. Surat</td>
                                 <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.NomorSurat ??
-                                                            "Belum dibuat")</td>
+                                                                                                "Belum dibuat")</td>
                                 </tr>
                                 <tr>
                                     <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Tanggal</td>
@@ -206,12 +220,12 @@ else
                                         <tr>
                                             <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Judul Berita Acara</td>
                                             <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.JenisCustom ??
-                                                           "-")</td>
+                                                                                                           "-")</td>
                                             </tr>
                                             <tr>
                                                 <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">Keterangan</td>
                                                 <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.Keterangan ??
-                                                           "-")</td>
+                                                                                                               "-")</td>
                                                 </tr>
                                             }
                                             @if (ba.Jenis != "Lainnya")
@@ -220,7 +234,7 @@ else
                                                     <td style="padding:8px 0;color:var(--text-secondary);font-size:14px;">No. Tiket My SSC/Nota Dinas
                                                     </td>
                                                     <td style="padding:8px 0;font-weight:600;font-size:14px;word-break:break-word;">@(ba.TiketSscNo ??
-                                                                 "-")</td>
+                                                                                                                         "-")</td>
                                                     </tr>
                                                 }
                                                 @if (ba.Jenis == "Peminjaman")
@@ -340,12 +354,6 @@ else
                                                 }
                                                 else if (ba.Status == "Rejected")
                                                 {
-                                                    <div style="background:var(--danger-light);border-radius:var(--radius);padding:14px 20px;flex:1;">
-                                                        <div style="color:var(--danger);font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
-                                                            <i class="bi bi-x-circle-fill"></i> Ditolak
-                                                        </div>
-                                                        <div style="font-size:14px;color:var(--text-secondary);">@ba.AlasanReject</div>
-                                                    </div>
                                                 }
                                             </div>
                                         }
@@ -376,7 +384,7 @@ else
                                             <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
                                                 <button class="btn btn-danger @(isProcessing ? "btn-loading" : "")" @onclick="RejectAsync"
                                                         disabled="@isProcessing">
-                                                    <i class="bi bi-x-lg"></i> Tolak
+                                                    Tolak
                                                 </button>
                                             </div>
                                         </div>
@@ -423,10 +431,18 @@ else
         {
             var auth = await AuthStateProvider.GetAuthenticationStateAsync();
             var userName = auth.User.Identity?.Name;
-            if (string.IsNullOrEmpty(userName)) { Navigation.NavigateTo("/login", true); return; }
+            if (string.IsNullOrEmpty(userName))
+            {
+                Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}", true);
+                return;
+            }
 
             var appUser = await UserManager.FindByEmailAsync(userName);
-            if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
+            if (appUser is null)
+            {
+                Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}", true);
+                return;
+            }
             currentRole = appUser.Role;
             currentUserId = appUser.Id;
 
@@ -444,10 +460,17 @@ else
 
             isReviewer = currentRole == "Reviewer" && appUser.Id == ba.MengetahuiId;
 
-            // Jika link dari email reviewer tapi yang login bukan reviewer yang ditugaskan, redirect ke progress
+            // Jika link dari email reviewer tapi yang login bukan reviewer yang ditugaskan, minta login ulang
             if (From == "review" && !isReviewer)
             {
-                Navigation.NavigateTo("/progress", true);
+                Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}", true);
+                return;
+            }
+
+            // Jika link dari email reject tapi yang login bukan Admin GB, minta login ulang
+            if (From == "rejected" && currentRole != "AdminGudangBarang")
+            {
+                Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}", true);
                 return;
             }
 
@@ -567,7 +590,7 @@ DateTime.Now.AddDays(7)
 
             Hangfire.BackgroundJob.Schedule<SistemBeritaAcara.Infrastructure.Jobs.AutoApproveJob>(
                 job => job.ProcessSingleAutoApproveAsync(ba.Id),
-                TimeSpan.FromHours(24)
+                TimeSpan.FromMinutes(2)
             );
 
             var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ??
@@ -703,6 +726,7 @@ barangListReject);
                  : From == "notifikasi_all" ? "/notifikasi?tab=all"
                  : From == "notifikasi_unread" ? "/notifikasi?tab=unread"
                  : From == "notifikasi" ? "/notifikasi"
+                 : From == "rejected" ? "/rejected"
                  : "/draft";
 
         if (currentRole == "Reviewer" && string.IsNullOrEmpty(From))
