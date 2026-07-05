@@ -94,8 +94,10 @@
             {
                 <div class="form-group" style="flex:1;">
                     <label class="form-label">Tanggal Kembali <span style="color:var(--danger)">*</span></label>
-                    <InputDate class="form-control" @bind-Value="model.TanggalKembali"
-                               @bind-Value:after="TriggerAutoSave" />
+                    <DatePicker Value="model.TanggalKembali"
+                                ValueChanged="v => { model.TanggalKembali = v; TriggerAutoSave(); }"
+                                Placeholder="Pilih tanggal kembali..."
+                                MinDate="model.Tanggal" />
                 </div>
             }
             else if (model.Jenis == "Lainnya")
