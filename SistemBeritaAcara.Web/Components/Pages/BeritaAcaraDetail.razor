@@ -180,7 +180,7 @@ else
                     </div>
                     @if (ba.Status == "Rejected" && currentRole == "AdminGudangBarang")
                     {
-                        <button class="btn btn-primary" @onclick="() => Navigation.NavigateTo($"/buat-ba?edit={ba.Id}")">
+                        <button class="btn btn-primary" @onclick="NavigateToRevisi">
                             Revisi
                         </button>
                     }
@@ -717,6 +717,11 @@ barangListReject);
 
     [SupplyParameterFromQuery(Name = "from")]
     public string? From { get; set; }
+
+    private void NavigateToRevisi()
+    {
+        Navigation.NavigateTo("/buat-ba?edit=" + ba!.Id);
+    }
 
     private void GoBack()
     {
