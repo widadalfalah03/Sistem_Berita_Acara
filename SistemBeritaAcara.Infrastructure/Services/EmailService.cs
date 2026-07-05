@@ -79,13 +79,13 @@ public class EmailService(IConfiguration config) : IEmailService
         string body = $"""
             <h2 style="color:#000000;">Undangan: Setup Akun Sistem Informasi Manajemen Berita Acara</h2>
             <p>Yth. <strong>{userName}</strong>,</p>
-            <p>Akun Anda telah didaftarkan oleh Administrator IT. Untuk mulai menggunakan sistem, silakan selesaikan pengaturan akun Anda melalui tautan berikut:</p>
+            <p>Akun Anda telah didaftarkan oleh Admin IT. Untuk mulai menggunakan sistem, silakan selesaikan pengaturan akun Anda melalui tautan berikut:</p>
 
             <div style="text-align:center;margin:32px 0;">
                 <a href="{link}" style="background-color:#0284c7;color:#ffffff;padding:14px 28px;text-decoration:none;font-weight:bold;font-size:15px;border-radius:6px;display:inline-block;">Selesaikan Setup Akun</a>
             </div>
 
-            <p style="color:#cc0000;font-size:13px;"><strong>Perhatian:</strong> Tautan ini hanya berlaku selama 24 jam. Apabila sudah kedaluwarsa, silakan hubungi Admin IT.</p>
+            <p style="color:#cc0000;font-size:13px;"><strong>Perhatian:</strong><br>Tautan ini hanya berlaku selama 24 jam. Apabila sudah kedaluwarsa, silakan hubungi Admin IT.</p>
             <br>
             <p>Regards,<br><strong>Admin IT</strong></p>
             """;
@@ -108,7 +108,7 @@ public class EmailService(IConfiguration config) : IEmailService
                 <a href="{link}" style="background-color:#0284c7;color:#ffffff;padding:14px 28px;text-decoration:none;font-weight:bold;font-size:15px;border-radius:6px;display:inline-block;">Reset Password</a>
             </div>
 
-            <p style="color:#cc0000;font-size:13px;"><strong>Perhatian:</strong> Tautan ini hanya berlaku selama 24 jam. Apabila Anda tidak pernah meminta reset password, abaikan email ini.</p>
+            <p style="color:#cc0000;font-size:13px;"><strong>Perhatian:</strong><br>Tautan ini hanya berlaku selama 24 jam. Apabila Anda tidak pernah meminta reset password, abaikan email ini.</p>
             <br>
             <p>Regards,<br><strong>Admin IT</strong></p>
             """;
@@ -132,7 +132,7 @@ public class EmailService(IConfiguration config) : IEmailService
 
     public async Task SendApprovalRequestAsync(string toEmail, string reviewerName, string baseUrl, int baId, string jenisBA, List<string> barangList)
     {
-        var loginLink = $"{baseUrl}/berita-acara/{baId}";
+        var loginLink = $"{baseUrl}/berita-acara/{baId}?from=review";
         string barangTable = RenderBarangTable(barangList);
 
         string body = $"""
@@ -142,7 +142,6 @@ public class EmailService(IConfiguration config) : IEmailService
 
             {barangTable}
 
-            <p>Silakan login ke sistem untuk meninjau dan memberikan keputusan terhadap dokumen tersebut:</p>
             <div style="text-align:center;margin:32px 0;">
                 <a href="{loginLink}" style="background-color:#0284c7;color:#ffffff;padding:14px 28px;text-decoration:none;font-weight:bold;font-size:15px;border-radius:6px;display:inline-block;">Review Dokumen</a>
             </div>
@@ -155,7 +154,7 @@ public class EmailService(IConfiguration config) : IEmailService
 
     public async Task SendApprovalResultAsync(string toEmail, string recipientName, string jenisBA, bool approved, int baId, string baseUrl, bool isForPj, string? nomorSurat = null, string? alasan = null, List<string>? barangList = null)
     {
-        string statusText = approved ? "Disetujui" : "Ditolak";
+        string statusText = approved ? "Sah &amp; Berlaku" : "Ditolak";
         string baLabel = string.IsNullOrEmpty(nomorSurat)
             ? $"Berita Acara {jenisBA}"
             : $"Berita Acara {jenisBA} No. {nomorSurat}";

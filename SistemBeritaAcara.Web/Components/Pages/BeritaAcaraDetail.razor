@@ -444,6 +444,13 @@ else
 
             isReviewer = currentRole == "Reviewer" && appUser.Id == ba.MengetahuiId;
 
+            // Jika link dari email reviewer tapi yang login bukan reviewer yang ditugaskan, redirect ke progress
+            if (From == "review" && !isReviewer)
+            {
+                Navigation.NavigateTo("/progress", true);
+                return;
+            }
+
             pdfVersion = DateTime.UtcNow.Ticks;
             isLoading = false;
         }
@@ -678,7 +685,7 @@ barangListReject);
     {
         "Draft" => "Draft",
         "WaitingPJSign" => "Menunggu TTD PJ",
-        "WaitingApproval" => "Menunggu Approval",
+        "WaitingApproval" => "Menunggu TTD Reviewer",
         "Approved" => "Disetujui",
         "Archived" => "Disetujui",
         "Rejected" => "Ditolak",

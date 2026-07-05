@@ -22,7 +22,7 @@
 
 @if (autoSaveStatus != AutoSaveState.Idle)
 {
-    <div style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,0.18);font-size:13px;font-weight:500;transition:opacity 0.3s;
+    <div style="position:fixed;top:72px;right:24px;z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--radius);box-shadow:0 4px 24px rgba(0,0,0,0.18);font-size:13px;font-weight:500;transition:opacity 0.3s;
         @(autoSaveStatus == AutoSaveState.Saved ? "background:#ECFDF5;border:1px solid #6EE7B7;color:#065F46;" :
            autoSaveStatus == AutoSaveState.Saving ? "background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);" :
            "background:#FEF2F2;border:1px solid #FECACA;color:var(--danger);")">
@@ -476,78 +476,72 @@
                     <div class="form-section">
                         <div class="form-section-title">5. Bukti Foto Serah Terima</div>
 
+                        <div style="display:flex;justify-content:center;margin-bottom:16px;">
+                            <label for="photo-upload-input" style="cursor:pointer;display:inline-block;">
+                                <div class="upload-btn-styled">
+                                    <i class="bi bi-cloud-arrow-up-fill" style="font-size:28px;"></i>
+                                    <span style="font-weight:600;font-size:15px;">
+                                        @if (photoFiles.Any() || existingPhotoUrls.Any())
+                                        {
+                                            @("Tambah Foto")
+                                        }
+                                        else
+                                        {
+                                            @("Pilih Foto")
+                                        }
+                                    </span>
+                                    <span style="font-size:12px;color:var(--text-muted);margin-top:2px;text-align:center;">JPG, PNG &middot; maks. 5 MB per file</span>
+                                </div>
+                            </label>
+                        </div>
+                        <InputFile id="photo-upload-input" OnChange="OnPhotosSelected" multiple
+                                   accept="image/jpeg,image/png,.jpg,.jpeg,.png" style="display:none;" />
+
+                        @if (existingPhotoUrls.Any())
+                        {
+                            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:12px;align-items:center;">
+                                @for (int i = 0; i < existingPhotoUrls.Count; i++)
+                                {
+                                    var idx = i;
+                                    var url = existingPhotoUrls[i].RelPath;
+                                    var name = existingPhotoUrls[i].Name;
+                                    <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--border);box-shadow:var(--shadow-md);max-width:100%;display:flex;flex-direction:column;">
+                                        <div style="background:rgba(0,0,0,0.55);padding:6px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                                            <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@name</div>
+                                            <i class="bi bi-x-lg" style="font-size:14px;color:white;cursor:pointer;flex-shrink:0;"
+                                               @onclick="() => RemoveExistingPhoto(idx)"></i>
+                                        </div>
+                                        <img src="/@url" alt="@name"
+                                             style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
+                                    </div>
+                                }
+                            </div>
+                        }
+
                         @if (photoDataUrls.Any())
                         {
-                            <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;align-items:center;">
+                            <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
                                 @for (int i = 0; i < photoDataUrls.Count; i++)
                                 {
                                     var idx = i;
                                     var url = photoDataUrls[i].Url;
                                     var name = photoDataUrls[i].Name;
-                                    <div
-                                        style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--primary);box-shadow:var(--shadow-md);max-width:100%;display:flex;flex-direction:column;">
-                                        <div
-                                            style="background:rgba(0,0,0,0.65);padding:6px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                                            <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                                                @name</div>
-                                                <i class="bi bi-x-lg" style="font-size:14px;color:white;cursor:pointer;flex-shrink:0;"
-                                                   @onclick="() => RemoveNewPhoto(idx)"></i>
-                                            </div>
-                                            <img src="@url" alt="@name"
-                                                 style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
+                                    <div style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--primary);box-shadow:var(--shadow-md);max-width:100%;display:flex;flex-direction:column;">
+                                        <div style="background:rgba(0,0,0,0.65);padding:6px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                                            <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@name</div>
+                                            <i class="bi bi-x-lg" style="font-size:14px;color:white;cursor:pointer;flex-shrink:0;"
+                                               @onclick="() => RemoveNewPhoto(idx)"></i>
                                         </div>
-                                    }
-                                </div>
-                            }
-                            @if (existingPhotoUrls.Any())
-                            {
-                                <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;align-items:center;">
-                                    @for (int i = 0; i < existingPhotoUrls.Count; i++)
-                                    {
-                                        var idx = i;
-                                        var url = existingPhotoUrls[i].RelPath;
-                                        var name = existingPhotoUrls[i].Name;
-                                        <div
-                                            style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--border);box-shadow:var(--shadow-md);max-width:100%;display:flex;flex-direction:column;">
-                                            <div
-                                                style="background:rgba(0,0,0,0.55);padding:6px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                                                <div style="font-size:12px;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                                                    @name</div>
-                                                    <i class="bi bi-x-lg" style="font-size:14px;color:white;cursor:pointer;flex-shrink:0;"
-                                                       @onclick="() => RemoveExistingPhoto(idx)"></i>
-                                                </div>
-                                                <img src="/@url" alt="@name"
-                                                     style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
-                                            </div>
-                                        }
+                                        <img src="@url" alt="@name"
+                                             style="width:100%;max-width:320px;height:auto;display:block;object-fit:contain;" />
                                     </div>
                                 }
+                            </div>
+                        }
+                    </div>
+                }
 
-                                <div style="display:flex;justify-content:center;">
-                                    <label for="photo-upload-input" style="cursor:pointer;display:inline-block;">
-                                        <div class="upload-btn-styled">
-                                            <i class="bi bi-cloud-arrow-up-fill" style="font-size:28px;"></i>
-                                            <span style="font-weight:600;font-size:15px;">
-                                                @if (photoFiles.Any() || existingPhotoUrls.Any())
-                                                {
-                                                    @("Tambah Foto")
-                                                }
-                                                else
-                                                {
-                                                    @("Pilih Foto")
-                                                }
-                                            </span>
-                                            <span style="font-size:12px;color:var(--text-muted);margin-top:2px;text-align:center;">JPG, PNG
-                                                &middot; maks. 5 MB per file</span>
-                                            </div>
-                                        </label>
-                                    </div>
-                                    <InputFile id="photo-upload-input" OnChange="OnPhotosSelected" multiple
-                                               accept="image/jpeg,image/png,.jpg,.jpeg,.png" style="display:none;" />
-                                </div>
-                            }
-
-                            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;">
+                    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;">
                                 <button type="button" class="btn btn-outline" @onclick="ResetForm">
                                     Reset
                                 </button>
