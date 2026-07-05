@@ -17,16 +17,14 @@
     <div></div>
     <div style="display:flex;gap:8px;">
         <button @onclick="ExportExcelAsync" disabled="@isExporting"
-                style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:var(--radius);border:none;background:#16A34A;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;"
+                style="display:inline-flex;align-items:center;padding:8px 16px;border-radius:var(--radius);border:none;background:#16A34A;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;"
                 onmouseover="if(!this.disabled)this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-            <i class="bi bi-file-earmark-excel-fill" style="font-size:15px;"></i>
             @(isExporting ? "Mengexport..." : "Export Excel")
         </button>
         <button @onclick="() => showUpload = true"
-                style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
-                onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)';this.style.background='var(--primary-light)'"
-                onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)';this.style.background='var(--surface)'">
-            <i class="bi bi-file-earmark-arrow-up" style="font-size:15px;"></i>
+                style="display:inline-flex;align-items:center;padding:8px 16px;border-radius:var(--radius);border:none;background:var(--surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
+                onmouseover="this.style.color='var(--primary)';this.style.background='var(--primary-light)'"
+                onmouseout="this.style.color='var(--text-secondary)';this.style.background='var(--surface)'">
             Import Excel
         </button>
     </div>
@@ -76,7 +74,7 @@ else
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Nama / No. Pekerja</th>
+                        <th>Nama/No. Pekerja</th>
                         <th>Jabatan</th>
                         <th>Fungsi/Direktorat</th>
                         <th>Email</th>
@@ -436,9 +434,16 @@ else
             using var stream = e.File.OpenReadStream(10_000_000);
             var (added, updated, deactivated, errors) = await ExcelService.ImportPegawaiAsync(stream, currentUser!.Id, e.File.Name);
             showUpload = false;
-            SetAlert($"Berhasil: {added} ditambahkan, {updated} diperbarui, {deactivated} dinonaktifkan." +
-                     (errors.Any() ? $" Kesalahan: {string.Join("; ", errors)}" : ""), false);
-            await LoadAsync();
+            if (errors.Any() && added == 0 && updated == 0 && deactivated == 0)
+            {
+                SetAlert(errors[0], true);
+            }
+            else
+            {
+                SetAlert($"Berhasil: {added} ditambahkan, {updated} diperbarui, {deactivated} dinonaktifkan." +
+                         (errors.Any() ? $" Peringatan: {string.Join("; ", errors)}" : ""), false);
+                await LoadAsync();
+            }
         }
         catch (Exception ex) { SetAlert($"Gagal impor: {ex.Message}", true); }
         finally { isImporting = false; }

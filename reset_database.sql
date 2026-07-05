@@ -1,25 +1,11 @@
--- ============================================================
---  SISTEM BERITA ACARA — SQL RESET SCRIPT
---  Untuk dijalankan sebelum deploy perdana atau reset data.
---  Jalankan di SQL Server Management Studio atau sqlcmd.
---
---  Pilih salah satu mode:
---    MODE A : Reset SEMUA data (termasuk Pegawai & MasterBarang)
---    MODE B : Reset data transaksi saja (pertahankan master data)
--- ============================================================
-
 USE [SistemBeritaAcara];
 GO
 
--- ============================================================
 --  BAGIAN 1: MATIKAN FOREIGN KEY SEMENTARA
--- ============================================================
 EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';
 GO
 
--- ============================================================
 --  BAGIAN 2: HAPUS DATA TRANSAKSI (SELALU DIJALANKAN)
--- ============================================================
 
 -- File-file generated dokumen dan tanda tangan di-handle manual
 -- (hapus isi folder wwwroot/files/documents/ dan wwwroot/files/signatures/)
@@ -57,6 +43,10 @@ GO
 DELETE FROM [PerangkatBA];
 GO
 
+-- Perpanjangan BA
+DELETE FROM [PerpanjanganBA];
+GO
+
 -- Berita Acara utama
 DELETE FROM [BeritaAcara];
 DBCC CHECKIDENT('[BeritaAcara]', RESEED, 0);
@@ -73,11 +63,11 @@ DELETE FROM [PegawaiImportLog];
 DELETE FROM [BarangImportLog];
 GO
 
--- ============================================================
 --  BAGIAN 3: HAPUS DATA PENGGUNA (USER & ROLES)
--- ============================================================
+--  Setelah ini: aplikasi restart → halaman /setup muncul →
+--  akun pertama yang dibuat otomatis menjadi Super Admin.
 
--- Identity tables
+-- Identity tables (termasuk Super Admin & semua Admin IT)
 DELETE FROM [AspNetUserTokens];
 DELETE FROM [AspNetUserLogins];
 DELETE FROM [AspNetUserClaims];
@@ -90,11 +80,7 @@ DELETE FROM [AspNetRoleClaims];
 DELETE FROM [AspNetRoles];
 GO
 
--- ============================================================
 --  BAGIAN 4 (OPSIONAL) — MODE A: HAPUS MASTER DATA
---  Hapus komentar pada bagian ini jika ingin full reset.
--- ============================================================
-
 
 -- Hapus data Pegawai
 DELETE FROM [Pegawai];
@@ -106,17 +92,14 @@ DELETE FROM [MasterBarang];
 DBCC CHECKIDENT('[MasterBarang]', RESEED, 0);
 GO
 
-
--- ============================================================
 --  BAGIAN 5: AKTIFKAN KEMBALI FOREIGN KEY
--- ============================================================
 EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';
 GO
 
--- ============================================================
 --  VERIFIKASI
--- ============================================================
 SELECT 'BeritaAcara'      AS [Tabel], COUNT(*) AS [Jumlah] FROM [BeritaAcara]
+UNION ALL
+SELECT 'PerpanjanganBA',   COUNT(*)                          FROM [PerpanjanganBA]
 UNION ALL
 SELECT 'BACounter',        [NextValue]                       FROM [BACounter]
 UNION ALL

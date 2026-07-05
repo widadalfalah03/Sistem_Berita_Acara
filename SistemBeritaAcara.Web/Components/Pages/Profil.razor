@@ -140,7 +140,7 @@ else
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Fungsi / Direktorat</label>
+                            <label class="form-label">Fungsi/Direktorat</label>
                             <input class="form-control readonly" readonly value="@(linkedPegawai.FungsiDirektorat ?? "-")" />
                         </div>
                         <div class="form-group">
@@ -152,7 +152,7 @@ else
                     {
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">No. Telp / HP</label>
+                                <label class="form-label">No. Telp/HP</label>
                                 <input class="form-control readonly" readonly value="@linkedPegawai.NoTelp" />
                             </div>
                             <div></div>
@@ -183,22 +183,36 @@ else
 
             @if (currentUser.Role != "AdminIT")
             {
-                @if (!string.IsNullOrEmpty(currentUser.TtdPath))
-                {
-                    <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;justify-content:center;margin-bottom:8px;">
-                        <img src="/@currentUser.TtdPath?v=@ttdCacheBuster" alt="Tanda Tangan" style="max-height:60px;max-width:100%;object-fit:contain;" />
+                <div class="side-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg);">
+                        <span style="font-size:13px;font-weight:600;color:var(--text-secondary);">Tanda Tangan</span>
                     </div>
-                }
-                <button class="btn btn-outline" style="width:100%; margin-bottom: 32px;" @onclick="OpenTtdModal" disabled="@isOpeningModal">
-                    @if (isOpeningModal)
-                    {
-                        <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
-                    }
-                    else
-                    {
-                        <i class="bi bi-pen"></i> <span>Ubah Tanda Tangan</span>
-                    }
-                </button>
+                    <div style="padding:16px;">
+                        @if (!string.IsNullOrEmpty(currentUser.TtdPath))
+                        {
+                            <div style="background:white;border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;justify-content:center;margin-bottom:12px;min-height:80px;align-items:center;">
+                                <img src="/@currentUser.TtdPath?v=@ttdCacheBuster" alt="Tanda Tangan" style="max-height:70px;max-width:100%;object-fit:contain;" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="background:#FFFBEB;border:1px dashed #FCD34D;border-radius:var(--radius);padding:16px;text-align:center;margin-bottom:12px;">
+                                <i class="bi bi-pen" style="font-size:22px;color:#D97706;display:block;margin-bottom:6px;"></i>
+                                <div style="font-size:12px;color:#92400E;font-weight:500;">Belum ada tanda tangan</div>
+                            </div>
+                        }
+                        <button class="btn btn-primary" style="width:100%;" @onclick="OpenTtdModal" disabled="@isOpeningModal">
+                            @if (isOpeningModal)
+                            {
+                                <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span>
+                            }
+                            else
+                            {
+                                <span>Ubah Tanda Tangan</span>
+                            }
+                        </button>
+                    </div>
+                </div>
             }
         </div>
     </div>
@@ -210,18 +224,18 @@ else
     <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1050;" @onclick="CloseTtdModal">
         <div style="background:var(--bg);width:600px;max-width:95%;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-lg);" @onclick:stopPropagation="true">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <h4 style="margin:0;font-size:18px;"><i class="bi bi-pen" style="color:var(--primary);margin-right:6px;"></i> Ubah Tanda Tangan</h4>
+                <h4 style="margin:0;font-size:18px;">Ubah Tanda Tangan</h4>
                 <button style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);" @onclick="CloseTtdModal">&times;</button>
             </div>
 
             <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
                 <button @onclick='() => SwitchTtdMode("draw")'
                         style="flex:1;padding:9px 12px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:@(ttdMode=="draw"?"var(--primary)":"transparent");color:@(ttdMode=="draw"?"white":"var(--text-secondary)");">
-                    <i class="bi bi-pen-fill" style="margin-right:5px;"></i>Gambar
+                    Gambar
                 </button>
                 <button @onclick='() => SwitchTtdMode("upload")'
                         style="flex:1;padding:9px 12px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(ttdMode=="upload"?"var(--primary)":"transparent");color:@(ttdMode=="upload"?"white":"var(--text-secondary)");">
-                    <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload TTD
+                    Upload TTD
                 </button>
             </div>
 
@@ -234,11 +248,11 @@ else
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
-                        <i class="bi bi-eraser"></i> Hapus
+                        Hapus
                     </button>
                     <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@isSavingTtd">
                         @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
-                        else { <i class="bi bi-save"></i> <span>Simpan</span> }
+                        else { <span>Simpan</span> }
                     </button>
                 </div>
             </div>
@@ -261,7 +275,7 @@ else
                 <div style="display:flex;justify-content:flex-end;">
                     <button class="btn btn-primary" @onclick="SaveDrawnTtdAsync" disabled="@isSavingTtd">
                         @if (isSavingTtd) { <span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> }
-                        else { <i class="bi bi-save"></i> <span>Simpan</span> }
+                        else { <span>Simpan</span> }
                     </button>
                 </div>
             </div>

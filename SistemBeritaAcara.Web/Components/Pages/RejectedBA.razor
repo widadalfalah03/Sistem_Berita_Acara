@@ -127,7 +127,7 @@ else
                     <tbody>
                         @foreach (var entry in paginated)
                         {
-                            <tr style="cursor:pointer; transition: background 0.2s;" class="hover-row" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{entry.BaId}"))">
+                            <tr style="cursor:pointer; transition: background 0.2s;" class="hover-row" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{entry.BaId}?from=rejected"))">
                                 <td>
                                     <span style="font-weight:600;">@entry.Jenis</span>
                                 </td>
@@ -156,8 +156,8 @@ else
                                 @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
                                 {
                                     <td style="text-align:right;" @onclick:stopPropagation>
-                                        <button class="btn btn-sm btn-primary" style="padding:4px 12px;font-size:12px;display:inline-flex;align-items:center;gap:4px;" @onclick="() => ReviseBA(entry.BaId)" title="Revisi">
-                                            <i class="bi bi-arrow-counterclockwise"></i> Revisi
+                                        <button class="btn btn-primary" style="padding:6px 16px;font-size:13px;" @onclick="() => ReviseBA(entry.BaId)">
+                                            Revisi
                                         </button>
                                     </td>
                                 }

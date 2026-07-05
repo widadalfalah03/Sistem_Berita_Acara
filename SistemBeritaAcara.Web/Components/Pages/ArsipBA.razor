@@ -92,20 +92,19 @@
         <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Keterangan</div>
             <div style="display:flex;align-items:center;gap:8px;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
-                <input type="text" placeholder="Cari keterangan / barang..."
+                <input type="text" placeholder="Cari keterangan/barang..."
                        style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
                        @bind="keteranganSearch" @bind:event="oninput" />
                 <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;flex-shrink:0;"></i>
             </div>
         </div>
 
-        <div style="border-right:1px solid var(--border-light);padding:10px 14px;">
+        <div style="border-right:1px solid var(--border-light);padding:10px 14px;min-width:200px;">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Tanggal</div>
-            <div style="display:flex;align-items:center;height:36px;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;background:var(--surface);">
-                <input type="date"
-                       style="border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--text-primary);padding:0;font-family:inherit;"
-                       @bind="dateFilter" />
-            </div>
+            <DatePicker Value="dateFilter"
+                        ValueChanged="v => dateFilter = v"
+                        Placeholder="Semua tanggal"
+                        InputPadding="6px 10px" />
         </div>
 
         <div style="padding:10px 14px;position:relative;">
@@ -367,21 +366,29 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
-        currentRole = appUser!.Role;
-        currentUserId = appUser.Id;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var appUser = await UserManager.FindByEmailAsync(auth.User.Identity?.Name ?? "");
+            if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
+            currentRole = appUser.Role;
+            currentUserId = appUser.Id;
 
-        IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
-            .Include(b => b.Pj)
-            .Include(b => b.Menyerahkan)
-            .Include(b => b.Mengetahui)
-            .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
-            .Where(b => b.Status == "Approved" || b.Status == "Archived");
+            IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Pj)
+                .Include(b => b.Menyerahkan)
+                .Include(b => b.Mengetahui)
+                .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
+                .Where(b => b.Status == "Approved" || b.Status == "Archived");
 
-
-        allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();
-        isLoading = false;
+            allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ArsipBA] OnInitializedAsync error: {ex.Message}");
+            isLoading = false;
+        }
     }
 
     private void ClearFilters()

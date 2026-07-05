@@ -12,6 +12,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject IConfiguration Configuration
+@inject ILogger<EditorBA> Logger
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 @implements IDisposable
@@ -54,22 +55,18 @@
         </div>
 
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#16A34A; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:20px; padding:5px 12px; white-space:nowrap;">
-                <i class="bi bi-check-circle-fill"></i> Draft tersimpan
-            </div>
-
             @if (!string.IsNullOrEmpty(ba.DocxPath))
             {
-                <NavLink href="@($"/onlyoffice-editor/{ba.Id}")"
-                         style="display:flex;align-items:center;justify-content:center;gap:8px;min-width:150px;padding:10px 20px;border-radius:var(--radius-full);border:1.5px solid var(--primary);color:var(--primary);background:transparent;font-weight:600;font-size:14px;text-decoration:none;white-space:nowrap;transition:background .15s,color .15s;"
-                         onmouseover="this.style.background='var(--primary)';this.style.color='white';"
-                         onmouseout="this.style.background='transparent';this.style.color='var(--primary)';">
-                    <i class="bi bi-pencil-fill"></i> Edit Manual
-                </NavLink>
+                <button @onclick="@(() => Navigation.NavigateTo($"/onlyoffice-editor/{ba.Id}"))"
+                        style="display:flex;align-items:center;justify-content:center;width:140px;height:42px;border-radius:var(--radius-full);border:1.5px solid var(--primary);background:transparent;color:var(--primary);font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;box-sizing:border-box;transition:background .15s,color .15s;"
+                        onmouseover="this.style.background='var(--primary)';this.style.color='white';"
+                        onmouseout="this.style.background='transparent';this.style.color='var(--primary)';">
+                    Edit Manual
+                </button>
             }
 
             <button @onclick="SubmitForApprovalAsync" disabled="@isSubmitting"
-                    style="display:flex;align-items:center;justify-content:center;gap:8px;min-width:160px;padding:11px 24px;border-radius:var(--radius-full);border:none;background:var(--primary);color:white;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;transition:opacity .2s,transform .15s;"
+                    style="display:flex;align-items:center;justify-content:center;width:140px;height:42px;border-radius:var(--radius-full);border:1.5px solid var(--primary);background:var(--primary);color:white;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;box-sizing:border-box;transition:opacity .2s,transform .15s;"
                     onmouseover="if(!this.disabled){this.style.opacity='.9';this.style.transform='translateY(-1px)';}"
                     onmouseout="this.style.opacity='1';this.style.transform='';">
                 @if (isSubmitting)
@@ -79,12 +76,10 @@
                 }
                 else if (ba.Jenis == "Lainnya")
                 {
-                    <i class="bi bi-archive-fill"></i>
-                    <span>Tambahkan ke Arsip</span>
+                    <span>Simpan</span>
                 }
                 else
                 {
-                    <i class="bi bi-send-fill"></i>
                     <span>Kirim</span>
                 }
             </button>
@@ -134,7 +129,7 @@
                     <table style="width:100%;border-collapse:collapse;font-size:13px;">
                         <tr>
                             <td style="padding:7px 0;color:var(--text-secondary);width:45%;">No. Surat</td>
-                            <td style="padding:7px 0;font-weight:600;color:var(--primary);">@(ba.NomorSurat ?? "Dibuat otomatis saat dikirim")</td>
+                            <td style="padding:7px 0;font-weight:600;color:var(--primary);">@(ba.NomorSurat ?? (ba.Jenis == "Lainnya" ? "Dibuat otomatis saat disimpan" : "Dibuat otomatis saat dikirim"))</td>
                         </tr>
                         <tr>
                             <td style="padding:7px 0;color:var(--text-secondary);">Jenis Berita Acara</td>
@@ -254,15 +249,24 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        int.TryParse(userIdStr, out _currentUserId);
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userIdStr = auth.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int.TryParse(userIdStr, out _currentUserId);
 
-        await LoadBaAsync();
+            await LoadBaAsync();
 
-        if (!RendererInfo.IsInteractive) return;
+            if (!RendererInfo.IsInteractive) return;
 
-        isLoading = false;
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[EditorBA] Unhandled exception in OnInitializedAsync for BA {Id}", Id);
+            errorMessage = "Gagal memuat halaman editor. Silakan coba lagi.";
+            isLoading = false;
+        }
     }
 
     private async Task LoadBaAsync()
