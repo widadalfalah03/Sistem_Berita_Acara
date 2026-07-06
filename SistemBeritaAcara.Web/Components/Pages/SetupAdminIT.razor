@@ -13,102 +13,215 @@
 @inject AppDbContext Db
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject SistemBeritaAcara.Core.Interfaces.IEmailService EmailService
+@inject IConfiguration Config
+
+@implements IDisposable
 
 <PageTitle>Setup Awal — Sistem Berita Acara</PageTitle>
 
 <div class="login-page" style="overflow-y:auto;align-items:flex-start;padding:32px 24px;">
-    <div class="login-card" style="max-width:420px;width:100%;margin:auto;">
-        <div class="login-card-body" style="padding:24px 32px;">
+    <div class="login-card" style="margin:auto;@(step == 3 ? "max-width:620px;" : "")"  >
+        <div class="login-card-body">
 
             <div class="login-logo" style="display:flex;flex-direction:column;align-items:center;margin-bottom:8px;">
-                <img src="/images/simba_logo_final.png" style="height:auto;max-height:150px;width:auto;max-width:100%;object-fit:contain;margin-top:-24px;margin-bottom:-16px;" alt="SIMBA" />
+                <img src="/images/simba_logo_final.png"
+                     style="height:auto;max-height:280px;width:auto;max-width:100%;object-fit:contain;margin-top:-24px;margin-bottom:-16px;"
+                     alt="SIMBA" />
             </div>
 
-            <div style="margin-bottom:16px;text-align:center;">
-                    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Setup Awal Sistem</h3>
-                    <p style="font-size:12px;color:var(--text-secondary);line-height:1.4;margin:0;">
-                        Buat akun <strong>Super Admin</strong> untuk memulai menggunakan aplikasi.
+            @* ── Step Indicator ── *@
+            <div style="display:flex;align-items:center;justify-content:center;margin-bottom:24px;">
+                @for (int i = 1; i <= 3; i++)
+                {
+                    var s = i;
+                    bool done   = step > s;
+                    bool active = step == s;
+                    <div style="display:flex;align-items:center;">
+                        <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                                    font-size:12px;font-weight:700;transition:background .3s,color .3s;
+                                    background:@(done || active ? "var(--primary)" : "var(--border)");
+                                    color:@(done || active ? "white" : "var(--text-muted)");">
+                            @if (done) { <i class="bi bi-check-lg"></i> }
+                            else { @s }
+                        </div>
+                        @if (s < 3)
+                        {
+                            <div style="width:48px;height:2px;transition:background .3s;background:@(step > s ? "var(--primary)" : "var(--border)");"></div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @* ── Error ── *@
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="login-error" style="margin-bottom:12px;font-size:13px;">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    @errorMessage
+                </div>
+            }
+
+            @* ══════════ STEP 1 — Email ══════════ *@
+            @if (step == 1)
+            {
+                <div style="text-align:center;margin-bottom:20px;">
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Verifikasi Email</h3>
+                    <p style="font-size:12px;color:var(--text-secondary);margin:0;">
+                        Masukkan email yang akan digunakan sebagai akun Super Admin.
                     </p>
                 </div>
 
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="login-error" style="margin-bottom:12px;font-size:13px;">
-                        <i class="bi bi-exclamation-circle-fill"></i>
-                        @errorMessage
-                    </div>
-                }
-
-                <form @onsubmit="HandleSubmit" @onsubmit:preventDefault>
-                <div style="display:flex;flex-direction:column;gap:12px;">
-
-                    <div>
-                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
-                            NAMA LENGKAP <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input class="login-input" type="text" @bind="namaLengkap"
-                               style="font-size:13px;" placeholder="Nama lengkap" />
-                    </div>
-                    
-                    <div>
-                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
-                            NO. PEKERJA <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input class="login-input" type="text" @bind="noPekerja"
-                               style="font-size:13px;" placeholder="Contoh: 12345" />
-                    </div>
-
+                <form @onsubmit="SendOtpAsync" @onsubmit:preventDefault>
                     <div>
                         <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
                             EMAIL <span style="color:var(--danger);">*</span>
                         </label>
                         <input class="login-input" type="email" @bind="email"
-                               style="font-size:13px;" placeholder="Email aktif untuk login" />
+                               placeholder="Email aktif untuk login" />
                     </div>
 
-                    <div>
-                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
-                            PASSWORD <span style="color:var(--danger);">*</span>
-                        </label>
-                        <div class="login-pw-wrap">
-                            <input class="login-input" type="@pwType" @bind="password"
-                                   style="font-size:13px;" placeholder="Min. 8 karakter" />
-                            <button type="button" class="login-pw-toggle" @onclick="TogglePw" tabindex="-1">
-                                <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
-                            KONFIRMASI PASSWORD <span style="color:var(--danger);">*</span>
-                        </label>
-                        <div class="login-pw-wrap">
-                            <input class="login-input" type="@pwType" @bind="confirmPassword"
-                                   style="font-size:13px;" placeholder="Ketik ulang password" />
-                            <button type="button" class="login-pw-toggle" @onclick="TogglePw" tabindex="-1">
-                                <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <button type="submit" class="login-btn" style="margin-top:16px;">
+                        Kirim Kode Verifikasi
+                    </button>
+                </form>
+            }
 
+            @* ══════════ STEP 2 — OTP ══════════ *@
+            else if (step == 2)
+            {
+                <div style="text-align:center;margin-bottom:4px;">
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Masukkan Kode OTP</h3>
+                    <p style="font-size:12px;color:var(--text-secondary);margin:0;">
+                        Kode 6 digit telah dikirim ke<br>
+                        <strong>@email</strong>
+                    </p>
                 </div>
 
-                <div style="margin-top:10px;padding:8px 12px;background:color-mix(in srgb,var(--info) 10%,transparent);border:1px solid color-mix(in srgb,var(--info) 30%,transparent);border-radius:var(--radius);font-size:11px;color:var(--text-secondary);">
-                    <i class="bi bi-info-circle" style="color:var(--info);margin-right:5px;"></i>
-                    Halaman ini hanya muncul <strong>sekali</strong>. Setelah akun Super Admin dibuat, halaman ini tidak dapat diakses kembali.
+                <form @onsubmit="VerifyOtpAsync" @onsubmit:preventDefault>
+                @* 6 kotak digit *@
+                <div style="display:flex;gap:10px;justify-content:center;margin:24px 0;">
+                    @for (int i = 0; i < 6; i++)
+                    {
+                        var idx = i;
+                        bool filled = _digits[idx] != '\0';
+                        <input id="otp-@idx"
+                               type="text"
+                               inputmode="numeric"
+                               maxlength="1"
+                               value="@(filled ? _digits[idx].ToString() : "")"
+                               style="width:50px;height:60px;text-align:center;
+                                      font-size:26px;font-weight:600;font-family:inherit;
+                                      border:2px solid @(filled ? "var(--primary)" : "var(--border)");
+                                      border-radius:10px;
+                                      background:@(filled ? "color-mix(in srgb,var(--primary) 8%,var(--surface))" : "var(--surface)");
+                                      color:var(--text-primary);
+                                      outline:none;transition:border-color .15s,background .15s;"
+                               @oninput="@(e => OnDigitInput(e, idx))"
+                               @onkeydown="@(e => OnDigitKeyDown(e, idx))" />
+                    }
                 </div>
 
-                <button type="submit" class="login-btn" style="margin-top:14px;">
-                    Buat Akun
+                @* Countdown / Kirim Ulang *@
+                <div style="text-align:center;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
+                    @if (_resendCooldown > 0)
+                    {
+                        <span>Kirim ulang dalam <strong>@_resendCooldown</strong> detik</span>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline btn-sm" @onclick="SendOtpAsync">
+                            Kirim Ulang
+                        </button>
+                    }
+                </div>
+
+                <button type="submit" class="login-btn" disabled="@(GetOtpString().Length < 6)">
+                    Verifikasi
                 </button>
                 </form>
+            }
+
+            @* ══════════ STEP 3 — Data & Password ══════════ *@
+            else if (step == 3)
+            {
+                <div style="text-align:center;margin-bottom:20px;">
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Lengkapi Data Akun</h3>
+                    <p style="font-size:12px;color:var(--text-secondary);margin:0;">
+                        Buat akun <strong>Super Admin</strong> untuk memulai menggunakan sistem.
+                    </p>
+                </div>
+
+                <form @onsubmit="HandleSubmit" @onsubmit:preventDefault>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+                        @* Kiri atas: Email *@
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">EMAIL</label>
+                            <input class="login-input" type="email" value="@email" readonly
+                                   style="background:var(--bg);cursor:not-allowed;color:var(--text-muted);" />
+                        </div>
+
+                        @* Kanan atas: Nama Lengkap *@
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                                NAMA LENGKAP <span style="color:var(--danger);">*</span>
+                            </label>
+                            <input class="login-input" type="text" @bind="namaLengkap"
+                                   placeholder="Nama lengkap" />
+                        </div>
+
+                        @* Kiri bawah: Password *@
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                                PASSWORD <span style="color:var(--danger);">*</span>
+                            </label>
+                            <div class="login-pw-wrap">
+                                <input class="login-input" type="@pwType" @bind="password"
+                                       placeholder="Min. 8 karakter" />
+                                <button type="button" class="login-pw-toggle" @onclick="TogglePw" tabindex="-1">
+                                    <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        @* Kanan bawah: Konfirmasi Password *@
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                                KONFIRMASI PASSWORD <span style="color:var(--danger);">*</span>
+                            </label>
+                            <div class="login-pw-wrap">
+                                <input class="login-input" type="@pwType2" @bind="confirmPassword"
+                                       placeholder="Ketik ulang" />
+                                <button type="button" class="login-pw-toggle" @onclick="TogglePw2" tabindex="-1">
+                                    <i class="bi @(pwType2 == "password" ? "bi-eye" : "bi-eye-slash")"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div style="margin-top:10px;padding:8px 12px;
+                                background:color-mix(in srgb,var(--info) 10%,transparent);
+                                border:1px solid color-mix(in srgb,var(--info) 30%,transparent);
+                                border-radius:var(--radius);font-size:11px;color:var(--text-secondary);">
+                        <i class="bi bi-info-circle" style="color:var(--info);margin-right:5px;"></i>
+                        Halaman ini hanya muncul <strong>sekali</strong>. Setelah akun Super Admin dibuat, halaman ini tidak dapat diakses kembali.
+                    </div>
+
+                    <button type="submit" class="login-btn" style="margin-top:14px;" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner" style="width:16px;height:16px;border-width:2px;margin-right:8px;display:inline-block;vertical-align:middle;"></span>
+                        }
+                        Buat Akun
+                    </button>
+                </form>
+            }
 
         </div>
     </div>
 </div>
-
-
 
 <form id="autoLoginForm" method="post" action="/account/login" style="display:none;">
     <input type="hidden" name="email" value="@email" />
@@ -117,29 +230,161 @@
 </form>
 
 @code {
-    private string namaLengkap = string.Empty;
-    private string noPekerja   = string.Empty;
-    private string email       = string.Empty;
-    private string password    = string.Empty;
-    private string confirmPassword = string.Empty;
-    private string pwType      = "password";
-    private string errorMessage = string.Empty;
+    private int    step  = 1;
+    private string email = string.Empty;
 
-    private void TogglePw() => pwType = pwType == "password" ? "text" : "password";
+    // ── OTP ─────────────────────────────────────────────────────────────────
+    private char[]   _digits        = new char[6];
+    private string   _otpCode       = string.Empty;
+    private DateTime _otpExpiry;
+    private int      _failedAttempts  = 0;
+    private int      _resendCooldown  = 0;
+    private bool     _pasteInitialized = false;
+    private DotNetObjectReference<SetupAdminIT>? _selfRef;
+    private System.Threading.Timer? _countdownTimer;
+
+    // ── Step 3 ───────────────────────────────────────────────────────────────
+    private string namaLengkap    = string.Empty;
+    private string password       = string.Empty;
+    private string confirmPassword = string.Empty;
+    private string pwType  = "password";
+    private string pwType2 = "password";
+
+    private string errorMessage = string.Empty;
+    private bool   isSaving     = false;
+
+    private void TogglePw()  => pwType  = pwType  == "password" ? "text" : "password";
+    private void TogglePw2() => pwType2 = pwType2 == "password" ? "text" : "password";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (step == 2 && !_pasteInitialized)
+        {
+            _pasteInitialized = true;
+            _selfRef ??= DotNetObjectReference.Create(this);
+            try
+            {
+                await JS.InvokeVoidAsync("otpInput.focus", "otp-0");
+                await JS.InvokeVoidAsync("otpInput.initPaste", _selfRef);
+            }
+            catch { }
+        }
+        else if (step != 2)
+        {
+            _pasteInitialized = false;
+        }
+    }
+
+    [Microsoft.JSInterop.JSInvokable]
+    public async Task SetOtpFromPaste(string digits)
+    {
+        for (int i = 0; i < 6; i++)
+            _digits[i] = i < digits.Length ? digits[i] : '\0';
+        await InvokeAsync(StateHasChanged);
+        var focusIdx = Math.Min(digits.Length - 1, 5);
+        await JS.InvokeVoidAsync("otpInput.focus", $"otp-{focusIdx}");
+    }
+
+    // ── OTP helpers ──────────────────────────────────────────────────────────
+
+    private string GetOtpString()
+        => new string(_digits.Where(c => c != '\0').ToArray());
+
+    private async Task OnDigitInput(ChangeEventArgs e, int idx)
+    {
+        var val = e.Value?.ToString() ?? "";
+        if (val.Length > 0 && char.IsDigit(val[^1]))
+        {
+            _digits[idx] = val[^1];
+            errorMessage = string.Empty;
+            if (idx < 5)
+                await JS.InvokeVoidAsync("otpInput.focus", $"otp-{idx + 1}");
+        }
+        else
+        {
+            _digits[idx] = '\0';
+        }
+    }
+
+    private async Task OnDigitKeyDown(KeyboardEventArgs e, int idx)
+    {
+        if (e.Key == "Backspace")
+        {
+            if (_digits[idx] != '\0')
+                _digits[idx] = '\0';
+            else if (idx > 0)
+            {
+                _digits[idx - 1] = '\0';
+                await JS.InvokeVoidAsync("otpInput.focus", $"otp-{idx - 1}");
+            }
+        }
+        else if (e.Key == "ArrowLeft"  && idx > 0) await JS.InvokeVoidAsync("otpInput.focus", $"otp-{idx - 1}");
+        else if (e.Key == "ArrowRight" && idx < 5) await JS.InvokeVoidAsync("otpInput.focus", $"otp-{idx + 1}");
+    }
+
+    // ── Step handlers ────────────────────────────────────────────────────────
+
+    private async Task SendOtpAsync()
+    {
+        errorMessage = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
+        { errorMessage = "Email tidak valid."; return; }
+
+        var existing = await UserManager.FindByEmailAsync(email);
+        if (existing is not null)
+        { errorMessage = "Email sudah terdaftar di sistem."; return; }
+
+        _otpCode          = GenerateOtp();
+        _otpExpiry        = DateTime.UtcNow.AddMinutes(10);
+        _failedAttempts   = 0;
+        _pasteInitialized = false;
+        Array.Clear(_digits, 0, 6);
+
+        // Pindah ke step 2 langsung — email dikirim di background
+        step = 2;
+        StartCountdown();
+
+        _ = EmailService.SendOtpAsync(email, _otpCode);
+    }
+
+    private async Task VerifyOtpAsync()
+    {
+        errorMessage = string.Empty;
+
+        if (DateTime.UtcNow > _otpExpiry)
+        {
+            errorMessage = "Kode OTP telah kedaluwarsa. Silakan kirim ulang.";
+            Array.Clear(_digits, 0, 6);
+            return;
+        }
+
+        if (GetOtpString() != _otpCode)
+        {
+            _failedAttempts++;
+            if (_failedAttempts >= 5)
+            {
+                BackToStep1();
+                errorMessage = "Terlalu banyak percobaan salah. Silakan mulai ulang.";
+                return;
+            }
+            errorMessage = $"Kode OTP salah. Sisa percobaan: {5 - _failedAttempts}.";
+            Array.Clear(_digits, 0, 6);
+            await JS.InvokeVoidAsync("otpInput.focus", "otp-0");
+            return;
+        }
+
+        // OTP benar
+        _countdownTimer?.Dispose();
+        step = 3;
+    }
 
     private async Task HandleSubmit()
     {
         errorMessage = string.Empty;
 
-        // ── Validasi client-side ─────────────────────────────────────────
         if (string.IsNullOrWhiteSpace(namaLengkap))
         { errorMessage = "Nama lengkap wajib diisi."; return; }
-
-        if (string.IsNullOrWhiteSpace(noPekerja))
-        { errorMessage = "No. Pekerja wajib diisi."; return; }
-
-        if (string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
-        { errorMessage = "Email tidak valid."; return; }
 
         if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
         { errorMessage = "Password minimal 8 karakter."; return; }
@@ -147,35 +392,15 @@
         if (password != confirmPassword)
         { errorMessage = "Konfirmasi password tidak cocok."; return; }
 
-        // ── Cek duplikat ─────────────────────────────────────────────────
-        var existing = await UserManager.FindByEmailAsync(email);
-        if (existing is not null)
-        { errorMessage = "Email sudah terdaftar."; return; }
-
-        if (Db.Pegawai.Any(p => p.NoPekerja == noPekerja.Trim()))
-        { errorMessage = "No. Pekerja sudah terdaftar."; return; }
-
+        isSaving = true;
         try
         {
-            // ── 1. Pastikan role AdminIT ada ─────────────────────────────
             foreach (var role in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
             {
                 if (!await RoleManager.RoleExistsAsync(role))
                     await RoleManager.CreateAsync(new IdentityRole<int>(role));
             }
 
-            // ── 2. Buat data Pegawai untuk Admin IT ──────────────────────
-            var pegawai = new CoreEntities.Pegawai
-            {
-                Nama      = namaLengkap.Trim(),
-                NoPekerja = noPekerja.Trim(),
-                Email     = email.Trim().ToLower(),
-                IsAktif   = true
-            };
-            Db.Pegawai.Add(pegawai);
-            await Db.SaveChangesAsync();
-
-            // ── 3. Buat ApplicationUser (Super Admin) ────────────────────
             var user = new CoreEntities.ApplicationUser
             {
                 UserName       = email.Trim().ToLower(),
@@ -183,32 +408,58 @@
                 EmailConfirmed = true,
                 Nama           = namaLengkap.Trim(),
                 Role           = "AdminIT",
-                PegawaiId      = pegawai.Id,
+                PegawaiId      = null,
                 IsSuperAdmin   = true
             };
 
             var result = await UserManager.CreateAsync(user, password);
             if (!result.Succeeded)
             {
-                // Rollback pegawai jika user gagal dibuat
-                Db.Pegawai.Remove(pegawai);
-                await Db.SaveChangesAsync();
-
                 errorMessage = "Gagal membuat akun: " + string.Join(", ", result.Errors.Select(e => e.Description));
+                isSaving = false;
                 return;
             }
 
             await UserManager.AddToRoleAsync(user, "AdminIT");
-
-            // ── 4. Beritahu middleware bahwa sudah ada user ───────────────
             FirstRunMiddleware.MarkHasUsers();
 
-            // Langsung submit form tersembunyi untuk auto-login ke dashboard
             await JS.InvokeVoidAsync("eval", "document.getElementById('autoLoginForm').submit();");
         }
         catch (Exception ex)
         {
             errorMessage = $"Terjadi kesalahan: {ex.Message}";
+            isSaving = false;
         }
+    }
+
+    private void BackToStep1()
+    {
+        step              = 1;
+        errorMessage      = string.Empty;
+        _pasteInitialized = false;
+        Array.Clear(_digits, 0, 6);
+        _countdownTimer?.Dispose();
+        _resendCooldown = 0;
+    }
+
+    private void StartCountdown()
+    {
+        _countdownTimer?.Dispose();
+        _resendCooldown = 60;
+        _countdownTimer = new System.Threading.Timer(_ =>
+        {
+            if (_resendCooldown > 0) _resendCooldown--;
+            InvokeAsync(StateHasChanged);
+            if (_resendCooldown == 0) _countdownTimer?.Dispose();
+        }, null, 1000, 1000);
+    }
+
+    private static string GenerateOtp()
+        => Random.Shared.Next(100_000, 1_000_000).ToString();
+
+    public void Dispose()
+    {
+        _countdownTimer?.Dispose();
+        _selfRef?.Dispose();
     }
 }

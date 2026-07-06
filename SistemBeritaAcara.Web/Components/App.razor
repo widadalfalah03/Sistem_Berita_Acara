@@ -38,6 +38,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <script src="js/cropper-interop.js"></script>
     <script>
+        window.otpInput = {
+            focus: function(id) {
+                const el = document.getElementById(id);
+                if (el) { el.focus(); el.select(); }
+            },
+            initPaste: function(dotNetRef) {
+                for (let i = 0; i < 6; i++) {
+                    const el = document.getElementById('otp-' + i);
+                    if (!el) continue;
+                    el.addEventListener('paste', function(e) {
+                        e.preventDefault();
+                        const text = (e.clipboardData || window.clipboardData).getData('text');
+                        const digits = text.replace(/\D/g, '').substring(0, 6);
+                        if (digits.length > 0)
+                            dotNetRef.invokeMethodAsync('SetOtpFromPaste', digits);
+                    });
+                }
+            }
+        };
+
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';

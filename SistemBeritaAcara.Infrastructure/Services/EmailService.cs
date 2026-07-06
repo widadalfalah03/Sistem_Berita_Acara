@@ -275,6 +275,34 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, subject, body);
     }
 
+    public async Task SendOtpAsync(string toEmail, string otp)
+    {
+        var cells = string.Concat(otp.Select(c =>
+            $"<td style=\"width:48px;height:58px;background:#f0f7ff;border:2px solid #0284c7;" +
+            $"border-radius:8px;text-align:center;vertical-align:middle;" +
+            $"font-size:30px;font-weight:700;color:#0284c7;font-family:Arial,sans-serif;\">{c}</td>"));
+
+        string body = $"""
+            <h2 style="color:#000000;">Verifikasi Email — Setup Awal Sistem</h2>
+            <p>Anda sedang melakukan proses setup awal Sistem Informasi Manajemen Berita Acara PT Pertamina Patra Niaga. Masukkan kode OTP berikut di halaman verifikasi:</p>
+
+            <div style="text-align:center;margin:32px 0;">
+                <table style="display:inline-table;border-collapse:separate;border-spacing:8px;">
+                    <tr>{cells}</tr>
+                </table>
+            </div>
+
+            <p>Kode ini berlaku selama <strong>10 menit</strong>.</p>
+
+            <p style="color:#cc0000;font-size:13px;"><strong>Perhatian:</strong><br>
+            Apabila Anda tidak melakukan hal ini, abaikan email ini. Halaman setup hanya dapat diakses saat sistem belum memiliki akun Super Admin.</p>
+            <br>
+            <p>Regards,<br><strong>Sistem Informasi Manajemen Berita Acara</strong></p>
+            """;
+
+        await SendEmailAsync(toEmail, "Kode Verifikasi Setup Awal — Sistem Berita Acara", body);
+    }
+
     private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
     {
         if (string.IsNullOrEmpty(_user) || string.IsNullOrEmpty(_pass))

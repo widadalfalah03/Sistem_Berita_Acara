@@ -10,4 +10,5 @@ public interface IEmailService
     Task SendDueDateReminderAsync(string toEmail, string recipientName, string nomorSurat, string pjNama, string tanggalKembali, int daysUntilDue, bool isForPj, int baId, string baseUrl, List<string>? barangList = null);
     Task SendUserInvitationAsync(string toEmail, string userName, string token, string baseUrl);
     Task SendPasswordResetLinkAsync(string toEmail, string userName, string token, string baseUrl);
+    Task SendOtpAsync(string toEmail, string otp);
 }
