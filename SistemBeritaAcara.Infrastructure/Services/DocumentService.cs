@@ -21,14 +21,12 @@ public class DocumentService : IDocumentService
     private readonly string _outputRoot;
     private readonly string _templatesDir;
     private readonly IConfiguration _config;
-    private readonly IHttpClientFactory _httpClientFactory;
 
-    public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IConfiguration config, IHttpClientFactory httpClientFactory)
+    public DocumentService(AppDbContext db, ILogger<DocumentService> logger, IConfiguration config)
     {
         _db = db;
         _logger = logger;
         _config = config;
-        _httpClientFactory = httpClientFactory;
         _outputRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
         _templatesDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "templates");
         Directory.CreateDirectory(_outputRoot);
@@ -250,134 +248,41 @@ public class DocumentService : IDocumentService
                 templateRow.Remove();
             }
 
+            var validFotos = new List<(string physical, string ext)>();
+            if (ba.BuktiFotos != null)
+            {
+                foreach (var foto in ba.BuktiFotos)
+                {
+                    var physical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                        foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (!File.Exists(physical)) continue;
+                    var ext = Path.GetExtension(physical).ToLowerInvariant();
+                    if (ext != ".png" && ext != ".jpg" && ext != ".jpeg")
+                    {
+                        _logger.LogWarning("[GenerateDocx] Format gambar tidak didukung ({ext}), melewati foto: {path}", ext, physical);
+                        continue;
+                    }
+                    validFotos.Add((physical, ext));
+                }
+            }
+
             var drawingParas = mainPart.Document.Body!.Descendants<Paragraph>()
                 .Where(p => p.Descendants<Drawing>().Any()
                          && string.IsNullOrWhiteSpace(p.InnerText)
                          && !p.Ancestors<TableCell>().Any())
                 .ToList();
 
+            var sectPr = mainPart.Document.Body!.Elements<SectionProperties>().LastOrDefault();
+
             if (drawingParas.Any())
             {
-                foreach (var drawPara in drawingParas)
-                    drawPara.Remove();
-
-                if (ba.BuktiFotos != null && ba.BuktiFotos.Any())
-                {
-                    uint imgId = (uint)Random.Shared.Next(2000, 200000);
-                    var sectPr = mainPart.Document.Body!.Elements<SectionProperties>().LastOrDefault();
-                    
-                    foreach (var foto in ba.BuktiFotos)
-                    {
-                        var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                        if (!File.Exists(fotoPhysical)) continue;
-
-                        var ext = Path.GetExtension(fotoPhysical).ToLowerInvariant();
-                        if (ext != ".png" && ext != ".jpg" && ext != ".jpeg")
-                        {
-                            _logger.LogWarning("[GenerateDocx] Format gambar tidak didukung ({ext}), melewati foto: {path}", ext, fotoPhysical);
-                            continue;
-                        }
-                        var imgPartType = ext == ".png" ? ImagePartType.Png : ImagePartType.Jpeg;
-                        var imgPart = mainPart.AddImagePart(imgPartType);
-                        using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
-
-                        var dims = GetImageDimensions(fotoPhysical);
-                        long cx = 5486400L;
-                        long cy = 4000000L;
-                        if (dims.width > 0 && dims.height > 0)
-                        {
-                            double imgRatio = (double)dims.width / dims.height;
-                            if (imgRatio > 1.0) { // Landscape
-                                cx = 5486400L;
-                                cy = (long)(5486400L / imgRatio);
-                            } else { // Portrait or Square
-                                cy = 5486400L;
-                                cx = (long)(5486400L * imgRatio);
-                            }
-                        }
-
-                        var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId);
-                        imgId += 2;
-                        var containerPara = new Paragraph(new ParagraphProperties(new Justification { Val = JustificationValues.Center }));
-                        containerPara.Append(new Run(drawing));
-                        
-                        if (sectPr != null)
-                        {
-                            mainPart.Document.Body!.InsertBefore(containerPara, sectPr);
-                        }
-                        else
-                        {
-                            mainPart.Document.Body!.Append(containerPara);
-                        }
-                    }
-                }
+                foreach (var dp in drawingParas) dp.Remove();
+                if (validFotos.Any())
+                    EmbedFotosGrid(mainPart, validFotos, sectPr);
             }
-            else if (ba.Jenis != "Lainnya" && ba.BuktiFotos != null && ba.BuktiFotos.Any())
+            else if (ba.Jenis != "Lainnya" && validFotos.Any())
             {
-                var sectPr = mainPart.Document.Body!.Elements<SectionProperties>().LastOrDefault();
-
-                var p1 = new Paragraph(new Run(new Text("")));
-                var p2 = new Paragraph(new Run(new Text("Bukti Foto Serah Terima")))
-                {
-                    ParagraphProperties = new ParagraphProperties(new Justification { Val = JustificationValues.Center })
-                };
-
-                if (sectPr != null)
-                {
-                    mainPart.Document.Body!.InsertBefore(p1, sectPr);
-                    mainPart.Document.Body!.InsertBefore(p2, sectPr);
-                }
-                else
-                {
-                    mainPart.Document.Body!.Append(p1);
-                    mainPart.Document.Body!.Append(p2);
-                }
-
-                uint imgId = (uint)Random.Shared.Next(2000, 200000);
-                foreach (var foto in ba.BuktiFotos)
-                {
-                    var fotoPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                    if (!File.Exists(fotoPhysical)) continue;
-
-                    var ext = Path.GetExtension(fotoPhysical).ToLowerInvariant();
-                    if (ext != ".png" && ext != ".jpg" && ext != ".jpeg")
-                    {
-                        _logger.LogWarning("[GenerateDocx] Format gambar tidak didukung ({ext}), melewati foto: {path}", ext, fotoPhysical);
-                        continue;
-                    }
-                    var imgPartType = ext == ".png" ? ImagePartType.Png : ImagePartType.Jpeg;
-                    var imgPart = mainPart.AddImagePart(imgPartType);
-                    using (var fs = File.OpenRead(fotoPhysical)) { imgPart.FeedData(fs); }
-
-                    var dims = GetImageDimensions(fotoPhysical);
-                    long cx = 5486400L;
-                    long cy = 4000000L;
-                    if (dims.width > 0 && dims.height > 0)
-                    {
-                        double imgRatio = (double)dims.width / dims.height;
-                        if (imgRatio > 1.0) { // Landscape
-                            cx = 5486400L;
-                            cy = (long)(5486400L / imgRatio);
-                        } else { // Portrait or Square
-                            cy = 5486400L;
-                            cx = (long)(5486400L * imgRatio);
-                        }
-                    }
-
-                    var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(fotoPhysical), imgId);
-                    imgId += 2;
-                    var containerPara = new Paragraph(new ParagraphProperties(new Justification { Val = JustificationValues.Center }));
-                    containerPara.Append(new Run(drawing));
-                    
-                    if (sectPr != null)
-                    {
-                        mainPart.Document.Body!.InsertBefore(containerPara, sectPr);
-                    }
-                    else
-                    {
-                        mainPart.Document.Body!.Append(containerPara);
-                    }
-                }
+                EmbedFotosGrid(mainPart, validFotos, sectPr);
             }
 
             mainPart.Document.Save();
@@ -630,45 +535,121 @@ public class DocumentService : IDocumentService
         }
     }
 
-    public async Task ConvertDocxToPdfAsync(string docxPhysicalPath)
-    {
-        await ConvertDocxToPdfInternalAsync(docxPhysicalPath, docxPhysicalPath.Replace(".docx", ".pdf"));
-    }
+    public Task ConvertDocxToPdfAsync(string docxPhysicalPath)
+        => ConvertDocxToPdfInternalAsync(docxPhysicalPath, docxPhysicalPath.Replace(".docx", ".pdf"));
 
-    private async Task ConvertDocxToPdfInternalAsync(string docxPath, string pdfPath)
+    private Task ConvertDocxToPdfInternalAsync(string docxPath, string pdfPath)
     {
-        var gotenbergUrl = _config["Gotenberg:ServerUrl"];
-        if (string.IsNullOrEmpty(gotenbergUrl))
-        {
-            _logger.LogWarning("Gotenberg:ServerUrl is not configured. PDF conversion skipped.");
-            return;
-        }
-
         try
         {
-            using var request = new MultipartFormDataContent();
-            using var fileStream = File.OpenRead(docxPath);
-            using var streamContent = new StreamContent(fileStream);
-            request.Add(streamContent, "files", Path.GetFileName(docxPath));
-
-            var httpClient = _httpClientFactory.CreateClient("Gotenberg");
-            var response = await httpClient.PostAsync("/forms/libreoffice/convert", request);
-            
-            if (response.IsSuccessStatusCode)
-            {
-                using var fs = new FileStream(pdfPath, FileMode.Create, FileAccess.Write);
-                await response.Content.CopyToAsync(fs);
-            }
-            else
-            {
-                var errorMsg = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Gotenberg conversion failed: {StatusCode} - {Error}", response.StatusCode, errorMsg);
-            }
+            using var doc = new Spire.Doc.Document();
+            doc.LoadFromFile(docxPath);
+            doc.SaveToFile(pdfPath, Spire.Doc.FileFormat.PDF);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Exception occurred during Gotenberg PDF conversion.");
+            _logger.LogError(ex, "FreeSpire.Doc PDF conversion failed for {path}", docxPath);
         }
+        return Task.CompletedTask;
+    }
+
+    private void EmbedFotosGrid(MainDocumentPart mainPart, List<(string physical, string ext)> fotos, SectionProperties? insertBefore)
+    {
+        int n = fotos.Count;
+        if (n == 0) return;
+
+        // Jumlah kolom berdasarkan jumlah foto
+        int cols = n switch { 1 => 1, 2 => 2, <= 3 => 3, 4 => 2, <= 6 => 3, _ => 4 };
+        int rows = (int)Math.Ceiling((double)n / cols);
+
+        // A4 dengan margin 2.54cm: content width ~159mm, height page 3 ~208mm
+        const long CONTENT_W    = 5_731_200L; // EMU
+        const long CONTENT_H    = 7_500_000L; // EMU – aman agar tidak melebihi page 3
+        const long ROW_GAP      = 200_000L;   // ~5.5mm antar baris
+        const int  H_PAD_DXA    = 80;         // padding horizontal per sisi cell
+
+        int tableW_dxa = (int)(CONTENT_W / 635);
+        int cellW_dxa  = tableW_dxa / cols;
+        long imgAreaW  = ((long)cellW_dxa - 2 * H_PAD_DXA) * 635L;
+        long imgAreaH  = (CONTENT_H - ROW_GAP * (rows - 1)) / rows;
+        int rowGap_dxa = (int)(ROW_GAP / 635);
+
+        var table = new Table();
+        table.AppendChild(new TableProperties(
+            new TableWidth { Width = tableW_dxa.ToString(), Type = TableWidthUnitValues.Dxa },
+            new TableJustification { Val = TableRowAlignmentValues.Center },
+            new TableBorders(
+                new TopBorder              { Val = BorderValues.None, Size = 0 },
+                new BottomBorder           { Val = BorderValues.None, Size = 0 },
+                new LeftBorder             { Val = BorderValues.None, Size = 0 },
+                new RightBorder            { Val = BorderValues.None, Size = 0 },
+                new InsideHorizontalBorder { Val = BorderValues.None, Size = 0 },
+                new InsideVerticalBorder   { Val = BorderValues.None, Size = 0 })));
+
+        uint imgId = (uint)Random.Shared.Next(2000, 200000);
+        int idx = 0;
+
+        for (int r = 0; r < rows; r++)
+        {
+            var tr = new TableRow();
+            string spacingAfter = (r < rows - 1 ? rowGap_dxa : 0).ToString();
+
+            for (int c = 0; c < cols; c++)
+            {
+                var tc = new TableCell();
+                tc.AppendChild(new TableCellProperties(
+                    new TableCellWidth { Width = cellW_dxa.ToString(), Type = TableWidthUnitValues.Dxa },
+                    new TableCellBorders(
+                        new TopBorder    { Val = BorderValues.None, Size = 0 },
+                        new BottomBorder { Val = BorderValues.None, Size = 0 },
+                        new LeftBorder   { Val = BorderValues.None, Size = 0 },
+                        new RightBorder  { Val = BorderValues.None, Size = 0 }),
+                    new TableCellMargin(
+                        new TopMargin    { Width = "0",                  Type = TableWidthUnitValues.Dxa },
+                        new BottomMargin { Width = "0",                  Type = TableWidthUnitValues.Dxa },
+                        new LeftMargin   { Width = H_PAD_DXA.ToString(), Type = TableWidthUnitValues.Dxa },
+                        new RightMargin  { Width = H_PAD_DXA.ToString(), Type = TableWidthUnitValues.Dxa }),
+                    new TableCellVerticalAlignment { Val = TableVerticalAlignmentValues.Center }));
+
+                if (idx < n)
+                {
+                    var (physical, ext) = fotos[idx++];
+                    var partType = ext == ".png" ? ImagePartType.Png : ImagePartType.Jpeg;
+                    var imgPart  = mainPart.AddImagePart(partType);
+                    using (var fs = File.OpenRead(physical)) imgPart.FeedData(fs);
+
+                    var (w, h) = GetImageDimensions(physical);
+                    long cx = imgAreaW, cy = imgAreaH;
+                    if (w > 0 && h > 0)
+                    {
+                        double ratio     = (double)w / h;
+                        double areaRatio = (double)imgAreaW / imgAreaH;
+                        if (ratio >= areaRatio) { cx = imgAreaW; cy = (long)(imgAreaW / ratio); }
+                        else                    { cy = imgAreaH; cx = (long)(imgAreaH * ratio); }
+                    }
+
+                    var drawing = CreateImageDrawingWithId(mainPart.GetIdOfPart(imgPart), cx, cy, Path.GetFileName(physical), imgId);
+                    imgId += 2;
+
+                    tc.Append(new Paragraph(
+                        new ParagraphProperties(
+                            new Justification { Val = JustificationValues.Center },
+                            new SpacingBetweenLines { Before = "0", After = spacingAfter }),
+                        new Run(drawing)));
+                }
+                else
+                {
+                    tc.Append(new Paragraph(new ParagraphProperties(
+                        new SpacingBetweenLines { Before = "0", After = spacingAfter })));
+                }
+                tr.AppendChild(tc);
+            }
+            table.AppendChild(tr);
+        }
+
+        var body = mainPart.Document.Body!;
+        if (insertBefore != null) body.InsertBefore(table, insertBefore);
+        else body.Append(table);
     }
 
     private string GetRelativePath(string fileName) => Path.Combine("files", "documents", fileName).Replace("\\", "/");
