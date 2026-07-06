@@ -38,8 +38,10 @@
             {
                 @if (step == 1)
                 {
-                    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;text-align:center;">Buat Password Baru</h3>
-                    <p style="font-size:13px;color:var(--text-secondary);text-align:center;margin-bottom:24px;">Silakan buat password untuk akun Anda sebelum mulai menggunakan sistem.</p>
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;text-align:center;">Setup Akun</h3>
+                    <p style="font-size:13px;color:var(--text-secondary);text-align:center;margin-bottom:24px;">
+                        Silakan buat password untuk akun Anda sebelum mulai menggunakan sistem.
+                    </p>
 
                     @if (!string.IsNullOrEmpty(errorMessage))
                     {
@@ -155,7 +157,6 @@
     private bool isSaving = false;
     private string errorMessage = string.Empty;
     private ApplicationUser? user;
-
     private string pwType = "password";
     private string pwType2 = "password";
     private string newPassword = string.Empty;
@@ -181,11 +182,12 @@
             return;
         }
 
-        // We verify the token implicitly by doing nothing. If we want to strictly verify without resetting:
         var isValid = await UserManager.VerifyUserTokenAsync(user, UserManager.Options.Tokens.PasswordResetTokenProvider, "ResetPassword", token);
         if (!isValid)
         {
             invalidToken = true;
+            isLoading = false;
+            return;
         }
 
         isLoading = false;
@@ -213,6 +215,7 @@
     private void ProcessStep1()
     {
         errorMessage = string.Empty;
+
         if (string.IsNullOrWhiteSpace(newPassword))
         {
             errorMessage = "Password baru wajib diisi.";

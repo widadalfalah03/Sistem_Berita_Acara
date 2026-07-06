@@ -245,6 +245,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseHttpsRedirection();
+app.UseStaticFiles(); // serve runtime-generated files (DOCX/PDF) from wwwroot
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -308,10 +309,12 @@ app.MapGet("/api/preview/pdf/{baId:int}", async (
     ctx.Response.Headers["Expires"] = "0";
 
     var ba = await db.BeritaAcara.FindAsync(baId);
-    if (ba?.DocxPath == null) return Results.NotFound();
+    if (ba == null || (ba.DocxPath == null && ba.DocxFinalPath == null)) return Results.NotFound();
 
+    // prefer final (with Reviewer + PJ signatures) over draft
+    string targetDocx = !string.IsNullOrEmpty(ba.DocxFinalPath) ? ba.DocxFinalPath : ba.DocxPath!;
     var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-        ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+        targetDocx.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
 
     if (!File.Exists(pdfPath)) return Results.NotFound();
 
