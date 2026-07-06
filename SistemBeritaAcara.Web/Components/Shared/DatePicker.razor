@@ -1,0 +1,286 @@
+@using System.Globalization
+@inject IJSRuntime JS
+
+<div id="dp-@_uid" style="position:relative;user-select:none;" @onkeydown="OnKeyDown">
+
+    @* Input trigger *@
+    <div @onclick="Toggle"
+         style="display:flex;align-items:center;gap:8px;border:@(isOpen ? "2px solid var(--primary)" : "1.5px solid var(--border)");border-radius:var(--radius);background:var(--surface);padding:@InputPadding;cursor:pointer;transition:border-color .15s,border-width .15s;min-height:38px;box-sizing:border-box;">
+        <i class="bi bi-calendar3" style="font-size:14px;color:@(Value.HasValue ? "var(--primary)" : "var(--text-muted)");flex-shrink:0;"></i>
+        <span style="flex:1;font-size:14px;color:@(Value.HasValue ? "var(--text-primary)" : "var(--text-muted)");">
+            @(Value.HasValue ? Value.Value.ToString("dd MMMM yyyy", CultureId) : Placeholder)
+        </span>
+        @if (Value.HasValue)
+        {
+            <span @onclick:stopPropagation @onclick="Clear"
+                  style="color:var(--text-muted);font-size:16px;line-height:1;cursor:pointer;padding:0 2px;"
+                  onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'">
+                &times;
+            </span>
+        }
+    </div>
+
+    @* Calendar popup *@
+    @if (isOpen)
+    {
+        <div @onclick="CloseBackdrop" style="position:fixed;inset:0;z-index:199;"></div>
+        <div style="@PopupPositionStyle z-index:200;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);width:300px;overflow:hidden;"
+             @onclick:stopPropagation>
+
+            @* Month / Year navigation *@
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-light);">
+                <button type="button" @onclick="PrevMonth"
+                        style="width:32px;height:32px;border:none;border-radius:8px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:16px;"
+                        onmouseover="this.style.background='var(--primary-light)';this.style.color='var(--primary)'"
+                        onmouseout="this.style.background='transparent';this.style.color='var(--text-secondary)'">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+
+                <div @onclick="ToggleYearMonthPicker" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 10px;border-radius:8px;transition:background .15s;"
+                     onmouseover="this.style.background='var(--primary-light)'"
+                     onmouseout="this.style.background='transparent'">
+                    <span style="font-size:14px;font-weight:700;color:var(--text-primary);">
+                        @MonthNames[viewDate.Month - 1] @viewDate.Year
+                    </span>
+                    <i class="bi bi-chevron-@(showYearMonthPicker ? "up" : "down")" style="font-size:11px;color:var(--text-muted);"></i>
+                </div>
+
+                <button type="button" @onclick="NextMonth"
+                        style="width:32px;height:32px;border:none;border-radius:8px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:16px;"
+                        onmouseover="this.style.background='var(--primary-light)';this.style.color='var(--primary)'"
+                        onmouseout="this.style.background='transparent';this.style.color='var(--text-secondary)'">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+
+            @* Year/Month quick-pick *@
+            @if (showYearMonthPicker)
+            {
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border-light);">
+                    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Bulan</div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:12px;">
+                        @for (int m = 1; m <= 12; m++)
+                        {
+                            var month = m;
+                            var isCurrentMonth = viewDate.Month == month;
+                            <button type="button" @onclick="() => SelectMonth(month)"
+                                    style="padding:5px 2px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:@(isCurrentMonth ? "700" : "400");background:@(isCurrentMonth ? "var(--primary)" : "transparent");color:@(isCurrentMonth ? "white" : "var(--text-primary)");transition:all .12s;"
+                                    onmouseover="if(this.style.background!='var(--primary)')this.style.background='var(--primary-light)'"
+                                    onmouseout="if(this.style.background!='var(--primary)')this.style.background='transparent'">
+                                @MonthShort[month - 1]
+                            </button>
+                        }
+                    </div>
+                    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Tahun</div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+                        @for (int y = viewDate.Year - 4; y <= viewDate.Year + 4; y++)
+                        {
+                            var year = y;
+                            var isCurrentYear = viewDate.Year == year;
+                            <button type="button" @onclick="() => SelectYear(year)"
+                                    style="padding:5px 2px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:@(isCurrentYear ? "700" : "400");background:@(isCurrentYear ? "var(--primary)" : "transparent");color:@(isCurrentYear ? "white" : "var(--text-primary)");transition:all .12s;"
+                                    onmouseover="if(this.style.background!='var(--primary)')this.style.background='var(--primary-light)'"
+                                    onmouseout="if(this.style.background!='var(--primary)')this.style.background='transparent'">
+                                @year
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* Day-of-week header *@
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:0;padding:10px 12px 4px;">
+                @foreach (var day in DayLabels)
+                {
+                    <div style="text-align:center;font-size:11px;font-weight:700;color:var(--text-muted);padding:4px 0;">@day</div>
+                }
+            </div>
+
+            @* Day cells *@
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 12px 12px;">
+                @foreach (var cell in CalendarCells)
+                {
+                    var c = cell;
+                    @if (c.Date == DateTime.MinValue)
+                    {
+                        <div></div>
+                    }
+                    else
+                    {
+                        var isSelected = Value.HasValue && Value.Value.Date == c.Date.Date;
+                        var isToday = c.Date.Date == DateTime.Today;
+                        var isOtherMonth = c.Date.Month != viewDate.Month;
+                        var isDisabled = (MinDate.HasValue && c.Date.Date < MinDate.Value.Date) ||
+                                         (MaxDate.HasValue && c.Date.Date > MaxDate.Value.Date);
+
+                        string bg = isSelected ? "var(--primary)" : "transparent";
+                        string color = isSelected ? "white" : isDisabled ? "var(--text-muted)" : isOtherMonth ? "#bbb" : "var(--text-primary)";
+                        string border = isToday && !isSelected ? "1.5px solid var(--primary)" : "1.5px solid transparent";
+                        string fontW = isSelected || isToday ? "700" : "400";
+                        string cursor = isDisabled ? "not-allowed" : "pointer";
+                        string opacity = isDisabled ? "0.4" : "1";
+
+                        <div @onclick="@(!isDisabled ? () => SelectDate(c.Date) : null)"
+                             style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:13px;font-weight:@fontW;background:@bg;color:@color;border:@border;cursor:@cursor;opacity:@opacity;transition:all .12s;"
+                             onmouseover="@(!isDisabled ? $"if(this.style.background!='var(--primary)'){{this.style.background='var(--primary-light)';this.style.color='var(--primary)';}}" : "")"
+                             onmouseout="@(!isDisabled ? $"if(this.style.background!='var(--primary)'){{this.style.background='transparent';this.style.color='{color}';}}" : "")">
+                            @c.Date.Day
+                        </div>
+                    }
+                }
+            </div>
+
+            @* Footer *@
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-top:1px solid var(--border-light);">
+                <button type="button" @onclick="Clear"
+                        style="background:none;border:none;font-size:13px;color:var(--danger);cursor:pointer;font-weight:500;padding:0;"
+                        onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
+                    Hapus
+                </button>
+                <button type="button" @onclick="GoToToday"
+                        style="background:none;border:none;font-size:13px;color:var(--primary);cursor:pointer;font-weight:600;padding:0;"
+                        onmouseover="this.style.opacity='.7'" onmouseout="this.style.opacity='1'">
+                    Hari Ini
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public DateTime? Value { get; set; }
+    [Parameter] public EventCallback<DateTime?> ValueChanged { get; set; }
+    [Parameter] public EventCallback ValueChangedCallback { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Pilih tanggal...";
+    [Parameter] public DateTime? MinDate { get; set; }
+    [Parameter] public DateTime? MaxDate { get; set; }
+    [Parameter] public string InputPadding { get; set; } = "8px 12px";
+    [Parameter] public bool UseFixed { get; set; }
+
+    private bool isOpen;
+    private bool showYearMonthPicker;
+    private DateTime viewDate = DateTime.Today;
+    private double _fixedTop;
+    private double _fixedLeft;
+    private readonly string _uid = Guid.NewGuid().ToString("N")[..8];
+
+    private static readonly CultureInfo CultureId = new("id-ID");
+
+    private static readonly string[] MonthNames = {
+        "Januari","Februari","Maret","April","Mei","Juni",
+        "Juli","Agustus","September","Oktober","November","Desember"
+    };
+    private static readonly string[] MonthShort = {
+        "Jan","Feb","Mar","Apr","Mei","Jun",
+        "Jul","Agu","Sep","Okt","Nov","Des"
+    };
+    private static readonly string[] DayLabels = { "Min","Sen","Sel","Rab","Kam","Jum","Sab" };
+
+    protected override void OnParametersSet()
+    {
+        if (Value.HasValue && viewDate.Month != Value.Value.Month)
+            viewDate = new DateTime(Value.Value.Year, Value.Value.Month, 1);
+    }
+
+    private record CalendarCell(DateTime Date);
+
+    private IEnumerable<CalendarCell> CalendarCells
+    {
+        get
+        {
+            var first = new DateTime(viewDate.Year, viewDate.Month, 1);
+            int startOffset = ((int)first.DayOfWeek); // Sunday = 0
+            for (int i = 0; i < startOffset; i++)
+                yield return new CalendarCell(DateTime.MinValue);
+
+            var daysInMonth = DateTime.DaysInMonth(viewDate.Year, viewDate.Month);
+            for (int d = 1; d <= daysInMonth; d++)
+                yield return new CalendarCell(new DateTime(viewDate.Year, viewDate.Month, d));
+        }
+    }
+
+    private string PopupPositionStyle => UseFixed
+        ? $"position:fixed;top:{_fixedTop}px;left:{_fixedLeft}px;"
+        : "position:absolute;top:calc(100% + 6px);left:0;";
+
+    private async Task Toggle()
+    {
+        if (isOpen)
+        {
+            isOpen = false;
+            showYearMonthPicker = false;
+            return;
+        }
+
+        showYearMonthPicker = false;
+        viewDate = Value.HasValue
+            ? new DateTime(Value.Value.Year, Value.Value.Month, 1)
+            : new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+        if (UseFixed)
+        {
+            var r = await JS.InvokeAsync<double[]>("eval",
+                $"(function(){{var e=document.getElementById('dp-{_uid}');var r=e.getBoundingClientRect();return[r.bottom,r.left];}})()");
+            _fixedTop = r[0] + 6;
+            _fixedLeft = r[1];
+        }
+
+        isOpen = true;
+    }
+
+    private void CloseBackdrop() { isOpen = false; showYearMonthPicker = false; }
+
+    private void ToggleYearMonthPicker() => showYearMonthPicker = !showYearMonthPicker;
+
+    private void PrevMonth()
+    {
+        viewDate = viewDate.AddMonths(-1);
+        showYearMonthPicker = false;
+    }
+
+    private void NextMonth()
+    {
+        viewDate = viewDate.AddMonths(1);
+        showYearMonthPicker = false;
+    }
+
+    private void SelectMonth(int month)
+    {
+        viewDate = new DateTime(viewDate.Year, month, 1);
+        showYearMonthPicker = false;
+    }
+
+    private void SelectYear(int year)
+    {
+        viewDate = new DateTime(year, viewDate.Month, 1);
+        showYearMonthPicker = false;
+    }
+
+    private async Task SelectDate(DateTime date)
+    {
+        isOpen = false;
+        showYearMonthPicker = false;
+        await ValueChanged.InvokeAsync(date);
+        if (ValueChangedCallback.HasDelegate)
+            await ValueChangedCallback.InvokeAsync();
+    }
+
+    private async Task Clear()
+    {
+        isOpen = false;
+        await ValueChanged.InvokeAsync(null);
+        if (ValueChangedCallback.HasDelegate)
+            await ValueChangedCallback.InvokeAsync();
+    }
+
+    private void GoToToday()
+    {
+        viewDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        showYearMonthPicker = false;
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") { isOpen = false; showYearMonthPicker = false; }
+    }
+}

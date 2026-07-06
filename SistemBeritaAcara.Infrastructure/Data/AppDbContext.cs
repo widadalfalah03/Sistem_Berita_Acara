@@ -19,6 +19,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
     public DbSet<BACounter> BACounter => Set<BACounter>();
     public DbSet<PegawaiImportLog> PegawaiImportLog => Set<PegawaiImportLog>();
     public DbSet<BarangImportLog> BarangImportLog => Set<BarangImportLog>();
+    public DbSet<PerpanjanganBA> PerpanjanganBA => Set<PerpanjanganBA>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -175,6 +176,17 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, Microsoft.AspNetC
                 .WithMany(u => u.BarangImportLogs)
                 .HasForeignKey(l => l.ImportedBy)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<PerpanjanganBA>(e =>
+        {
+            e.HasKey(p => p.Id);
+            e.Property(p => p.Catatan).HasMaxLength(300);
+            e.Property(p => p.DiperpanjangPada).HasDefaultValueSql("GETDATE()");
+            e.HasOne(p => p.BeritaAcara)
+                .WithMany()
+                .HasForeignKey(p => p.BeritaAcaraId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

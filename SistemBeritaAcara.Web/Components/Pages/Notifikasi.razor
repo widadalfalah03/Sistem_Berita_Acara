@@ -6,7 +6,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
-@rendermode InteractiveServer
+
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 <PageTitle>Inbox — Sistem Berita Acara</PageTitle>
@@ -93,7 +93,6 @@
     }
 </style>
 
-<!-- Tab bar & Actions -->
 <div class="notif-header-wrapper">
     <div class="segmented-control">
         <button class="segment-btn @(activeTab == "unread" ? "active" : "")" @onclick="SetTabUnread">
@@ -266,17 +265,25 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var appUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
-        if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
-        currentUserId = appUser.Id;
-        
-        if (!string.IsNullOrEmpty(TabQuery))
+        try
         {
-            _activeTab = TabQuery;
-        }
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var appUser = await UserManager.FindByEmailAsync(auth.User.Identity?.Name ?? "");
+            if (appUser is null) { Navigation.NavigateTo("/login", true); return; }
+            currentUserId = appUser.Id;
 
-        await LoadAsync();
+            if (!string.IsNullOrEmpty(TabQuery))
+            {
+                _activeTab = TabQuery;
+            }
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[Notifikasi] OnInitializedAsync error: {ex.Message}");
+            isLoading = false;
+        }
     }
 
     private void SetTabAll() => activeTab = "all";
@@ -358,7 +365,7 @@ else
     {
         "BA_APPROVED" => "Berita Acara Disetujui",
         "BA_REJECTED" => "Berita Acara Ditolak",
-        "WAITING_APPROVAL" => "Menunggu Persetujuan",
+        "WAITING_APPROVAL" => "Menunggu TTD Reviewer",
         "WAITING_PJ_SIGN" => "Menunggu Tanda Tangan PJ",
         "PJ_SIGNED" => "PJ Sudah Menandatangani",
         "DUE_TODAY" => "Jatuh Tempo Hari Ini",

@@ -8,33 +8,28 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject IJSRuntime JS
-@rendermode InteractiveServer
+
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
 
 <PageTitle>Data Barang — Sistem Berita Acara</PageTitle>
 
 <div class="page-header d-flex align-center justify-between">
-    <div>
-        <h1 class="page-title"></h1>
-    </div>
+    <div></div>
     <div style="display:flex;gap:8px;">
         <button @onclick="ExportExcelAsync" disabled="@isExporting"
-                style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid #16A34A;background:#F0FDF4;color:#16A34A;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
-                onmouseover="if(!this.disabled)this.style.background='#DCFCE7'" onmouseout="this.style.background='#F0FDF4'">
-            <i class="bi bi-file-earmark-excel" style="font-size:15px;"></i>
+                style="display:inline-flex;align-items:center;padding:8px 16px;border-radius:var(--radius);border:none;background:#16A34A;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;"
+                onmouseover="if(!this.disabled)this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
             @(isExporting ? "Mengexport..." : "Export Excel")
         </button>
         <button @onclick="() => showUpload = true"
-                style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
-                onmouseover="this.style.background='var(--primary-light)';this.style.borderColor='var(--primary)';this.style.color='var(--primary)'"
-                onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text-primary)'">
-            <i class="bi bi-upload" style="font-size:14px;"></i>
+                style="display:inline-flex;align-items:center;padding:8px 16px;border-radius:var(--radius);border:none;background:var(--surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
+                onmouseover="this.style.color='var(--primary)';this.style.background='var(--primary-light)'"
+                onmouseout="this.style.color='var(--text-secondary)';this.style.background='var(--surface)'">
             Import Excel
         </button>
     </div>
 </div>
 
-<!-- Stat Card -->
 <div class="stat-cards" style="grid-template-columns:repeat(1,1fr);max-width:220px;margin-bottom:24px;">
     <div class="stat-card">
         <div class="stat-card-icon total"><i class="bi bi-box-seam"></i></div>
@@ -45,7 +40,6 @@
     </div>
 </div>
 
-<!-- Alert -->
 @if (!string.IsNullOrEmpty(alertMessage))
 {
     <div style="background:@(alertIsError ? "var(--danger-light)" : "#F0FDF4");border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;color:@(alertIsError ? "var(--danger)" : "#16A34A");font-size:14px;display:flex;align-items:center;gap:8px;">
@@ -54,7 +48,6 @@
     </div>
 }
 
-<!-- Search + Tambah -->
 <div class="search-bar" style="justify-content:space-between;">
     <div style="display:flex;align-items:center;gap:12px;">
         <div class="search-input" style="max-width:320px;">
@@ -81,10 +74,8 @@ else
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="cursor:pointer;" @onclick="@(() => SortTable("Nama Barang"))">
-                            Nama Barang <i class="bi @GetSortIcon("Nama Barang")" style="margin-left:4px;font-size:11px;color:var(--text-muted);"></i>
-                        </th>
-                        <th style="width:100px;text-align:center;">Aksi</th>
+                        <th>Nama Barang</th>
+                        <th style="width:80px;text-align:center;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -93,18 +84,18 @@ else
                         <tr>
                             <td class="fw-semibold">@b.NamaBarang</td>
                             <td style="text-align:center;">
-                                <div style="display:flex;gap:4px;justify-content:center;">
+                                <div style="display:flex;gap:6px;justify-content:center;">
                                     <button @onclick="() => OpenEdit(b)" title="Edit"
-                                            style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text-secondary);cursor:pointer;transition:all .15s;"
-                                            onmouseover="this.style.background='var(--primary-light)';this.style.borderColor='var(--primary)';this.style.color='var(--primary)'"
-                                            onmouseout="this.style.background='var(--surface)';this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
-                                        <i class="bi bi-pencil" style="font-size:13px;"></i>
+                                            style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:none;background:var(--primary-light);color:var(--primary);cursor:pointer;transition:all .15s;"
+                                            onmouseover="this.style.background='var(--primary)';this.style.color='#fff'"
+                                            onmouseout="this.style.background='var(--primary-light)';this.style.color='var(--primary)'">
+                                        <i class="bi bi-pencil-fill" style="font-size:12px;"></i>
                                     </button>
                                     <button @onclick="() => OpenHapus(b)" title="Hapus"
-                                            style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;border:1px solid #FECACA;background:#FFF5F5;color:var(--danger);cursor:pointer;transition:all .15s;"
-                                            onmouseover="this.style.background='#FEE2E2';this.style.borderColor='var(--danger)'"
-                                            onmouseout="this.style.background='#FFF5F5';this.style.borderColor='#FECACA'">
-                                        <i class="bi bi-trash" style="font-size:13px;"></i>
+                                            style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:none;background:#FEE2E2;color:var(--danger);cursor:pointer;transition:all .15s;"
+                                            onmouseover="this.style.background='var(--danger)';this.style.color='#fff'"
+                                            onmouseout="this.style.background='#FEE2E2';this.style.color='var(--danger)'">
+                                        <i class="bi bi-trash-fill" style="font-size:12px;"></i>
                                     </button>
                                 </div>
                             </td>
@@ -134,7 +125,6 @@ else
     }
 }
 
-<!-- ── Modal Tambah / Edit ── -->
 @if (showForm)
 {
     <div class="modal-overlay" @onclick="CloseForm">
@@ -166,7 +156,6 @@ else
     </div>
 }
 
-<!-- ── Modal Konfirmasi Hapus ── -->
 @if (showHapus && hapusTarget != null)
 {
     <div class="modal-overlay" @onclick="() => showHapus = false">
@@ -188,7 +177,6 @@ else
     </div>
 }
 
-<!-- ── Modal Import Excel ── -->
 @if (showUpload)
 {
     <div class="modal-overlay" @onclick="() => showUpload = false">
@@ -236,8 +224,6 @@ else
     private string formError = string.Empty;
     private string formNamaBarang = string.Empty;
 
-    private string sortColumn = "Nama Barang";
-    private bool sortAscending = true;
     private int currentPage = 1;
     private int pageSize = 10;
     private string _search = string.Empty;
@@ -245,19 +231,6 @@ else
     {
         get => _search;
         set { _search = value; currentPage = 1; }
-    }
-
-    private void SortTable(string column)
-    {
-        if (sortColumn == column) sortAscending = !sortAscending;
-        else { sortColumn = column; sortAscending = true; }
-        currentPage = 1;
-    }
-
-    private string GetSortIcon(string column)
-    {
-        if (sortColumn != column) return "bi-arrow-down-up";
-        return sortAscending ? "bi-arrow-up text-primary" : "bi-arrow-down text-primary";
     }
 
     private int TotalFilteredItems => allBarang
@@ -274,11 +247,7 @@ else
                 .Where(b => string.IsNullOrEmpty(search) ||
                             b.NamaBarang.Contains(search, StringComparison.OrdinalIgnoreCase));
 
-            query = sortColumn == "Nama Barang"
-                ? (sortAscending ? query.OrderBy(b => b.NamaBarang) : query.OrderByDescending(b => b.NamaBarang))
-                : query;
-
-            return query.Skip((currentPage - 1) * pageSize).Take(pageSize);
+            return query.OrderBy(b => b.NamaBarang).Skip((currentPage - 1) * pageSize).Take(pageSize);
         }
     }
 
@@ -405,9 +374,16 @@ else
             using var stream = e.File.OpenReadStream(10_000_000);
             var (added, updated, deactivated, errors) = await ExcelService.ImportBarangAsync(stream, currentUser!.Id, e.File.Name);
             showUpload = false;
-            SetAlert($"Berhasil: {added} ditambahkan, {updated} diperbarui, {deactivated} dinonaktifkan." +
-                     (errors.Any() ? $" Kesalahan: {string.Join("; ", errors)}" : ""), false);
-            await LoadAsync();
+            if (errors.Any() && added == 0 && updated == 0 && deactivated == 0)
+            {
+                SetAlert(errors[0], true);
+            }
+            else
+            {
+                SetAlert($"Berhasil: {added} ditambahkan, {updated} diperbarui, {deactivated} dinonaktifkan." +
+                         (errors.Any() ? $" Peringatan: {string.Join("; ", errors)}" : ""), false);
+                await LoadAsync();
+            }
         }
         catch (Exception ex) { SetAlert($"Gagal impor: {ex.Message}", true); }
         finally { isImporting = false; }

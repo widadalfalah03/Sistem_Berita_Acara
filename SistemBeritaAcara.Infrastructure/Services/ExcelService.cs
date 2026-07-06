@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SistemBeritaAcara.Core.Entities;
@@ -9,7 +9,6 @@ namespace SistemBeritaAcara.Infrastructure.Services;
 
 public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService, IConfiguration configuration) : IExcelService
 {
-    // H-7: Mutex untuk cegah concurrent write ke file Excel arsip
     private static readonly SemaphoreSlim _archiveLock = new(1, 1);
 
     public async Task<(int added, int updated, int deactivated, List<string> errors)> ImportPegawaiAsync(
@@ -24,18 +23,50 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
 
         using var workbook = new XLWorkbook(ms);
         var sheet = workbook.Worksheet(1);
+
+        // Normalisasi header: lowercase, hanya alfanumerik + spasi
+        static string Norm(string s) => new string(s.ToLowerInvariant().Where(c => char.IsLetterOrDigit(c) || c == ' ').ToArray()).Trim();
+
+        // Baca semua header dari baris 1, petakan nama → indeks kolom
+        var headerRow = sheet.Row(1);
+        var colMap = new Dictionary<string, int>();
+        int lastCol = headerRow.LastCellUsed()?.Address.ColumnNumber ?? 0;
+        for (int c = 1; c <= lastCol; c++)
+        {
+            var h = Norm(headerRow.Cell(c).Value.ToString());
+            if (!string.IsNullOrEmpty(h) && !colMap.ContainsKey(h))
+                colMap[h] = c;
+        }
+        // "fungsi" dan "fungsi direktorat" keduanya diarahkan ke key yang sama
+        if (!colMap.ContainsKey("fungsi direktorat") && colMap.ContainsKey("fungsi"))
+            colMap["fungsi direktorat"] = colMap["fungsi"];
+
+        // Validasi kolom wajib: Nama, No. Pekerja, Email
+        foreach (var required in new[] { "nama", "no pekerja", "email" })
+        {
+            if (!colMap.ContainsKey(required))
+                return (0, 0, 0, [$"Format file tidak valid. Kolom wajib '{required}' tidak ditemukan. Pastikan file memiliki kolom Nama, No. Pekerja, dan Email."]);
+        }
+
+        int colNama        = colMap["nama"];
+        int colNoPekerja   = colMap["no pekerja"];
+        int colEmail       = colMap["email"];
+        int colJabatan     = colMap.GetValueOrDefault("jabatan", 0);
+        int colFungsi      = colMap.GetValueOrDefault("fungsi direktorat", 0);
+        int colCostCenter  = colMap.GetValueOrDefault("cost center", 0);
+
         var rows = sheet.RowsUsed().Skip(1).ToList();
 
         var noPekerjaInExcel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var row in rows)
         {
-            string nama = row.Cell(1).Value.ToString().Trim();
-            string noPekerja = row.Cell(2).Value.ToString().Trim();
-            string jabatan = row.Cell(3).Value.ToString().Trim();
-            string fungsi = row.Cell(4).Value.ToString().Trim();
-            string email = row.Cell(5).Value.ToString().Trim();
-            string costCenter = row.Cell(6).Value.ToString().Trim();
+            string nama      = row.Cell(colNama).Value.ToString().Trim();
+            string noPekerja = row.Cell(colNoPekerja).Value.ToString().Trim();
+            string email     = row.Cell(colEmail).Value.ToString().Trim();
+            string jabatan   = colJabatan > 0 ? row.Cell(colJabatan).Value.ToString().Trim() : string.Empty;
+            string fungsi    = colFungsi > 0 ? row.Cell(colFungsi).Value.ToString().Trim() : string.Empty;
+            string costCenter = colCostCenter > 0 ? row.Cell(colCostCenter).Value.ToString().Trim() : string.Empty;
 
             if (string.IsNullOrEmpty(noPekerja)) continue;
             if (!noPekerjaInExcel.Add(noPekerja)) continue; // Skip duplicates within the file
@@ -125,13 +156,19 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
 
         using var workbook = new XLWorkbook(ms);
         var sheet = workbook.Worksheet(1);
+
+        // Validasi kolom wajib Data Barang (normalisasi: lowercase, hanya alfanumerik+spasi)
+        static string NormB(string s) => new string(s.ToLowerInvariant().Where(c => char.IsLetterOrDigit(c) || c == ' ').ToArray()).Trim();
+        var col1Norm = NormB(sheet.Cell(1, 1).Value.ToString());
+        if (col1Norm != "nama barang")
+            return (0, 0, 0, [$"Format file tidak valid. Kolom pertama harus 'Nama Barang', ditemukan '{col1Norm}'. Pastikan menggunakan template Data Barang yang benar."]);
+
         var rows = sheet.RowsUsed().Skip(1).ToList();
 
         var namaInExcel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var row in rows)
         {
-            // Hanya menggunakan Kolom 1 sebagai Nama Barang
             string nama = row.Cell(1).Value.ToString().Trim();
 
             if (string.IsNullOrEmpty(nama)) continue;
@@ -188,7 +225,6 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
 
     public async Task AppendBeritaAcaraToArsipAsync(BeritaAcara ba)
     {
-        // H-7: Gunakan semaphore agar hanya satu proses yang membaca+menulis file Excel secara bersamaan
         await _archiveLock.WaitAsync();
         try
         {
@@ -265,7 +301,6 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
             var docCell = sheet.Cell(row, 4);
             if (!string.IsNullOrEmpty(docPath))
             {
-                // PDF path is usually the docx path with .pdf extension, assuming they are converted
                 string pdfPath = docPath.Replace(".docx", ".pdf");
                 string pdfName = Path.GetFileName(pdfPath);
                 string fileUrl = $"{baseUrl.TrimEnd('/')}/{pdfPath.TrimStart('/')}";

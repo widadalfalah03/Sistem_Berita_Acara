@@ -6,7 +6,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
-@rendermode InteractiveServer
+
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
 
 <PageTitle>Draft Dokumen — Sistem Berita Acara</PageTitle>
@@ -80,7 +80,6 @@ else
     </div>
 
     <div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:24px;">
-        <!-- List Items -->
         <div>
             @foreach (var ba in PaginatedDrafts)
             {
@@ -114,7 +113,6 @@ else
     }
 }
 
-<!-- Confirm delete all modal -->
 @if (deleteAllConfirm)
 {
     <div class="modal-overlay" @onclick="() => deleteAllConfirm = false">
@@ -140,7 +138,6 @@ else
     </div>
 }
 
-<!-- Confirm delete modal -->
 @if (deleteConfirmId.HasValue)
 {
     <div class="modal-overlay" @onclick="() => deleteConfirmId = null">

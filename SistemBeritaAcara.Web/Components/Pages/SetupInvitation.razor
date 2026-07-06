@@ -10,11 +10,10 @@
 
 <PageTitle>Setup Akun — Sistem Berita Acara</PageTitle>
 
-<div class="login-page">
-    <div class="login-card" style="max-width:480px;width:100%;">
+<div class="login-page" style="overflow-y:auto;align-items:flex-start;padding:32px 24px;">
+    <div class="login-card" style="max-width:480px;width:100%;margin:auto;">
         <div class="login-card-body">
-            <!-- Logo only, no text heading -->
-            <div class="login-logo" style="display:flex;flex-direction:column;align-items:center;margin-bottom: 8px;">
+            <div class="login-logo" style="display:flex;flex-direction:column;align-items:center;margin-bottom:8px;">
                 <img src="/images/simba_logo_final.png" style="height:auto;max-height:280px;width:auto;max-width:100%;object-fit:contain;margin-top:-24px;margin-bottom:-16px;" alt="SIMBA" />
             </div>
 
@@ -50,6 +49,7 @@
                         </div>
                     }
 
+                    <form @onsubmit="ProcessStep1" @onsubmit:preventDefault>
                     <div class="form-group">
                         <input class="login-input" type="email" value="@email" readonly style="background:transparent; cursor:not-allowed;" placeholder="Email Address" />
                     </div>
@@ -72,9 +72,8 @@
                         </div>
                     </div>
 
-                    <button class="login-btn" @onclick="ProcessStep1">
-                        <span>Selanjutnya <i class="bi bi-arrow-right"></i></span>
-                    </button>
+                    <button type="submit" class="login-btn">Selanjutnya</button>
+                    </form>
                 }
                 else if (step == 2)
                 {
@@ -89,66 +88,59 @@
                         </div>
                     }
 
-                    <!-- Tab bar -->
                     <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;">
-                        <button @onclick='() => SwitchSetupMode("draw")'
+                        <button type="button" @onclick='() => SwitchSetupMode("draw")'
                                 style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:@(setupTtdMode=="draw"?"var(--primary)":"transparent");color:@(setupTtdMode=="draw"?"white":"var(--text-secondary)");">
-                            <i class="bi bi-pen-fill" style="margin-right:5px;"></i>Gambar
+                            Gambar
                         </button>
-                        <button @onclick='() => SwitchSetupMode("upload")'
+                        <button type="button" @onclick='() => SwitchSetupMode("upload")'
                                 style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(setupTtdMode=="upload"?"var(--primary)":"transparent");color:@(setupTtdMode=="upload"?"white":"var(--text-secondary)");">
-                            <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload Gambar
+                            Upload TTD
                         </button>
                     </div>
 
-                    <!-- MODE: GAMBAR -->
+                    <form @onsubmit="ProcessStep2" @onsubmit:preventDefault>
                     <div style="display:@(setupTtdMode == "draw" ? "block" : "none")">
-                        <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg-card);margin-bottom:10px;overflow:hidden;">
+                        <div style="border:2px solid var(--border);border-radius:var(--radius);background:white;margin-bottom:8px;overflow:hidden;height:200px;">
                             <canvas id="setup-ttd-canvas" width="400" height="200"
-                                    style="width:100%;height:160px;display:block;touch-action:none;cursor:crosshair;"></canvas>
+                                    style="width:100%;height:200px;display:block;touch-action:none;cursor:crosshair;"></canvas>
                         </div>
-                        <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-                            <button class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                            <button type="button" class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
                                 <i class="bi bi-eraser"></i> Hapus
                             </button>
                         </div>
                     </div>
 
-                    <!-- MODE: UPLOAD -->
-                    <div style="display:@(setupTtdMode == "upload" ? "block" : "none")">
-                        <label for="setup-ul-input" style="cursor:pointer;display:block;margin-bottom:10px;">
-                            <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg-card);padding:18px;text-align:center;"
-                                 onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-                                <i class="bi bi-image" style="font-size:26px;color:var(--primary);display:block;margin-bottom:6px;"></i>
-                                <div style="font-weight:600;font-size:13px;margin-bottom:2px;">Klik untuk pilih gambar</div>
-                                <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
-                            </div>
+                    <div style="display:@(setupTtdMode == "upload" ? "block" : "none");position:relative;height:200px;margin-bottom:12px;">
+                        <label for="setup-ul-input" style="position:absolute;inset:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg-card);"
+                               onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                            <i class="bi bi-image" style="font-size:26px;color:var(--primary);margin-bottom:6px;"></i>
+                            <div style="font-weight:600;font-size:13px;margin-bottom:2px;">Klik untuk pilih gambar</div>
+                            <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
                             <input type="file" id="setup-ul-input" accept="image/*" style="display:none"
                                    onchange="ttdUpload.onFileChange('setup-ul-input', 'setup-ul-canvas', 'setup-ul-wrap')" />
                         </label>
-
-                        <div id="setup-ul-wrap" style="display:none;margin-bottom:10px;">
-                            <div style="background:white;border-radius:var(--radius);border:2px solid var(--border);padding:6px;min-height:60px;display:flex;align-items:center;justify-content:center;">
-                                <canvas id="setup-ul-canvas" style="display:block;max-width:100%;height:auto;"></canvas>
-                            </div>
+                        <div id="setup-ul-wrap" style="display:none;position:absolute;inset:0;background:white;border-radius:var(--radius);border:2px solid var(--border);overflow:hidden;align-items:center;justify-content:center;">
+                            <canvas id="setup-ul-canvas" style="display:block;max-width:100%;max-height:100%;"></canvas>
                         </div>
                     </div>
 
-                    <button class="login-btn" @onclick="ProcessStep2" disabled="@isSaving">
-                        @if (isSaving)
-                        {
-                        }
-                        else
-                        {
-                            <span>Selesai & Login <i class="bi bi-box-arrow-in-right"></i></span>
-                        }
+                    <button type="submit" class="login-btn" disabled="@isSaving">
+                        Buat Akun
                     </button>
+                    </form>
                 }
             }
         </div>
     </div>
 </div>
 
+<form id="invitationAutoLoginForm" method="post" action="/account/login" style="display:none;">
+    <input type="hidden" name="email" value="@email" />
+    <input type="hidden" name="password" value="@newPassword" />
+    <input type="hidden" name="returnUrl" value="/dashboard" />
+</form>
 
 @code {
     [SupplyParameterFromQuery]
@@ -267,7 +259,7 @@
         if (setupTtdMode == "upload")
         {
             bool hasImg = await JS.InvokeAsync<bool>("ttdUpload.hasImage");
-            if (!hasImg) { errorMessage = "Silakan upload gambar tanda tangan terlebih dahulu."; return; }
+            if (!hasImg) { errorMessage = "Silakan upload TTD terlebih dahulu."; return; }
             dataUrl = await JS.InvokeAsync<string>("ttdUpload.getDataUrl");
         }
         else
@@ -313,11 +305,11 @@
 
             user.TtdPath = $"files/signatures/{fileName}";
             user.EmailConfirmed = true;  // Aktifkan akun setelah setup selesai
-            
+
             var updateResult = await UserManager.UpdateAsync(user);
 
-            // Redirect ke login — user login manual dengan password yang baru dibuat
-            Navigation.NavigateTo("/login");
+            // Auto-login langsung ke dashboard via hidden form
+            await JS.InvokeVoidAsync("eval", "document.getElementById('invitationAutoLoginForm').submit();");
         }
         catch (Exception ex)
         {

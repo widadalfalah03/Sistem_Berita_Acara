@@ -1,4 +1,4 @@
-﻿@page "/tambah-pengguna"
+@page "/tambah-pengguna"
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using PegawaiEntity = SistemBeritaAcara.Core.Entities.Pegawai
@@ -14,10 +14,10 @@
 
 <div class="add-user-card">
     <h2>Tambah Pengguna</h2>
-    <p>Cari pegawai berdasarkan nama atau No. Pekerja untuk ditambahkan sebagai pengguna sistem.</p>
+    <p>Cari pekerja berdasarkan nama atau No. Pekerja untuk ditambahkan sebagai pengguna sistem.</p>
 
     <div class="form-group">
-        <label class="form-label">Cari Pegawai</label>
+        <label class="form-label">Cari Pekerja</label>
         <div class="search-input">
             <i class="bi bi-search"></i>
             <input type="text" placeholder="Masukkan Nama atau No. Pekerja..."
@@ -50,7 +50,7 @@
                     else
                     {
                         <button class="btn btn-primary btn-sm" @onclick="() => SelectPegawai(p)">
-                            <i class="bi bi-plus-lg"></i> Tambah
+                            Tambah
                         </button>
                     }
                 </div>
@@ -65,39 +65,32 @@
         </div>
     }
 
-    <!-- Setup Role Form (after selecting) -->
     @if (selectedPegawai is not null && !formSaved)
     {
         <div style="border-top:1px solid var(--border);margin-top:24px;padding-top:24px;">
 
             <div class="form-group">
                 <label class="form-label">Role <span style="color:var(--danger)">*</span></label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
-                    @{
-                        var roles = new[] {
-                            new { Value = "AdminGudangBarang", Text = "Admin Gudang & Barang", Icon = "bi-box-seam", Desc = "Kelola & buat Berita Acara" },
-                            new { Value = "Reviewer", Text = "Reviewer", Icon = "bi-person-check", Desc = "Menyetujui Berita Acara" }
-                        };
-                        foreach (var r in roles)
-                        {
-                            var isSelected = selectedRole == r.Value;
-                            <div @onclick="() => { selectedRole = r.Value; }"
-                                 style="padding:14px 16px;cursor:pointer;border:2px solid @(isSelected ? "var(--primary)" : "var(--border)");border-radius:var(--radius);background:@(isSelected ? "color-mix(in srgb,var(--primary) 8%,transparent)" : "var(--surface)");transition:all 0.15s;">
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <div style="width:36px;height:36px;border-radius:50%;background:@(isSelected ? "var(--primary)" : "var(--bg)");display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.15s;">
-                                        <i class="bi @r.Icon" style="font-size:16px;color:@(isSelected ? "white" : "var(--text-secondary)")"></i>
-                                    </div>
-                                    <div>
-                                        <div style="font-size:13px;font-weight:600;color:@(isSelected ? "var(--primary)" : "var(--text-primary)")">@r.Text</div>
-                                        <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">@r.Desc</div>
-                                    </div>
-                                    @if (isSelected)
-                                    {
-                                        <i class="bi bi-check-circle-fill" style="margin-left:auto;color:var(--primary);font-size:16px;"></i>
-                                    }
+                <div style="position:relative;margin-top:4px;">
+                    <div @onclick="() => showRoleDropdown = !showRoleDropdown"
+                         style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">
+                        <span style="font-weight:500;">@(string.IsNullOrEmpty(selectedRole) ? "Pilih role..." : GetRoleLabel(selectedRole))</span>
+                        <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showRoleDropdown ? "transform:rotate(180deg);" : "")"></i>
+                    </div>
+                    @if (showRoleDropdown)
+                    {
+                        <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
+                        <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
+                            @foreach (var roleOpt in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
+                            {
+                                <div @onclick="@(() => { selectedRole = roleOpt; showRoleDropdown = false; })"
+                                     style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(selectedRole == roleOpt ? "600" : "400");background:@(selectedRole == roleOpt ? "var(--primary)" : "transparent");color:@(selectedRole == roleOpt ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
+                                     onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
+                                     onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
+                                    @GetRoleLabel(roleOpt)
                                 </div>
-                            </div>
-                        }
+                            }
+                        </div>
                     }
                 </div>
             </div>
@@ -117,7 +110,7 @@
             <div style="display:flex;gap:12px;">
                 <button class="btn btn-outline" @onclick="() => { selectedPegawai = null; selectedRole = string.Empty; }">Batal</button>
                 <button class="btn btn-primary" @onclick="CreateUserAsync" disabled="@isSaving">
-                    <i class="bi bi-person-plus"></i> Buat Akun
+                    Buat Akun
                 </button>
             </div>
         </div>
@@ -248,12 +241,7 @@
             _ = EmailService.SendUserInvitationAsync(user.Email, user.Nama, token, baseUrl);
 
             savedName = selectedPegawai.Nama;
-            savedRole = selectedRole switch
-            {
-                "AdminGudangBarang" => "Admin Gudang & Barang",
-                "Reviewer" => "Reviewer",
-                _ => selectedRole
-            };
+            savedRole = GetRoleLabel(selectedRole);
             formSaved = true;
         }
         catch (Exception ex) { errorMsg = ex.Message; }
@@ -266,4 +254,12 @@
         searchQuery = string.Empty; selectedRole = string.Empty;
         savedName = string.Empty; savedRole = string.Empty;
     }
+
+    private static string GetRoleLabel(string role) => role switch
+    {
+        "AdminIT" => "Admin IT",
+        "AdminGudangBarang" => "Admin Gudang & Barang",
+        "Reviewer" => "Reviewer",
+        _ => role
+    };
 }

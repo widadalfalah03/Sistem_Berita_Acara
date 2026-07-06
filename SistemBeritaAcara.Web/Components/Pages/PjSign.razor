@@ -81,7 +81,6 @@ else if (alreadySigned)
 else
 {
     <div class="pj-layout">
-        <!-- ═══ LEFT: PDF Preview ═══ -->
         <div class="pj-preview">
             @if (!string.IsNullOrEmpty(pdfPath))
             {
@@ -97,7 +96,6 @@ else
             }
         </div>
 
-        <!-- ═══ RIGHT: Form TTD ═══ -->
         <div class="pj-form-wrap">
             <div class="pj-header">
                 <img src="/images/simba_logo_final.png" style="height:auto;max-height:240px;width:auto;max-width:100%;object-fit:contain;margin-top:-24px;margin-bottom:-8px;" alt="SIMBA" />
@@ -111,19 +109,17 @@ else
                 <div class="error-box"><i class="bi bi-exclamation-circle-fill"></i> @actionMessage</div>
             }
 
-            <!-- Tab bar -->
             <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;">
                 <button @onclick='() => SwitchPjMode("draw")'
                         style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;background:@(pjTtdMode=="draw"?"var(--primary)":"transparent");color:@(pjTtdMode=="draw"?"white":"var(--text-secondary)");">
-                    <i class="bi bi-pen-fill" style="margin-right:5px;"></i>Gambar
+                    Gambar
                 </button>
                 <button @onclick='() => SwitchPjMode("upload")'
                         style="flex:1;padding:9px 10px;font-size:13px;font-weight:600;border:none;border-left:1px solid var(--border);cursor:pointer;transition:all .15s;background:@(pjTtdMode=="upload"?"var(--primary)":"transparent");color:@(pjTtdMode=="upload"?"white":"var(--text-secondary)");">
-                    <i class="bi bi-cloud-upload-fill" style="margin-right:5px;"></i>Upload Gambar
+                    Upload TTD
                 </button>
             </div>
 
-            <!-- MODE: GAMBAR -->
             <div style="display:@(pjTtdMode == "draw" ? "block" : "none")">
                 <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">Gambar tanda tangan Anda di kotak ini:</div>
                 <div class="canvas-wrap">
@@ -139,12 +135,11 @@ else
                 </div>
                 <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
                     <button type="button" class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
-                        <i class="bi bi-eraser"></i> Bersihkan
+                        Bersihkan
                     </button>
                 </div>
             </div>
 
-            <!-- MODE: UPLOAD -->
             <div style="display:@(pjTtdMode == "upload" ? "block" : "none");margin-bottom:16px;">
                 <label for="pj-ul-input" style="cursor:pointer;display:block;">
                     <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg);padding:18px;text-align:center;transition:border-color .15s;"
@@ -171,7 +166,6 @@ else
                 }
                 else
                 {
-                    <i class="bi bi-send-fill" style="margin-right:8px;"></i>
                     <span>Kirim Tanda Tangan</span>
                 }
             </button>
@@ -389,7 +383,7 @@ else
                 bool hasImg = await JS.InvokeAsync<bool>("ttdUpload.hasImage");
                 if (!hasImg)
                 {
-                    actionMessage = "Silakan upload gambar tanda tangan terlebih dahulu.";
+                    actionMessage = "Silakan upload TTD terlebih dahulu.";
                     isSubmitting = false;
                     return;
                 }

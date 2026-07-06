@@ -14,7 +14,6 @@ public class DueDateCheckerJob(
 {
     private string BaseUrl => (configuration["App:PublicUrl"] ?? configuration["App:BaseUrl"] ?? "http://localhost:5000").TrimEnd('/');
 
-    // Helper: ambil daftar nama barang dari BA
     private static List<string> GetBarangList(BeritaAcara ba)
     {
         return ba.Perangkat
@@ -34,7 +33,6 @@ public class DueDateCheckerJob(
         var today = DateOnly.FromDateTime(DateTime.Today);
         var todayStart = DateTime.Today;
 
-        // ── 1. Jatuh tempo HARI INI (H-0) ─────────────────────────────────────
         var dueToday = await db.BeritaAcara
             .Where(ba => ba.Status == "Approved"
                 && ba.Jenis == "Peminjaman"
@@ -47,7 +45,6 @@ public class DueDateCheckerJob(
 
         foreach (var ba in dueToday)
         {
-            // Dedup: skip jika notifikasi DUE_TODAY untuk BA ini sudah dikirim hari ini
             if (await db.Notification.AnyAsync(n => n.BaId == ba.Id && n.Tipe == "DUE_TODAY" && n.CreatedAt >= todayStart))
                 continue;
 
@@ -56,11 +53,9 @@ public class DueDateCheckerJob(
             string pjNama = ba.Pj?.Nama ?? "–";
             var barangList = GetBarangList(ba);
 
-            // Notifikasi Inbox ke Admin Gudang yang buat BA
             string msgInbox = $"⏰ Peminjaman {nomorSurat} (PJ: {pjNama}) jatuh tempo hari ini ({tglStr}). Harap segera koordinasikan pengembalian perangkat.";
             await notificationService.SendAsync(ba.CreatedBy, "DUE_TODAY", msgInbox, ba.Id);
 
-            // Email ke Admin Gudang
             if (!string.IsNullOrEmpty(ba.Creator?.Email))
             {
                 await emailService.SendDueDateReminderAsync(
@@ -76,7 +71,6 @@ public class DueDateCheckerJob(
                     barangList: barangList);
             }
 
-            // Email ke PJ
             if (!string.IsNullOrEmpty(ba.Pj?.Email))
             {
                 await emailService.SendDueDateReminderAsync(
@@ -94,7 +88,6 @@ public class DueDateCheckerJob(
         }
 
 
-        // ── 3. Jatuh tempo BESOK (H-1) ─────────────────────────────────────────
         var tomorrow = today.AddDays(1);
         var dueTomorrow = await db.BeritaAcara
             .Where(ba => ba.Status == "Approved"
@@ -108,7 +101,6 @@ public class DueDateCheckerJob(
 
         foreach (var ba in dueTomorrow)
         {
-            // Dedup: skip jika notifikasi DUE_TOMORROW untuk BA ini sudah dikirim hari ini
             if (await db.Notification.AnyAsync(n => n.BaId == ba.Id && n.Tipe == "DUE_TOMORROW" && n.CreatedAt >= todayStart))
                 continue;
 
@@ -117,11 +109,9 @@ public class DueDateCheckerJob(
             string pjNama = ba.Pj?.Nama ?? "–";
             var barangList = GetBarangList(ba);
 
-            // Notifikasi Inbox ke Admin Gudang
             string msgInbox = $"ℹ️ Peminjaman {nomorSurat} (PJ: {pjNama}) akan jatuh tempo besok ({tglStr}). Harap persiapkan pengembalian.";
             await notificationService.SendAsync(ba.CreatedBy, "DUE_TOMORROW", msgInbox, ba.Id);
 
-            // Email ke Admin Gudang
             if (!string.IsNullOrEmpty(ba.Creator?.Email))
             {
                 await emailService.SendDueDateReminderAsync(
@@ -137,7 +127,6 @@ public class DueDateCheckerJob(
                     barangList: barangList);
             }
 
-            // Email ke PJ
             if (!string.IsNullOrEmpty(ba.Pj?.Email))
             {
                 await emailService.SendDueDateReminderAsync(

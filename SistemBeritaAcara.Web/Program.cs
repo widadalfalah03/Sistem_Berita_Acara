@@ -142,18 +142,6 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             ALTER TABLE [BeritaAcara] ADD CONSTRAINT [FK_BeritaAcara_Users_MenyerahkanId]
                 FOREIGN KEY ([MenyerahkanId]) REFERENCES [Users]([Id]) ON DELETE NO ACTION
         END
-
-        -- Hapus kolom BeritaAcaraId dari ApprovalToken yang di-generate otomatis oleh EF Core sebelumnya
-        IF EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'BeritaAcaraId' AND Object_ID = Object_ID(N'ApprovalToken'))
-        BEGIN
-            -- Hapus index yang bergantung pada kolom tersebut jika ada
-            IF EXISTS (SELECT 1 FROM sys.indexes WHERE Name = N'IX_ApprovalToken_BeritaAcaraId' AND Object_ID = Object_ID(N'ApprovalToken'))
-            BEGIN
-                EXEC('DROP INDEX [IX_ApprovalToken_BeritaAcaraId] ON [ApprovalToken]')
-            END
-            
-            EXEC('ALTER TABLE [ApprovalToken] DROP COLUMN [BeritaAcaraId]')
-        END
     ");
     }
     catch (Exception ex)
@@ -431,6 +419,9 @@ RecurringJob.AddOrUpdate<DueDateCheckerJob>(
     job => job.CheckDueDatesAsync(),
     Cron.Daily(7));
 
-
+RecurringJob.AddOrUpdate<AutoApproveJob>(
+    "cek-auto-approve-pj",
+    job => job.ProcessAutoApproveAsync(),
+    Cron.Hourly());
 
 app.Run();

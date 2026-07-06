@@ -10,6 +10,7 @@ public class ApplicationUser : IdentityUser<int>
     public string? TtdPath { get; set; }
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
+    public bool IsSuperAdmin { get; set; } = false;
     public int? PegawaiId { get; set; }
     public string? ProfilePicPath { get; set; }
 

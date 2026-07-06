@@ -1,4 +1,4 @@
-﻿namespace SistemBeritaAcara.Core.Interfaces;
+namespace SistemBeritaAcara.Core.Interfaces;
 
 public interface IEmailService
 {

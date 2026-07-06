@@ -6,7 +6,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
-@rendermode InteractiveServer
+
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @implements IAsyncDisposable
 
@@ -67,7 +67,7 @@ else if (currentRole == "AdminGudangBarang")
                                 else
                                 {
                                     <span class="pill pill-waiting-approval">
-                                        <i class="bi bi-hourglass-split" style="margin-right:4px;"></i> Menunggu Approval
+                                        Menunggu TTD Reviewer
                                     </span>
                                 }
                             </td>
@@ -101,31 +101,51 @@ else if (currentRole == "Reviewer")
     else
     {
         <div class="card">
-            @foreach (var ba in PaginatedBaList)
-            {
-                <NavLink class="queue-item" href="@($"/berita-acara/{ba.Id}?from=progress")">
-                    <div style="display:flex;align-items:flex-start;justify-content:space-between;">
-                        <div style="flex:1;">
-                            <div class="queue-number">@ba.NomorSurat</div>
-                            <div class="queue-desc">
-                                <span class="pill @GetJenisPill(ba.Jenis)" style="font-size:11px;">@ba.Jenis</span>
-                                <span style="margin-left:8px;font-size:14px;">@(ba.Perangkat?.FirstOrDefault()?.Barang?.NamaBarang ?? "—")</span>
-                            </div>
-                            <div class="queue-person" style="margin-top:6px;">
-                                <i class="bi bi-person"></i>
-                                <span>@ba.Pj?.Nama</span>
-                                <span style="color:var(--text-muted);">•</span>
-                                <span style="color:var(--text-muted);">@ba.Pj?.FungsiDirektorat</span>
-                            </div>
-                        </div>
-                        <div style="text-align:right;flex-shrink:0;">
-                            <div style="font-size:13px;color:var(--text-muted);">@GetRelativeTime(ba.SubmittedAt)</div>
-                        </div>
-                    </div>
-                </NavLink>
-            }
+            <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Jenis Berita Acara</th>
+                        <th>Penanggung Jawab</th>
+                        <th>Jenis Perangkat</th>
+                        <th>Waktu Pengajuan</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ba in PaginatedBaList)
+                    {
+                        var perangkatNames = ba.Perangkat?.Select(p => p.Barang?.NamaBarang).Where(n => n != null).ToList() ?? new();
+                        var perangkatDisplay = perangkatNames.Any()
+                            ? string.Join(", ", perangkatNames.Take(2)) + (perangkatNames.Count > 2 ? $" +{perangkatNames.Count - 2} lainnya" : "")
+                            : "—";
+
+                        <tr style="cursor:pointer;" class="hover-row" @onclick="@(() => Navigation.NavigateTo($"/berita-acara/{ba.Id}?from=progress"))">
+                            <td>
+                                <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
+                            </td>
+                            <td>
+                                <div class="cell-main">@ba.Pj?.Nama</div>
+                            </td>
+                            <td>
+                                <div class="cell-main">@perangkatDisplay</div>
+                            </td>
+                            <td>
+                                <div>@ba.SubmittedAt?.ToString("dd MMM yyyy")</div>
+                                <div style="font-size:11px;color:var(--text-muted);">@ba.SubmittedAt?.ToString("HH:mm") WIB</div>
+                            </td>
+                            <td>
+                                <span class="pill pill-waiting-approval">
+                                    Menunggu TTD Reviewer
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            </div>
         </div>
-        
+
         @if (baList.Count > 0)
         {
             <SistemBeritaAcara.Web.Components.Shared.Pagination
@@ -251,6 +271,14 @@ else if (currentRole == "Reviewer")
         "Peminjaman" => "pill-peminjaman",
         "Penarikan" => "pill-penarikan",
         _ => "pill-lainnya"
+    };
+
+    private static string GetJenisAccentColor(string jenis) => jenis switch
+    {
+        "Alokasi" => "var(--primary)",
+        "Peminjaman" => "var(--success)",
+        "Penarikan" => "#F59E0B",
+        _ => "#64748B"
     };
 
     private static string GetRelativeTime(DateTime? dt)

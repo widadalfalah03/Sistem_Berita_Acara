@@ -20,13 +20,12 @@ else
 
     <div class="app-layout">
         <header class="topbar">
-            <!-- Brand Logo -->
             <div class="brand-logo-container" style="display:flex;align-items:center;gap:12px;">
                 <button type="button" class="hamburger-menu" onclick="toggleSidebar()" title="Menu" style="background:none;border:none;color:var(--text-primary);font-size:24px;cursor:pointer;">
                     <i class="bi bi-list"></i>
                 </button>
                 <NavLink href="/dashboard" style="display:flex;flex-direction:row;align-items:center;gap:12px;line-height:0;text-decoration:none;">
-                    <img src="/images/simba_horizontal_logo.png" style="height: 110px; width: auto; object-fit: contain; margin: -24px 0;" alt="SIMBA" />
+                    <img src="/images/simba_horizontal_logo.png" style="height:110px;width:auto;object-fit:contain;margin:-24px 0;" alt="SIMBA" />
                 </NavLink>
             </div>
 
@@ -71,7 +70,6 @@ else
 
         <aside id="main-sidebar" class="sidebar">
 
-            <!-- CTA Buat BA (hanya AdminGudangBarang) -->
             @if (currentRole == "AdminGudangBarang")
             {
                 <div class="sidebar-cta">
@@ -82,7 +80,6 @@ else
                 </div>
             }
 
-            <!-- Navigation -->
             <div class="sidebar-nav-card">
             <nav class="sidebar-nav">
                 @if (currentRole == "AdminGudangBarang")
@@ -94,26 +91,14 @@ else
                     <NavLink class="nav-link" href="/notifikasi">
                         <i class="bi bi-bell"></i>
                         <span>Inbox</span>
-                        @if (unreadCount > 0)
-                        {
-                            <span class="nav-badge">@unreadCount</span>
-                        }
                     </NavLink>
                     <NavLink class="nav-link" href="/draft">
                         <i class="bi bi-file-earmark-text"></i>
                         <span>Draft</span>
-                        @if (draftCount > 0)
-                        {
-                            <span class="nav-badge">@draftCount</span>
-                        }
                     </NavLink>
                     <NavLink class="nav-link" href="/progress">
                         <i class="bi bi-hourglass-split"></i>
                         <span>Progress</span>
-                        @if (progressCount > 0)
-                        {
-                            <span class="nav-badge">@progressCount</span>
-                        }
                     </NavLink>
                     <NavLink class="nav-link" href="/rejected">
                         <i class="bi bi-x-circle"></i>
@@ -133,26 +118,18 @@ else
                     <NavLink class="nav-link" href="/notifikasi">
                         <i class="bi bi-bell"></i>
                         <span>Inbox</span>
-                        @if (unreadCount > 0)
-                        {
-                            <span class="nav-badge">@unreadCount</span>
-                        }
                     </NavLink>
                     <NavLink class="nav-link" href="/progress">
                         <i class="bi bi-hourglass-split"></i>
                         <span>Progress</span>
-                        @if (progressCount > 0)
-                        {
-                            <span class="nav-badge">@progressCount</span>
-                        }
-                    </NavLink>
-                    <NavLink class="nav-link" href="/archive">
-                        <i class="bi bi-archive"></i>
-                        <span>Archive</span>
                     </NavLink>
                     <NavLink class="nav-link" href="/rejected">
                         <i class="bi bi-x-circle"></i>
                         <span>Rejected</span>
+                    </NavLink>
+                    <NavLink class="nav-link" href="/archive">
+                        <i class="bi bi-archive"></i>
+                        <span>Archive</span>
                     </NavLink>
                 }
                 else if (currentRole == "AdminIT")
@@ -216,13 +193,17 @@ else
                 .profile-dropdown-menu.show {
                     display: block;
                 }
+                .profile-dropdown-menu a,
+                .profile-dropdown-menu button {
+                    background: transparent;
+                    transition: background 0.2s;
+                }
                 .profile-dropdown-menu a:hover,
                 .profile-dropdown-menu button:hover {
                     background: var(--primary-light, #f0fdf4);
                 }
             </style>
 
-            <!-- Content -->
             <div class="content-area">
                 @Body
             </div>
@@ -250,7 +231,6 @@ else
             if (dropdown && dropdown.classList.contains('show')) {
                 var container = document.querySelector('.topbar-profile-container');
                 
-                // Close if clicked outside, OR if clicked on a link inside the dropdown
                 var isClickInsideDropdownLink = dropdown.contains(e.target) && (e.target.tagName === 'A' || e.target.closest('a'));
                 
                 if (!container || !container.contains(e.target) || isClickInsideDropdownLink) {
@@ -262,7 +242,8 @@ else
 }
 
 <div id="blazor-error-ui" data-nosnippet>
-    Terjadi kesalahan. <a href="." class="reload">Muat ulang</a>
+    Terjadi kesalahan. Memuat ulang dalam <span id="blazor-error-countdown">5</span> detik...
+    <a href="." class="reload">Muat ulang sekarang</a>
     <span class="dismiss">🗙</span>
 </div>
 
@@ -280,48 +261,53 @@ else
     private int _currentUserId;
     private Microsoft.AspNetCore.SignalR.Client.HubConnection? _hubConnection;
 
-    [Inject] private AppDbContext DbContext { get; set; } = null!;
-
     protected override async Task OnInitializedAsync()
     {
-        var uri = Navigation.Uri;
-        isLoginPage = uri.Contains("/login") || uri.Contains("/logout") || uri.Contains("/pj/sign");
-
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var principal = auth.User;
-
-        if (principal.Identity?.IsAuthenticated == true)
+        try
         {
-            currentUserName = principal.FindFirst("nama")?.Value
-                           ?? principal.Identity.Name
+            var uri = Navigation.Uri;
+            isLoginPage = uri.Contains("/login") || uri.Contains("/logout") || uri.Contains("/pj/sign");
+
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var principal = auth.User;
+
+            if (principal.Identity?.IsAuthenticated == true)
+            {
+                currentUserName = principal.FindFirst("nama")?.Value
+                               ?? principal.Identity.Name
+                               ?? string.Empty;
+
+                currentRole = principal.FindFirst("app_role")?.Value
+                           ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
                            ?? string.Empty;
 
-            currentRole = principal.FindFirst("app_role")?.Value
-                       ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
-                       ?? string.Empty;
-
-            var userIdStr = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (int.TryParse(userIdStr, out _currentUserId))
-            {
-                using var scope = ServiceProvider.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var appUser = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == _currentUserId);
-                if (appUser is not null)
+                var userIdStr = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (int.TryParse(userIdStr, out _currentUserId))
                 {
-                    profilePicPath = appUser.ProfilePicPath;
+                    using var scope = ServiceProvider.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    var appUser = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == _currentUserId);
+                    if (appUser is not null)
+                    {
+                        profilePicPath = appUser.ProfilePicPath;
+                    }
                 }
+
+                initials = GetInitials(currentUserName);
+                currentRoleLabel = currentRole switch
+                {
+                    "AdminIT"            => "Admin IT",
+                    "AdminGudangBarang"  => "Admin Gudang & Barang",
+                    "Reviewer"           => "Reviewer",
+                    _                    => currentRole
+                };
+
+                pageTitle = GetPageTitle(Navigation.Uri);
             }
-
-            initials = GetInitials(currentUserName);
-            currentRoleLabel = currentRole switch
-            {
-                "AdminIT"            => "Admin IT",
-                "AdminGudangBarang"  => "Admin Gudang & Barang",
-                "Reviewer"           => "Reviewer",
-                _                    => currentRole
-            };
-
-            pageTitle = GetPageTitle(Navigation.Uri);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[MainLayout] OnInitializedAsync error: {ex.Message}");
         }
     }
 
@@ -329,11 +315,16 @@ else
     {
         if (!firstRender || isLoginPage || _currentUserId == 0) return;
 
-        // Load badge counts (tetap cepat — query DB lokal)
-        await RefreshCountsAsync();
-        StateHasChanged();
+        try
+        {
+            await RefreshCountsAsync();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[MainLayout] OnAfterRenderAsync error: {ex.Message}");
+        }
 
-        // Fire-and-forget SignalR — tidak memblokir, koneksi terjadi di latar belakang
         _ = ConnectSignalRAsync();
     }
 
@@ -351,8 +342,15 @@ else
             {
                 await InvokeAsync(async () =>
                 {
-                    await RefreshCountsAsync();
-                    StateHasChanged();
+                    try
+                    {
+                        await RefreshCountsAsync();
+                        StateHasChanged();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine($"[MainLayout] Hub BaListUpdated error: {ex.Message}");
+                    }
                 });
             });
 
@@ -360,27 +358,33 @@ else
         }
         catch
         {
-            // SignalR gagal connect — badge tetap muncul, hanya tidak real-time
         }
     }
 
     private async Task RefreshCountsAsync()
     {
         if (_currentUserId == 0) return;
-        unreadCount = await DbContext.Notification
+        using var scope = ServiceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        unreadCount = await db.Notification
+            .AsNoTracking()
             .CountAsync(n => n.UserId == _currentUserId && !n.IsRead);
 
         if (currentRole == "AdminGudangBarang")
         {
-            draftCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+            draftCount = await db.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+                .AsNoTracking()
                 .CountAsync(ba => ba.CreatedBy == _currentUserId && (ba.Status == "Draft" || ba.Status == "Rejected"));
-            progressCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+            progressCount = await db.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+                .AsNoTracking()
                 .CountAsync(ba => ba.CreatedBy == _currentUserId &&
                     (ba.Status == "WaitingPJSign" || ba.Status == "WaitingApproval"));
         }
         else if (currentRole == "Reviewer")
         {
-            progressCount = await DbContext.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+            progressCount = await db.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
+                .AsNoTracking()
                 .CountAsync(ba => ba.MengetahuiId == _currentUserId && ba.Status == "WaitingApproval");
         }
     }

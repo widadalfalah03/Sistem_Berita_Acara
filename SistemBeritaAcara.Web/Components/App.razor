@@ -8,29 +8,25 @@
     <base href="/" />
     <ResourcePreloader />
 
-    <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 
-    <!-- Cropper.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
 
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["SistemBeritaAcara.Web.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="js/loading-overlay.js"></script>
@@ -40,7 +36,6 @@
     <script src="js/download-interop.js"></script>
     <script src="js/pdf-viewer.js"></script>
     
-    <!-- Cropper.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <script src="js/cropper-interop.js"></script>
     <script>
@@ -92,6 +87,35 @@
             btn.appendChild(ripple);
             ripple.addEventListener('animationend', () => ripple.remove());
         });
+
+        // Auto-reload when Blazor circuit error occurs (blazor-error-ui becomes visible)
+        (function () {
+            let reloadTimer = null;
+            function startErrorMonitor() {
+                const errorEl = document.getElementById('blazor-error-ui');
+                if (!errorEl) return;
+                function onAttrChange() {
+                    const visible = window.getComputedStyle(errorEl).display !== 'none';
+                    if (visible && !reloadTimer) {
+                        let secs = 5;
+                        const cd = document.getElementById('blazor-error-countdown');
+                        if (cd) cd.textContent = secs;
+                        reloadTimer = setInterval(function () {
+                            secs--;
+                            if (cd) cd.textContent = secs;
+                            if (secs <= 0) { clearInterval(reloadTimer); location.reload(); }
+                        }, 1000);
+                    } else if (!visible && reloadTimer) {
+                        clearInterval(reloadTimer);
+                        reloadTimer = null;
+                    }
+                }
+                new MutationObserver(onAttrChange).observe(errorEl, {
+                    attributes: true, attributeFilter: ['style', 'class']
+                });
+            }
+            document.addEventListener('DOMContentLoaded', startErrorMonitor);
+        })();
 
         // Update icon after DOM loads
         window.addEventListener('DOMContentLoaded', () => {
