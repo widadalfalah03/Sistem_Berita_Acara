@@ -1,6 +1,7 @@
 @using System.Globalization
+@inject IJSRuntime JS
 
-<div style="position:relative;user-select:none;" @onkeydown="OnKeyDown">
+<div id="dp-@_uid" style="position:relative;user-select:none;" @onkeydown="OnKeyDown">
 
     @* Input trigger *@
     <div @onclick="Toggle"
@@ -23,7 +24,7 @@
     @if (isOpen)
     {
         <div @onclick="CloseBackdrop" style="position:fixed;inset:0;z-index:199;"></div>
-        <div style="position:absolute;top:calc(100% + 6px);left:0;z-index:200;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);width:300px;overflow:hidden;"
+        <div style="@PopupPositionStyle z-index:200;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);width:300px;overflow:hidden;"
              @onclick:stopPropagation>
 
             @* Month / Year navigation *@
@@ -154,10 +155,14 @@
     [Parameter] public DateTime? MinDate { get; set; }
     [Parameter] public DateTime? MaxDate { get; set; }
     [Parameter] public string InputPadding { get; set; } = "8px 12px";
+    [Parameter] public bool UseFixed { get; set; }
 
     private bool isOpen;
     private bool showYearMonthPicker;
     private DateTime viewDate = DateTime.Today;
+    private double _fixedTop;
+    private double _fixedLeft;
+    private readonly string _uid = Guid.NewGuid().ToString("N")[..8];
 
     private static readonly CultureInfo CultureId = new("id-ID");
 
@@ -194,16 +199,33 @@
         }
     }
 
-    private void Toggle()
+    private string PopupPositionStyle => UseFixed
+        ? $"position:fixed;top:{_fixedTop}px;left:{_fixedLeft}px;"
+        : "position:absolute;top:calc(100% + 6px);left:0;";
+
+    private async Task Toggle()
     {
-        isOpen = !isOpen;
         if (isOpen)
         {
+            isOpen = false;
             showYearMonthPicker = false;
-            viewDate = Value.HasValue
-                ? new DateTime(Value.Value.Year, Value.Value.Month, 1)
-                : new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            return;
         }
+
+        showYearMonthPicker = false;
+        viewDate = Value.HasValue
+            ? new DateTime(Value.Value.Year, Value.Value.Month, 1)
+            : new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+        if (UseFixed)
+        {
+            var r = await JS.InvokeAsync<double[]>("eval",
+                $"(function(){{var e=document.getElementById('dp-{_uid}');var r=e.getBoundingClientRect();return[r.bottom,r.left];}})()");
+            _fixedTop = r[0] + 6;
+            _fixedLeft = r[1];
+        }
+
+        isOpen = true;
     }
 
     private void CloseBackdrop() { isOpen = false; showYearMonthPicker = false; }

@@ -282,7 +282,7 @@ else if (currentRole == "AdminGudangBarang")
                         {
                             <button @onclick="@(() => { showPerpanjanganForm = true; perpanjanganError = null; })"
                                     style="display:flex;align-items:center;gap:6px;background:var(--primary);color:white;border:none;border-radius:var(--radius);padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">
-                                <i class="bi bi-calendar-plus"></i> Perpanjang
+                                Perpanjang
                             </button>
                         }
                     </div>
@@ -294,9 +294,12 @@ else if (currentRole == "AdminGudangBarang")
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
                                 <div>
                                     <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">Tanggal Kembali Baru <span style="color:var(--danger)">*</span></label>
-                                    <input type="date"
-                                           style="width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px;font-size:13px;outline:none;background:white;color:var(--text-primary);font-family:inherit;"
-                                           @bind="inputTanggalPerpanjangan" />
+                                    <DatePicker Value="inputTanggalPerpanjangan"
+                                                ValueChanged="v => inputTanggalPerpanjangan = v"
+                                                Placeholder="Pilih tanggal baru..."
+                                                MinDate="DateTime.Today.AddDays(1)"
+                                                InputPadding="7px 10px"
+                                                UseFixed="true" />
                                 </div>
                                 <div>
                                     <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">Catatan (opsional)</label>
@@ -422,7 +425,7 @@ else if (currentRole == "AdminGudangBarang")
                 else
                 {
                     <button class="btn btn-success" @onclick="@(() => InitiateReturn(modalBA.Id, modalBA.NomorSurat ?? $"BA-{modalBA.Id}"))">
-                        <i class="bi bi-box-arrow-in-down"></i> Tandai Sudah Dikembalikan
+                        Tandai Sudah Dikembalikan
                     </button>
                 }
             </div>
