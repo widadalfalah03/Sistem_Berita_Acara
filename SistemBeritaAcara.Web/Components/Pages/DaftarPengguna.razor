@@ -1,12 +1,18 @@
 @page "/pengguna"
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
 @using SistemBeritaAcara.Infrastructure.Data
 @inject AppDbContext DbCtx
+@inject UserManager<ApplicationUser> UserManager
+@inject SistemBeritaAcara.Core.Interfaces.IEmailService EmailService
+@inject IConfiguration Config
 @inject NavigationManager Navigation
+@rendermode InteractiveServer
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
+@implements IDisposable
 
 @if (isLoading)
 {
@@ -17,8 +23,7 @@
 else
 {
     <div class="page-header d-flex align-center justify-between">
-        <div>
-        </div>
+        <div></div>
         <NavLink class="btn btn-primary" href="/tambah-pengguna">
             <i class="bi bi-plus-lg"></i>
             Tambah Pengguna
@@ -98,6 +103,34 @@ else
         </label>
     </div>
 
+    @* Konfirmasi hapus *@
+    @if (confirmDeleteId is not null)
+    {
+        <div style="position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);">
+            <div style="background:var(--surface);border-radius:var(--radius-lg);padding:28px 32px;max-width:400px;width:100%;box-shadow:var(--shadow-xl);">
+                <div style="font-size:16px;font-weight:700;margin-bottom:8px;">Hapus Akun Belum Aktivasi?</div>
+                <div style="font-size:13px;color:var(--text-secondary);margin-bottom:24px;">
+                    Hapus akun <strong>@confirmDeleteEmail</strong>?
+                </div>
+                <div style="display:flex;gap:12px;justify-content:flex-end;">
+                    <button class="btn btn-outline" @onclick="() => { confirmDeleteId = null; confirmDeleteEmail = null; }">Batal</button>
+                    <button class="btn btn-danger" @onclick="ConfirmDeleteAsync" disabled="@isProcessing">
+                        @if (isProcessing) { <span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px;display:inline-block;vertical-align:middle;"></span> }
+                        Hapus
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* Toast notifikasi *@
+    @if (!string.IsNullOrEmpty(toastMsg))
+    {
+        <div style="position:fixed;bottom:24px;right:24px;z-index:600;background:@(toastIsError ? "var(--danger)" : "#22c55e");color:white;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);max-width:320px;">
+            <i class="bi @(toastIsError ? "bi-exclamation-circle-fill" : "bi-check-circle-fill")" style="margin-right:8px;"></i>@toastMsg
+        </div>
+    }
+
     <div class="card">
         @if (!FilteredUsers.Any())
         {
@@ -126,7 +159,10 @@ else
                         <tr>
                             <td>
                                 <div class="cell-main">@u.Nama</div>
-                                <div class="cell-sub">No. Pekerja: @(u.Pegawai?.NoPekerja ?? "-")</div>
+                                @if (u.PegawaiId != null)
+                                {
+                                    <div class="cell-sub">No. Pekerja: @(u.Pegawai?.NoPekerja ?? "-")</div>
+                                }
                             </td>
                             <td>@u.Email</td>
                             <td>
@@ -139,9 +175,14 @@ else
                                     <span class="pill @GetRolePill(u.Role)">@GetRoleLabel(u.Role)</span>
                                 }
                             </td>
-
                             <td>
-                                @if (!u.IsDeleted)
+                                @if (!u.EmailConfirmed)
+                                {
+                                    <span class="status-dot" style="color:#d97706;">
+                                        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#d97706;margin-right:6px;"></span>Belum Aktivasi
+                                    </span>
+                                }
+                                else if (!u.IsDeleted)
                                 {
                                     <span class="status-dot active">Aktif</span>
                                 }
@@ -151,12 +192,42 @@ else
                                 }
                             </td>
                             <td style="text-align:right;">
-                                <NavLink href="@($"/edit-pengguna/{u.Id}")" title="Edit"
-                                         style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--primary-light);color:var(--primary);text-decoration:none;transition:all .15s;"
-                                         onmouseover="this.style.background='var(--primary)';this.style.color='#fff'"
-                                         onmouseout="this.style.background='var(--primary-light)';this.style.color='var(--primary)'">
-                                    <i class="bi bi-pencil-fill" style="font-size:13px;"></i>
-                                </NavLink>
+                                @if (!u.EmailConfirmed)
+                                {
+                                    <div style="display:inline-flex;gap:6px;align-items:center;">
+                                        <button title="Kirim Ulang Undangan"
+                                                @onclick="() => ResendInvitationAsync(u)"
+                                                disabled="@(resendingId == u.Id)"
+                                                style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--primary-light);color:var(--primary);border:none;cursor:pointer;transition:all .15s;"
+                                                onmouseover="this.style.background='var(--primary)';this.style.color='#fff'"
+                                                onmouseout="this.style.background='var(--primary-light)';this.style.color='var(--primary)'">
+                                            @if (resendingId == u.Id)
+                                            {
+                                                <span class="spinner" style="width:13px;height:13px;border-width:2px;display:inline-block;"></span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-envelope-fill" style="font-size:13px;"></i>
+                                            }
+                                        </button>
+                                        <button title="Hapus Akun"
+                                                @onclick="() => { confirmDeleteId = u.Id; confirmDeleteEmail = u.Email; }"
+                                                style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:#fef2f2;color:#ef4444;border:none;cursor:pointer;transition:all .15s;"
+                                                onmouseover="this.style.background='#ef4444';this.style.color='#fff'"
+                                                onmouseout="this.style.background='#fef2f2';this.style.color='#ef4444'">
+                                            <i class="bi bi-trash-fill" style="font-size:13px;"></i>
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <NavLink href="@($"/edit-pengguna/{u.Id}")" title="Edit"
+                                             style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:var(--primary-light);color:var(--primary);text-decoration:none;transition:all .15s;"
+                                             onmouseover="this.style.background='var(--primary)';this.style.color='#fff'"
+                                             onmouseout="this.style.background='var(--primary-light)';this.style.color='var(--primary)'">
+                                        <i class="bi bi-pencil-fill" style="font-size:13px;"></i>
+                                    </NavLink>
+                                }
                             </td>
                         </tr>
                     }
@@ -178,81 +249,145 @@ else
 
 @code {
     private bool isLoading = true;
+    private bool isProcessing = false;
     private List<ApplicationUser> allUsers = new();
     private string roleFilter = "";
     private bool showInactive = false;
     private bool showRoleDropdown = false;
-    private string errorMsg = string.Empty;
-    private (int Total, int SuperAdmin, int AdminIT, int AdminGudang, int Reviewer) stats;
+
+    private int? confirmDeleteId;
+    private string? confirmDeleteEmail;
+    private int? resendingId;
+    private string toastMsg = string.Empty;
+    private bool toastIsError = false;
+    private System.Threading.Timer? _toastTimer;
 
     private int currentPage = 1;
     private int pageSize = 10;
     private string _search = string.Empty;
-    private string search 
+    private string search
     {
         get => _search;
-        set 
-        {
-            _search = value;
-            currentPage = 1; // reset page saat pencarian berubah
-        }
+        set { _search = value; currentPage = 1; }
     }
 
+    private (int Total, int SuperAdmin, int AdminIT, int AdminGudang, int Reviewer) stats;
+
     private int TotalFilteredItems => allUsers
-        .Where(u => u.EmailConfirmed)
-        .Where(u => showInactive || !u.IsDeleted)
+        .Where(u => (u.EmailConfirmed && (showInactive || !u.IsDeleted)) || (!u.EmailConfirmed && !u.IsDeleted))
         .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
         .Count(u => string.IsNullOrEmpty(search) ||
                     (u.Nama != null && u.Nama.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
                     (u.Email != null && u.Email.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
                     (u.Pegawai != null && u.Pegawai.NoPekerja != null && u.Pegawai.NoPekerja.Contains(search, StringComparison.OrdinalIgnoreCase)));
 
-    private IEnumerable<ApplicationUser> FilteredUsers
-    {
-        get
-        {
-            var query = allUsers
-                .Where(u => u.EmailConfirmed)
-                .Where(u => showInactive || !u.IsDeleted)
-                .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
-                .Where(u => string.IsNullOrEmpty(search) ||
-                            (u.Nama != null && u.Nama.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
-                            (u.Email != null && u.Email.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
-                            (u.Pegawai != null && u.Pegawai.NoPekerja != null && u.Pegawai.NoPekerja.Contains(search, StringComparison.OrdinalIgnoreCase)));
-
-            return query.OrderBy(u => u.Nama).Skip((currentPage - 1) * pageSize).Take(pageSize);
-        }
-    }
+    private IEnumerable<ApplicationUser> FilteredUsers => allUsers
+        .Where(u => (u.EmailConfirmed && (showInactive || !u.IsDeleted)) || (!u.EmailConfirmed && !u.IsDeleted))
+        .Where(u => string.IsNullOrEmpty(roleFilter) || u.Role == roleFilter)
+        .Where(u => string.IsNullOrEmpty(search) ||
+                    (u.Nama != null && u.Nama.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (u.Email != null && u.Email.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                    (u.Pegawai != null && u.Pegawai.NoPekerja != null && u.Pegawai.NoPekerja.Contains(search, StringComparison.OrdinalIgnoreCase)))
+        .OrderBy(u => u.EmailConfirmed ? 1 : 0) // pending di atas
+        .ThenBy(u => u.Nama)
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
 
     protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+        isLoading = false;
+    }
+
+    private async Task LoadUsersAsync()
     {
         allUsers = await DbCtx.Users
             .Include(u => u.Pegawai)
             .OrderBy(u => u.Nama)
             .ToListAsync();
 
-        stats.Total      = allUsers.Count(u => u.EmailConfirmed && !u.IsDeleted);
-        stats.SuperAdmin = allUsers.Count(u => u.EmailConfirmed && u.IsSuperAdmin && !u.IsDeleted);
-        stats.AdminIT    = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminIT" && !u.IsSuperAdmin && !u.IsDeleted);
+        stats.Total       = allUsers.Count(u => u.EmailConfirmed && !u.IsDeleted);
+        stats.SuperAdmin  = allUsers.Count(u => u.EmailConfirmed && u.IsSuperAdmin && !u.IsDeleted);
+        stats.AdminIT     = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminIT" && !u.IsSuperAdmin && !u.IsDeleted);
         stats.AdminGudang = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminGudangBarang" && !u.IsDeleted);
-        stats.Reviewer   = allUsers.Count(u => u.EmailConfirmed && u.Role == "Reviewer" && !u.IsDeleted);
-
-        isLoading = false;
+        stats.Reviewer    = allUsers.Count(u => u.EmailConfirmed && u.Role == "Reviewer" && !u.IsDeleted);
     }
+
+    private async Task ResendInvitationAsync(ApplicationUser user)
+    {
+        resendingId = user.Id;
+        try
+        {
+            var token   = await UserManager.GeneratePasswordResetTokenAsync(user);
+            var baseUrl = Config["App:PublicUrl"] ?? Config["App:BaseUrl"] ?? "http://localhost:5000";
+            _ = EmailService.SendUserInvitationAsync(user.Email!, user.Nama ?? user.Email!, token, baseUrl);
+            ShowToast("Undangan berhasil dikirim ulang ke " + user.Email, isError: false);
+        }
+        catch
+        {
+            ShowToast("Gagal mengirim ulang undangan. Coba lagi.", isError: true);
+        }
+        finally
+        {
+            resendingId = null;
+        }
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (confirmDeleteId is null) return;
+        isProcessing = true;
+        try
+        {
+            var user = allUsers.FirstOrDefault(u => u.Id == confirmDeleteId);
+            if (user != null)
+            {
+                DbCtx.Users.Remove(user);
+                await DbCtx.SaveChangesAsync();
+                await LoadUsersAsync();
+                ShowToast("Akun berhasil dihapus.", isError: false);
+            }
+        }
+        catch
+        {
+            ShowToast("Gagal menghapus akun. Coba lagi.", isError: true);
+        }
+        finally
+        {
+            isProcessing = false;
+            confirmDeleteId = null;
+            confirmDeleteEmail = null;
+        }
+    }
+
+    private void ShowToast(string message, bool isError)
+    {
+        _toastTimer?.Dispose();
+        toastMsg = message;
+        toastIsError = isError;
+        StateHasChanged();
+        _toastTimer = new System.Threading.Timer(_ =>
+        {
+            toastMsg = string.Empty;
+            InvokeAsync(StateHasChanged);
+        }, null, 3500, System.Threading.Timeout.Infinite);
+    }
+
+    public void Dispose() => _toastTimer?.Dispose();
 
     private static string GetRolePill(string role) => role switch
     {
-        "AdminIT" => "pill-admin-it",
+        "AdminIT"           => "pill-admin-it",
         "AdminGudangBarang" => "pill-admin-gudang",
-        "Reviewer" => "pill-reviewer",
-        _ => "pill-draft"
+        "Reviewer"          => "pill-reviewer",
+        _                   => "pill-draft"
     };
 
     private static string GetRoleLabel(string role) => role switch
     {
-        "AdminIT" => "Admin IT",
+        "AdminIT"           => "Admin IT",
         "AdminGudangBarang" => "Admin Gudang & Barang",
-        "Reviewer" => "Reviewer",
-        _ => role
+        "Reviewer"          => "Reviewer",
+        _                   => role
     };
 }

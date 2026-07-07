@@ -291,7 +291,7 @@
 
             var token   = await UserManager.GeneratePasswordResetTokenAsync(user);
             var baseUrl = Config["App:PublicUrl"] ?? Config["App:BaseUrl"] ?? "http://localhost:5000";
-            _ = EmailService.SendUserInvitationAsync(email, GetRoleLabel(selectedRole), token, baseUrl);
+            _ = EmailService.SendUserInvitationAsync(email, nama, token, baseUrl);
 
             savedEmail = email;
             savedName  = nama;
