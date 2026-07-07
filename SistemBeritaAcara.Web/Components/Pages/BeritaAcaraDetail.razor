@@ -176,7 +176,7 @@ else
                             <span class="pill @GetJenisPill(ba.Jenis)">@ba.Jenis</span>
                         </div>
                     </div>
-                    @if (ba.Status == "Rejected" && currentRole == "AdminGudangBarang")
+                    @if (ba.Status == "Rejected" && currentRole == "AdminBA")
                     {
                         <button class="btn btn-primary" @onclick="NavigateToRevisi">
                             Revisi
@@ -185,7 +185,7 @@ else
                 </div>
             </div>
 
-            @if (ba.Status == "Rejected" && currentRole == "AdminGudangBarang")
+            @if (ba.Status == "Rejected" && currentRole == "AdminBA")
             {
                 <div style="background:var(--danger-light);border-radius:var(--radius);padding:14px 20px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;">
                     <i class="bi bi-x-circle-fill" style="color:var(--danger);margin-top:2px;flex-shrink:0;"></i>
@@ -332,7 +332,7 @@ else
                                             </div>
                                         }
 
-                                        @if (currentRole == "AdminGudangBarang")
+                                        @if (currentRole == "AdminBA")
                                         {
                                             <div style="display:flex;gap:12px;flex-wrap:wrap;">
                                                 @if (ba.Status == "Draft")
@@ -466,7 +466,7 @@ else
             }
 
             // Jika link dari email reject tapi yang login bukan Admin GB, minta login ulang
-            if (From == "rejected" && currentRole != "AdminGudangBarang")
+            if (From == "rejected" && currentRole != "AdminBA")
             {
                 Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}", true);
                 return;
@@ -510,7 +510,7 @@ DateTime.Now.AddDays(7)
             ba!.Status = "WaitingPJSign";
             ba.SubmittedAt = DateTime.Now;
             await DbContext.SaveChangesAsync();
-            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ??
+            var baseUrl = (Configuration["App:BaseUrl"] ??
 Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangListMagic = ba.Perangkat
                 .Select(p =>
@@ -523,7 +523,7 @@ Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
                 }).ToList();
             await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis,
 barangListMagic);
-            await NotificationService.SendToRoleAsync("AdminGudangBarang", "WAITING_PJ_SIGN", $"Berita Acara {ba.Jenis} {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
+            await NotificationService.SendToRoleAsync("AdminBA", "WAITING_PJ_SIGN", $"Berita Acara {ba.Jenis} {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
             actionIsError = false; actionMessage = "Magic link berhasil dikirim ke email PJ.";
             await LoadAsync();
         }
@@ -591,7 +591,7 @@ DateTime.Now.AddDays(7)
                 TimeSpan.FromMinutes(2)
             );
 
-            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ??
+            var baseUrl = (Configuration["App:BaseUrl"] ??
 Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangList = ba.Perangkat
                 .Select(p =>
@@ -663,7 +663,7 @@ ex.InnerException.Message : "")}";
             var text = $"Berita Acara {ba.Jenis} {label} ditolak: {rejectReason}".Replace("  ", " ").Trim();
             await NotificationService.SendAsync(ba.CreatedBy, "BA_REJECTED", text, ba.Id);
 
-            var baseUrlReject = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ??
+            var baseUrlReject = (Configuration["App:BaseUrl"] ??
 Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangListReject = ba.Perangkat
                 .Select(p =>

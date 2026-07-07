@@ -177,7 +177,7 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
     var userManager = preScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-    foreach (var role in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
+    foreach (var role in new[] { "AdminIT", "AdminBA", "Reviewer" })
     {
         if (!await roleManager.RoleExistsAsync(role))
             await roleManager.CreateAsync(new IdentityRole<int>(role));

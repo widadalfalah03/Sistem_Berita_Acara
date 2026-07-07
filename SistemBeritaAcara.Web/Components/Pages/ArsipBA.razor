@@ -13,7 +13,7 @@
 
 <PageTitle>Archive — Sistem Berita Acara</PageTitle>
 
-@if ((currentRole == "AdminGudangBarang" || currentRole == "Reviewer") && !isLoading && allBA.Count > 0)
+@if ((currentRole == "AdminBA" || currentRole == "Reviewer") && !isLoading && allBA.Count > 0)
 {
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button class="btn btn-primary btn-sm @(isExporting ? "btn-loading" : "")"

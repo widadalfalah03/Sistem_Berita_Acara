@@ -16,7 +16,7 @@
 {
     <div class="loading-spinner"><div class="spinner"></div></div>
 }
-else if (currentRole == "AdminGudangBarang")
+else if (currentRole == "AdminBA")
 {
     @if (!baList.Any())
     {
@@ -186,7 +186,7 @@ else if (currentRole == "Reviewer")
         currentRole = appUser!.Role;
         currentUserId = appUser.Id;
 
-        if (currentRole == "AdminGudangBarang")
+        if (currentRole == "AdminBA")
         {
             baList = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Pj).Include(b => b.Mengetahui)
@@ -245,7 +245,7 @@ else if (currentRole == "Reviewer")
 
     private async Task ReloadListAsync()
     {
-        if (currentRole == "AdminGudangBarang")
+        if (currentRole == "AdminBA")
         {
             baList = await DbContext.Set<BeritaAcaraEntity>()
                 .Include(b => b.Pj).Include(b => b.Mengetahui)

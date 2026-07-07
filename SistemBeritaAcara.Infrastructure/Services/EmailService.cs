@@ -13,7 +13,7 @@ public class EmailService(IConfiguration config) : IEmailService
     private readonly string _user = config["Email:Username"] ?? "";
     private readonly string _pass = config["Email:Password"] ?? "";
     private readonly string _from = config["Email:From"] ?? "noreply@pertamina.com";
-    private readonly string _baseUrl = config["App:PublicUrl"] ?? config["App:BaseUrl"] ?? "http://localhost:5000";
+    private readonly string _baseUrl = config["App:BaseUrl"] ?? "http://localhost:5000";
 
     private static string RenderBarangTable(List<string> barangList)
     {
@@ -138,7 +138,7 @@ public class EmailService(IConfiguration config) : IEmailService
         string body = $"""
             <h2 style="color:#000000;">Dokumen Berita Acara Menunggu Persetujuan Anda</h2>
             <p>Yth. <strong>{reviewerName}</strong>,</p>
-            <p>Terdapat dokumen <strong>Berita Acara {jenisBA}</strong> yang telah diajukan oleh Admin Gudang Barang dan memerlukan persetujuan Anda.</p>
+            <p>Terdapat dokumen <strong>Berita Acara {jenisBA}</strong> yang telah diajukan oleh Admin BA dan memerlukan persetujuan Anda.</p>
 
             {barangTable}
 

@@ -55,7 +55,7 @@ else
         <div class="stat-card">
             <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Admin Gudang & Barang</div>
+                <div class="stat-card-label">Admin BA</div>
                 <div class="stat-card-value green">@stats.AdminGudang</div>
             </div>
         </div>
@@ -84,7 +84,7 @@ else
             {
                 <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
                 <div style="position:absolute;top:100%;left:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);min-width:180px;margin-top:4px;overflow:hidden;">
-                    @foreach (var role in new[] { "", "AdminIT", "AdminGudangBarang", "Reviewer" })
+                    @foreach (var role in new[] { "", "AdminIT", "AdminBA", "Reviewer" })
                     {
                         var label = string.IsNullOrEmpty(role) ? "Semua Role" : GetRoleLabel(role);
                         <div @onclick="@(() => { roleFilter = role; showRoleDropdown = false; })"
@@ -309,7 +309,7 @@ else
         stats.Total       = allUsers.Count(u => u.EmailConfirmed && !u.IsDeleted);
         stats.SuperAdmin  = allUsers.Count(u => u.EmailConfirmed && u.IsSuperAdmin && !u.IsDeleted);
         stats.AdminIT     = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminIT" && !u.IsSuperAdmin && !u.IsDeleted);
-        stats.AdminGudang = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminGudangBarang" && !u.IsDeleted);
+        stats.AdminGudang = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminBA" && !u.IsDeleted);
         stats.Reviewer    = allUsers.Count(u => u.EmailConfirmed && u.Role == "Reviewer" && !u.IsDeleted);
     }
 
@@ -319,7 +319,7 @@ else
         try
         {
             var token   = await UserManager.GeneratePasswordResetTokenAsync(user);
-            var baseUrl = Config["App:PublicUrl"] ?? Config["App:BaseUrl"] ?? "http://localhost:5000";
+            var baseUrl = Config["App:BaseUrl"] ?? "http://localhost:5000";
             _ = EmailService.SendUserInvitationAsync(user.Email!, user.Nama ?? user.Email!, token, baseUrl);
             ShowToast("Undangan berhasil dikirim ulang ke " + user.Email, isError: false);
         }
@@ -378,7 +378,7 @@ else
     private static string GetRolePill(string role) => role switch
     {
         "AdminIT"           => "pill-admin-it",
-        "AdminGudangBarang" => "pill-admin-gudang",
+        "AdminBA" => "pill-admin-gudang",
         "Reviewer"          => "pill-reviewer",
         _                   => "pill-draft"
     };
@@ -386,7 +386,7 @@ else
     private static string GetRoleLabel(string role) => role switch
     {
         "AdminIT"           => "Admin IT",
-        "AdminGudangBarang" => "Admin Gudang & Barang",
+        "AdminBA" => "Admin BA",
         "Reviewer"          => "Reviewer",
         _                   => role
     };

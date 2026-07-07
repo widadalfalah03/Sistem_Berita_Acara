@@ -14,7 +14,7 @@
 @inject IConfiguration Configuration
 @inject ILogger<EditorBA> Logger
 @rendermode InteractiveServer
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminBA")]
 @implements IDisposable
 
 <PageTitle>Editor Berita Acara — Sistem Berita Acara</PageTitle>
@@ -470,7 +470,7 @@
                     trackedBa.Id
                 );
 
-                var baseUrlReviewer = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+                var baseUrlReviewer = (Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
                 var barangListReviewer = trackedBa.Perangkat
                     .Select(p => {
                         string nama = p.Barang?.NamaBarang ?? "Perangkat";

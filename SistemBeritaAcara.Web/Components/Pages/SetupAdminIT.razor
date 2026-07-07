@@ -395,7 +395,7 @@
         isSaving = true;
         try
         {
-            foreach (var role in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
+            foreach (var role in new[] { "AdminIT", "AdminBA", "Reviewer" })
             {
                 if (!await RoleManager.RoleExistsAsync(role))
                     await RoleManager.CreateAsync(new IdentityRole<int>(role));

@@ -17,7 +17,7 @@ public class AutoApproveJob(
     IExcelService excelService,
     ILogger<AutoApproveJob> logger)
 {
-    private string BaseUrl => (configuration["App:PublicUrl"] ?? configuration["App:BaseUrl"] ?? "http://localhost:5000").TrimEnd('/');
+    private string BaseUrl => (configuration["App:BaseUrl"] ?? "http://localhost:5000").TrimEnd('/');
 
     public async Task ProcessSingleAutoApproveAsync(int baId)
     {

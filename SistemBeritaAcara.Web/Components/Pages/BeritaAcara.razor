@@ -16,7 +16,7 @@
 @inject ILogger<BeritaAcara> Logger
 @rendermode InteractiveServer
 @implements IAsyncDisposable
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminGudangBarang")]
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminBA")]
 
 <PageTitle>@(editId.HasValue ? "Edit Berita Acara" : "Buat Berita Acara") — Sistem Berita Acara</PageTitle>
 
@@ -404,7 +404,7 @@
                                         <span style="font-weight:600;color:var(--text-primary);">
                                             <i class="bi bi-person-check" style="color:var(--success);"></i>
                                             @(adminGudangUsers.FirstOrDefault(u => u.Id == model.MenyerahkanId)?.Nama ??
-                                    currentUserObj?.Nama ?? "Admin Gudang")
+                                    currentUserObj?.Nama ?? "Admin BA")
                                         </span>
                                     }
                                 </div>
@@ -451,7 +451,7 @@
                                     {
                                         <span style="font-weight:600;color:var(--text-primary);">
                                             <i class="bi bi-person-check" style="color:var(--success);"></i>
-                                            @(currentUserObj?.Nama ?? "Admin Gudang")
+                                            @(currentUserObj?.Nama ?? "Admin BA")
                                         </span>
                                     }
                                     else
@@ -618,7 +618,7 @@
 
         allPegawai = await DbContext.Pegawai.Where(p => p.IsAktif).OrderBy(p => p.Nama).ToListAsync();
         reviewers = await DbContext.Users.Where(u => u.Role == "Reviewer" && !u.IsDeleted).OrderBy(u => u.Nama).ToListAsync();
-        adminGudangUsers = await DbContext.Users.Where(u => u.Role == "AdminGudangBarang" && !u.IsDeleted).OrderBy(u =>
+        adminGudangUsers = await DbContext.Users.Where(u => u.Role == "AdminBA" && !u.IsDeleted).OrderBy(u =>
 u.Nama).ToListAsync();
         barangOptions = await DbContext.MasterBarang.Where(b => b.IsAktif).OrderBy(b => b.NamaBarang).ToListAsync();
 

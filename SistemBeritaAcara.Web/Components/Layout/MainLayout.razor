@@ -70,7 +70,7 @@ else
 
         <aside id="main-sidebar" class="sidebar">
 
-            @if (currentRole == "AdminGudangBarang")
+            @if (currentRole == "AdminBA")
             {
                 <div class="sidebar-cta">
                     <NavLink class="btn-create-ba" href="/buat-ba">
@@ -82,7 +82,7 @@ else
 
             <div class="sidebar-nav-card">
             <nav class="sidebar-nav">
-                @if (currentRole == "AdminGudangBarang")
+                @if (currentRole == "AdminBA")
                 {
                     <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
                         <i class="bi bi-speedometer2"></i>
@@ -297,7 +297,7 @@ else
                 currentRoleLabel = currentRole switch
                 {
                     "AdminIT"            => "Admin IT",
-                    "AdminGudangBarang"  => "Admin Gudang & Barang",
+                    "AdminBA"  => "Admin BA",
                     "Reviewer"           => "Reviewer",
                     _                    => currentRole
                 };
@@ -371,7 +371,7 @@ else
             .AsNoTracking()
             .CountAsync(n => n.UserId == _currentUserId && !n.IsRead);
 
-        if (currentRole == "AdminGudangBarang")
+        if (currentRole == "AdminBA")
         {
             draftCount = await db.Set<SistemBeritaAcara.Core.Entities.BeritaAcara>()
                 .AsNoTracking()

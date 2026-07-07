@@ -461,7 +461,7 @@ else
             await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah selesai dan disetujui sepenuhnya.", ba.Id);
             
             var creatorUser = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
-            var baseUrl = (Configuration["App:PublicUrl"] ?? Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+            var baseUrl = (Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             var barangList = ba.Perangkat
                 .Select(p => {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";

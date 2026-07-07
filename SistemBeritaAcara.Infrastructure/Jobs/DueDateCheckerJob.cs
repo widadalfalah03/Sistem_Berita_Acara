@@ -12,7 +12,7 @@ public class DueDateCheckerJob(
     IEmailService emailService,
     IConfiguration configuration)
 {
-    private string BaseUrl => (configuration["App:PublicUrl"] ?? configuration["App:BaseUrl"] ?? "http://localhost:5000").TrimEnd('/');
+    private string BaseUrl => (configuration["App:BaseUrl"] ?? "http://localhost:5000").TrimEnd('/');
 
     private static List<string> GetBarangList(BeritaAcara ba)
     {

@@ -51,7 +51,7 @@
     }
 </style>
 
-@if (currentRole == "AdminGudangBarang")
+@if (currentRole == "AdminBA")
 {
     <div class="segmented-control">
         <button class="segment-btn @(activeTab == "revisi" ? "active" : "")" @onclick='() => SwitchTab("revisi")'>
@@ -110,7 +110,7 @@ else
                             <th>Jenis Berita Acara</th>
                             @if (currentRole == "Reviewer")
                             {
-                                <th>Admin Gudang &amp; Barang</th>
+                                <th>Admin BA</th>
                             }
                             else
                             {
@@ -118,7 +118,7 @@ else
                             }
                             <th>Alasan</th>
                             <th>Waktu</th>
-                            @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
+                            @if (activeTab == "revisi" && currentRole == "AdminBA")
                             {
                                 <th style="text-align:right;">Aksi</th>
                             }
@@ -153,7 +153,7 @@ else
                                         @(entry.WaktuTolak == default ? "-" : entry.WaktuTolak.ToString("dd MMM yyyy, HH:mm"))
                                     </span>
                                 </td>
-                                @if (activeTab == "revisi" && currentRole == "AdminGudangBarang")
+                                @if (activeTab == "revisi" && currentRole == "AdminBA")
                                 {
                                     <td style="text-align:right;" @onclick:stopPropagation>
                                         <button class="btn btn-primary" style="padding:6px 16px;font-size:13px;" @onclick="() => ReviseBA(entry.BaId)">
@@ -217,7 +217,7 @@ else
             currentRole = appUser.Role;
             currentUserId = appUser.Id;
 
-            if (currentRole == "AdminGudangBarang")
+            if (currentRole == "AdminBA")
                 await LoadAdminGbAsync();
             else if (currentRole == "Reviewer")
             {

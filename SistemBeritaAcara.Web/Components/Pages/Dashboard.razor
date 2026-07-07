@@ -67,7 +67,7 @@
         <div class="spinner"></div>
     </div>
 }
-else if (currentRole == "AdminGudangBarang")
+else if (currentRole == "AdminBA")
 {
     <div class="dashboard-fill">
     <div class="stat-cards">
@@ -617,7 +617,7 @@ else if (currentRole == "AdminIT")
         <div class="stat-card">
             <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Admin Gudang & Barang</div>
+                <div class="stat-card-label">Admin BA</div>
                 <div class="stat-card-value green">@userStats.AdminGudang</div>
                 <div class="stat-card-desc">Pembuat Berita Acara</div>
             </div>
@@ -709,7 +709,7 @@ else if (currentRole == "AdminIT")
                 Navigation.NavigateTo("/pengguna");
                 return;
             }
-            else if (currentRole == "AdminGudangBarang")
+            else if (currentRole == "AdminBA")
                 await LoadGudangDataAsync();
             else if (currentRole == "Reviewer")
                 await LoadReviewerDataAsync();
@@ -730,7 +730,7 @@ else if (currentRole == "AdminIT")
 
         try
         {
-            if (currentRole == "AdminGudangBarang")
+            if (currentRole == "AdminBA")
             {
                 var months = GetLast6MonthLabels();
                 var monthData = GetMonthlyData();
@@ -762,7 +762,7 @@ else if (currentRole == "AdminIT")
             else if (currentRole == "AdminIT")
             {
                 await JS.InvokeVoidAsync("chartInterop.createDonutChart", "adminITDonut",
-                    new[] { "Admin IT", "Admin Gudang & Barang", "Reviewer" },
+                    new[] { "Admin IT", "Admin BA", "Reviewer" },
                     new[] { userStats.AdminIT, userStats.AdminGudang, userStats.Reviewer },
                     new[] { "#64748B", "#22C55E", "#3B82F6" });
             }
@@ -843,7 +843,7 @@ else if (currentRole == "AdminIT")
         var allUsers = await DbCtx.Users.ToListAsync();
         userStats.Total = allUsers.Count(u => !u.IsDeleted);
         userStats.AdminIT = allUsers.Count(u => u.Role == "AdminIT" && !u.IsDeleted);
-        userStats.AdminGudang = allUsers.Count(u => u.Role == "AdminGudangBarang" && !u.IsDeleted);
+        userStats.AdminGudang = allUsers.Count(u => u.Role == "AdminBA" && !u.IsDeleted);
         userStats.Reviewer = allUsers.Count(u => u.Role == "Reviewer" && !u.IsDeleted);
     }
 

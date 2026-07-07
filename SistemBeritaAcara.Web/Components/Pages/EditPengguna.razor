@@ -129,7 +129,7 @@ else
                             {
                                 <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
                                 <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
-                                    @foreach (var roleOpt in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
+                                    @foreach (var roleOpt in new[] { "AdminIT", "AdminBA", "Reviewer" })
                                     {
                                         <div @onclick="@(() => SelectRole(roleOpt))"
                                              style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(editRole == roleOpt ? "600" : "400");background:@(editRole == roleOpt ? "var(--primary)" : "transparent");color:@(editRole == roleOpt ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
@@ -265,7 +265,7 @@ else
     private static string GetRoleLabel(string role) => role switch
     {
         "AdminIT" => "Admin IT",
-        "AdminGudangBarang" => "Admin Gudang & Barang",
+        "AdminBA" => "Admin BA",
         "Reviewer" => "Reviewer",
         _ => role
     };
@@ -273,7 +273,7 @@ else
     private static string GetRolePill(string role) => role switch
     {
         "AdminIT" => "pill-admin-it",
-        "AdminGudangBarang" => "pill-admin-gudang",
+        "AdminBA" => "pill-admin-gudang",
         "Reviewer" => "pill-reviewer",
         _ => "pill-draft"
     };
