@@ -60,7 +60,11 @@ public static class DependencyInjection
 
         services.AddHangfireServer();
 
-        services.AddScoped<IEmailService, EmailService>();
+        var useEws = config.GetValue<bool>("Email:UseEws");
+        if (useEws)
+            services.AddScoped<IEmailService, EwsEmailService>();
+        else
+            services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IBACounterService, BACounterService>();
         services.AddScoped<IDeaktivasiService, DeaktivasiService>();

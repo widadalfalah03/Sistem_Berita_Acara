@@ -59,7 +59,7 @@ public class EmailService(IConfiguration config) : IEmailService
                 <a href="{link}" style="background-color:#0284c7;color:#ffffff;padding:14px 28px;text-decoration:none;font-weight:bold;font-size:15px;border-radius:6px;display:inline-block;">Akses Dokumen &amp; Tanda Tangan</a>
             </div>
 
-            <p style="color:#cc0000;font-size:13px;"><strong>Perhatian:</strong> Dokumen ini akan diproses secara otomatis oleh sistem apabila tidak ditandatangani dalam waktu 1x24 jam.</p>
+            <p style="color:#cc0000;font-size:13px;"><strong>Perhatian:</strong> Dokumen ini akan diproses secara otomatis oleh sistem apabila tidak ditandatangani dalam waktu 1x24 jam.<br>Harap menggunakan jaringan internal Pertamina untuk mengakses tautan di atas.</p>
             <br>
             <p>Regards,<br><strong>Admin IT</strong></p>
             """;
@@ -303,24 +303,7 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, "Kode Verifikasi Setup Awal — Sistem Berita Acara", body);
     }
 
-    private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
-    {
-        if (string.IsNullOrEmpty(_user) || string.IsNullOrEmpty(_pass))
-        {
-            Console.WriteLine($"[MOCK EMAIL] To: {toEmail}, Subject: {subject}");
-            Console.WriteLine($"[MOCK EMAIL BODY]: {htmlBody}");
-            return;
-        }
-
-        var message = new MimeMessage();
-        message.From.Add(new MailboxAddress("Sistem Informasi Manajemen Berita Acara", _from));
-        message.To.Add(MailboxAddress.Parse(toEmail));
-        message.Subject = subject;
-
-        var plainText = System.Text.RegularExpressions.Regex.Replace(htmlBody, "<.*?>", String.Empty);
-        plainText = plainText.Replace("&nbsp;", " ").Trim();
-
-        var fullHtml = $@"
+    protected static string BuildFullHtml(string htmlBody) => $@"
 <!DOCTYPE html>
 <html>
 <head>
@@ -344,10 +327,27 @@ public class EmailService(IConfiguration config) : IEmailService
 </body>
 </html>";
 
+    protected virtual async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
+    {
+        if (string.IsNullOrEmpty(_user) || string.IsNullOrEmpty(_pass))
+        {
+            Console.WriteLine($"[MOCK EMAIL] To: {toEmail}, Subject: {subject}");
+            Console.WriteLine($"[MOCK EMAIL BODY]: {htmlBody}");
+            return;
+        }
+
+        var message = new MimeMessage();
+        message.From.Add(new MailboxAddress("Sistem Informasi Manajemen Berita Acara", _from));
+        message.To.Add(MailboxAddress.Parse(toEmail));
+        message.Subject = subject;
+
+        var plainText = System.Text.RegularExpressions.Regex.Replace(htmlBody, "<.*?>", string.Empty);
+        plainText = plainText.Replace("&nbsp;", " ").Trim();
+
         var builder = new BodyBuilder
         {
             TextBody = plainText,
-            HtmlBody = fullHtml
+            HtmlBody = BuildFullHtml(htmlBody)
         };
 
         message.Body = builder.ToMessageBody();

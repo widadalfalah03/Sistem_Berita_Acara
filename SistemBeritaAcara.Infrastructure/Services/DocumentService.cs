@@ -276,7 +276,17 @@ public class DocumentService : IDocumentService
 
             if (drawingParas.Any())
             {
+                if (!validFotos.Any())
+                {
+                    // Hapus page break yang memulai halaman 3 agar tidak muncul halaman kosong
+                    var pageBreakPara = drawingParas[0].PreviousSibling<Paragraph>();
+                    if (pageBreakPara != null && pageBreakPara.Descendants<Break>()
+                            .Any(b => b.Type == BreakValues.Page))
+                        pageBreakPara.Remove();
+                }
+
                 foreach (var dp in drawingParas) dp.Remove();
+
                 if (validFotos.Any())
                     EmbedFotosGrid(mainPart, validFotos, sectPr);
             }
