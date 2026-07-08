@@ -295,7 +295,7 @@ public class EmailService(IConfiguration config) : IEmailService
             <p>Kode ini berlaku selama <strong>10 menit</strong>.</p>
 
             <p style="color:#cc0000;font-size:13px;"><strong>Perhatian:</strong><br>
-            Apabila Anda tidak melakukan hal ini, abaikan email ini. Halaman setup hanya dapat diakses saat sistem belum memiliki akun Super Admin.</p>
+            Apabila Anda tidak melakukan hal ini, abaikan email ini. Halaman setup hanya dapat diakses saat sistem belum memiliki akun Admin IT.</p>
             <br>
             <p>Regards,<br><strong>Sistem Informasi Manajemen Berita Acara</strong></p>
             """;

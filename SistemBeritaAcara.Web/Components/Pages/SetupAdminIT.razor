@@ -68,7 +68,7 @@
                 <div style="text-align:center;margin-bottom:20px;">
                     <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Verifikasi Email</h3>
                     <p style="font-size:12px;color:var(--text-secondary);margin:0;">
-                        Masukkan email yang akan digunakan sebagai akun Super Admin.
+                        Masukkan email yang akan digunakan sebagai akun Admin IT.
                     </p>
                 </div>
 
@@ -148,7 +148,7 @@
                 <div style="text-align:center;margin-bottom:20px;">
                     <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Lengkapi Data Akun</h3>
                     <p style="font-size:12px;color:var(--text-secondary);margin:0;">
-                        Buat akun <strong>Super Admin</strong> untuk memulai menggunakan sistem.
+                        Buat akun <strong>Admin IT</strong> untuk memulai menggunakan sistem.
                     </p>
                 </div>
 
@@ -206,7 +206,7 @@
                                 border:1px solid color-mix(in srgb,var(--info) 30%,transparent);
                                 border-radius:var(--radius);font-size:11px;color:var(--text-secondary);">
                         <i class="bi bi-info-circle" style="color:var(--info);margin-right:5px;"></i>
-                        Halaman ini hanya muncul <strong>sekali</strong>. Setelah akun Super Admin dibuat, halaman ini tidak dapat diakses kembali.
+                        Halaman ini hanya muncul <strong>sekali</strong>. Setelah akun Admin IT dibuat, halaman ini tidak dapat diakses kembali.
                     </div>
 
                     <button type="submit" class="login-btn" style="margin-top:14px;" disabled="@isSaving">
@@ -408,8 +408,7 @@
                 EmailConfirmed = true,
                 Nama           = namaLengkap.Trim(),
                 Role           = "AdminIT",
-                PegawaiId      = null,
-                IsSuperAdmin   = true
+                PegawaiId      = null
             };
 
             var result = await UserManager.CreateAsync(user, password);

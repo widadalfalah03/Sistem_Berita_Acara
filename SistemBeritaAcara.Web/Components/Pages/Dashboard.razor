@@ -599,21 +599,13 @@ else if (currentRole == "Reviewer")
 }
 else if (currentRole == "AdminIT")
 {
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
         <div class="stat-card">
             <div class="stat-card-icon total"><i class="bi bi-people-fill"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Total Pengguna Sistem</div>
                 <div class="stat-card-value">@userStats.Total</div>
                 <div class="stat-card-desc">Akun aktif</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card-icon neutral"><i class="bi bi-shield-lock"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Admin IT</div>
-                <div class="stat-card-value">@userStats.AdminIT</div>
-                <div class="stat-card-desc">Superadmin sistem</div>
             </div>
         </div>
         <div class="stat-card">
@@ -678,7 +670,7 @@ else if (currentRole == "AdminIT")
     private (int Pending, int Total, int ApprovedThisMonth, int RejectedThisMonth, int ApprovedAlokasi, int ApprovedPeminjaman, int ApprovedPenarikan, int ApprovedLainnya) reviewerStat;
     private List<BAEntity> reviewerQueue = new();
 
-    private (int Total, int AdminIT, int AdminGudang, int Reviewer) userStats;
+    private (int Total, int AdminGudang, int Reviewer) userStats;
     private AdminITStats itStats = new();
 
     private sealed class AdminITStats
@@ -769,9 +761,9 @@ else if (currentRole == "AdminIT")
             else if (currentRole == "AdminIT")
             {
                 await JS.InvokeVoidAsync("chartInterop.createDonutChart", "adminITDonut",
-                    new[] { "Admin IT", "Admin BA", "Reviewer" },
-                    new[] { userStats.AdminIT, userStats.AdminGudang, userStats.Reviewer },
-                    new[] { "#64748B", "#22C55E", "#3B82F6" });
+                    new[] { "Admin BA", "Reviewer" },
+                    new[] { userStats.AdminGudang, userStats.Reviewer },
+                    new[] { "#22C55E", "#3B82F6" });
             }
         }
         catch (Exception ex)
@@ -849,7 +841,6 @@ else if (currentRole == "AdminIT")
     {
         var allUsers = await DbCtx.Users.ToListAsync();
         userStats.Total = allUsers.Count(u => !u.IsDeleted);
-        userStats.AdminIT = allUsers.Count(u => u.Role == "AdminIT" && !u.IsDeleted);
         userStats.AdminGudang = allUsers.Count(u => u.Role == "AdminBA" && !u.IsDeleted);
         userStats.Reviewer = allUsers.Count(u => u.Role == "Reviewer" && !u.IsDeleted);
     }

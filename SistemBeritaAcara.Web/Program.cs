@@ -61,8 +61,6 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     await db.Database.ExecuteSqlRawAsync(@"
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'ProfilePicPath')
             ALTER TABLE [Users] ADD [ProfilePicPath] nvarchar(500) NULL;
-        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'IsSuperAdmin')
-            ALTER TABLE [Users] ADD [IsSuperAdmin] bit NOT NULL DEFAULT 0;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'Keterangan')
             ALTER TABLE [BeritaAcara] ADD [Keterangan] nvarchar(max) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('PerangkatBA') AND name = 'Keterangan')

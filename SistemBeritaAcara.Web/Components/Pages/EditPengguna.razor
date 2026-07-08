@@ -54,14 +54,7 @@ else
                     <div>
                         <div style="font-size:20px;font-weight:800;color:var(--text-primary);">@appUser.Nama</div>
                         <div style="margin-top:4px;display:flex;align-items:center;gap:6px;">
-                            @if (appUser.IsSuperAdmin)
-                            {
-                                <span class="pill" style="font-size:12px;background:#7c3aed;color:white;">Super Admin</span>
-                            }
-                            else
-                            {
-                                <span class="pill @GetRolePill(appUser.Role)" style="font-size:12px;">@GetRoleLabel(appUser.Role)</span>
-                            }
+                            <span class="pill @GetRolePill(appUser.Role)" style="font-size:12px;">@GetRoleLabel(appUser.Role)</span>
                         </div>
                     </div>
                 </div>
@@ -109,12 +102,12 @@ else
                 <h4>Pengaturan Akun</h4>
                 <div class="form-group" style="margin-top:12px;">
                     <label class="form-label">Role</label>
-                    @if (appUser.IsSuperAdmin)
+                    @if (appUser.Role == "AdminIT")
                     {
-                        <input class="form-control readonly" readonly value="Super Admin" />
+                        <input class="form-control readonly" readonly value="Admin IT" />
                         <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">
-                            <i class="bi bi-shield-lock-fill" style="color:#7c3aed;margin-right:4px;"></i>
-                            Role Super Admin tidak dapat diubah.
+                            <i class="bi bi-shield-lock-fill" style="color:#3b82f6;margin-right:4px;"></i>
+                            Role Admin IT tidak dapat diubah.
                         </div>
                     }
                     else
@@ -151,7 +144,7 @@ else
                     <span class="status-dot @(appUser.IsDeleted ? "inactive" : "active")">
                         @(appUser.IsDeleted ? "Nonaktif" : "Aktif")
                     </span>
-                    @if (appUser.IsSuperAdmin)
+                    @if (appUser.Role == "AdminIT")
                     {
                         <div class="toggle-switch active" style="cursor:not-allowed;opacity:0.5;"></div>
                     }
@@ -163,9 +156,9 @@ else
                     }
                 </div>
                 <div style="font-size:13px;color:var(--text-muted);">
-                    @if (appUser.IsSuperAdmin)
+                    @if (appUser.Role == "AdminIT")
                     {
-                        <span><i class="bi bi-shield-lock-fill" style="color:#7c3aed;margin-right:4px;"></i>Akun Super Admin tidak dapat dinonaktifkan.</span>
+                        <span><i class="bi bi-shield-lock-fill" style="color:#3b82f6;margin-right:4px;"></i>Akun Admin IT tidak dapat dinonaktifkan.</span>
                     }
                     else
                     {
@@ -204,7 +197,7 @@ else
     private async Task SelectRole(string newRole)
     {
         showRoleDropdown = false;
-        if (appUser is null || appUser.IsSuperAdmin) return;
+        if (appUser is null || appUser.Role == "AdminIT") return;
         if (string.IsNullOrEmpty(newRole) || newRole == editRole) return;
 
         isSaving = true;
@@ -228,7 +221,7 @@ else
     private async Task ToggleStatusAsync()
     {
         if (appUser is null) return;
-        if (appUser.IsSuperAdmin) return;
+        if (appUser.Role == "AdminIT") return;
 
         if (appUser.IsDeleted && pegawai is not null && !pegawai.IsAktif)
         {

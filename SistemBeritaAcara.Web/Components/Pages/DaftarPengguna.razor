@@ -30,26 +30,12 @@ else
         </NavLink>
     </div>
 
-    <div class="stat-cards" style="margin-bottom:24px;grid-template-columns:repeat(5,1fr);">
+    <div class="stat-cards" style="margin-bottom:24px;grid-template-columns:repeat(3,1fr);">
         <div class="stat-card">
             <div class="stat-card-icon total"><i class="bi bi-people"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Total Pengguna</div>
                 <div class="stat-card-value">@stats.Total</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card-icon total"><i class="bi bi-shield-fill"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Super Admin</div>
-                <div class="stat-card-value" style="color:#7c3aed;">@stats.SuperAdmin</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-card-icon neutral"><i class="bi bi-shield-lock"></i></div>
-            <div class="stat-card-info">
-                <div class="stat-card-label">Admin IT</div>
-                <div class="stat-card-value">@stats.AdminIT</div>
             </div>
         </div>
         <div class="stat-card">
@@ -166,14 +152,7 @@ else
                             </td>
                             <td>@u.Email</td>
                             <td>
-                                @if (u.IsSuperAdmin)
-                                {
-                                    <span class="pill" style="background:#7c3aed;color:white;">Super Admin</span>
-                                }
-                                else
-                                {
-                                    <span class="pill @GetRolePill(u.Role)">@GetRoleLabel(u.Role)</span>
-                                }
+                                <span class="pill @GetRolePill(u.Role)">@GetRoleLabel(u.Role)</span>
                             </td>
                             <td>
                                 @if (!u.EmailConfirmed)
@@ -271,7 +250,7 @@ else
         set { _search = value; currentPage = 1; }
     }
 
-    private (int Total, int SuperAdmin, int AdminIT, int AdminGudang, int Reviewer) stats;
+    private (int Total, int AdminGudang, int Reviewer) stats;
 
     private int TotalFilteredItems => allUsers
         .Where(u => (u.EmailConfirmed && (showInactive || !u.IsDeleted)) || (!u.EmailConfirmed && !u.IsDeleted))
@@ -307,9 +286,7 @@ else
             .ToListAsync();
 
         stats.Total       = allUsers.Count(u => u.EmailConfirmed && !u.IsDeleted);
-        stats.SuperAdmin  = allUsers.Count(u => u.EmailConfirmed && u.IsSuperAdmin && !u.IsDeleted);
-        stats.AdminIT     = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminIT" && !u.IsSuperAdmin && !u.IsDeleted);
-        stats.AdminGudang = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminBA" && !u.IsDeleted);
+        stats.AdminGudang = allUsers.Count(u => u.EmailConfirmed && u.Role == "AdminGudangBarang" && !u.IsDeleted);
         stats.Reviewer    = allUsers.Count(u => u.EmailConfirmed && u.Role == "Reviewer" && !u.IsDeleted);
     }
 
