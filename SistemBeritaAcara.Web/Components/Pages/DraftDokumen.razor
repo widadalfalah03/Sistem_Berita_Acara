@@ -251,8 +251,8 @@ else
         if (string.IsNullOrEmpty(relativePath)) return;
         try
         {
-            var physical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            var physical = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
+                relativePath.TrimStart('/').Replace("files/", "").Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(physical)) File.Delete(physical);
         }
         catch { /* abaikan jika file sedang dipakai atau sudah tidak ada */ }

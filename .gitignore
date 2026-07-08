@@ -48,14 +48,16 @@ appsettings.Staging.json
 .env.*
 !.env.example
 
-# Upload & dokumen generated
-**/wwwroot/uploads/
-**/wwwroot/dokumen/
-**/wwwroot/ttd/
-**/wwwroot/arsip/
-**/wwwroot/lib/
-**/wwwroot/files/*
-!**/wwwroot/files/templates/
+# Upload & dokumen generated (sekarang di AppFiles)
+**/AppFiles/documents/*
+!**/AppFiles/documents/.gitkeep
+**/AppFiles/photos/*
+!**/AppFiles/photos/.gitkeep
+**/AppFiles/profiles/*
+!**/AppFiles/profiles/.gitkeep
+**/AppFiles/signatures/*
+!**/AppFiles/signatures/.gitkeep
+# Template BA dibiarkan ter-commit karena berada di luar 4 folder di atas
 
 # Database lokal
 *.db

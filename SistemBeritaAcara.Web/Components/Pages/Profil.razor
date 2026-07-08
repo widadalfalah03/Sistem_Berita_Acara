@@ -396,7 +396,7 @@ else
                 return;
             }
 
-            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
+            var folder = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "signatures");
             Directory.CreateDirectory(folder);
             var fname = $"ttd-user-{currentUser!.Id}.png";
             var fpath = Path.Combine(folder, fname);
@@ -428,12 +428,13 @@ else
                 var bytes = Convert.FromBase64String(base64Data);
                 
                 var ext = ".jpg"; 
-                var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "profiles");
+                var folder = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "profiles");
                 Directory.CreateDirectory(folder);
 
                 if (!string.IsNullOrEmpty(currentUser!.ProfilePicPath))
                 {
-                    var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.ProfilePicPath.Replace("/", "\\"));
+                    var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", 
+                        currentUser.ProfilePicPath.Replace("files/", "").Replace("/", "\\"));
                     if (File.Exists(oldPath)) File.Delete(oldPath);
                 }
 

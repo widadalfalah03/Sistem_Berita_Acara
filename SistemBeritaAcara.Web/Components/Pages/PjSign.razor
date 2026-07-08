@@ -296,8 +296,8 @@ else
             if (!string.IsNullOrEmpty(targetDocx))
             {
                 var pdfRelative = targetDocx.Replace(".docx", ".pdf");
-                var pdfPhysical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                    pdfRelative.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                var pdfPhysical = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
+                    pdfRelative.Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()));
                 if (File.Exists(pdfPhysical))
                 {
                     pdfPath = pdfRelative;
@@ -371,7 +371,7 @@ else
         actionMessage = string.Empty;
         try
         {
-            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
+            var folder = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "signatures");
             Directory.CreateDirectory(folder);
             string fpath;
             string fname;
@@ -431,8 +431,8 @@ else
             // Patch NomorSurat atau Generate Docx
             var docxPhysicalPath = string.IsNullOrEmpty(ba!.DocxPath)
                 ? null
-                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                      ba.DocxPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                : Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
+                      ba.DocxPath.TrimStart('/').Replace("files/", "").Replace('/', Path.DirectorySeparatorChar));
             if (docxPhysicalPath != null && File.Exists(docxPhysicalPath))
             {
                 await DocumentService.PatchNomorSuratAsync(ba.Id, ba.NomorSurat!);
@@ -442,13 +442,25 @@ else
                 ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
             }
 
+            // Cek dan konsumsi token secara atomic untuk mencegah race condition (double click)
+            var rowsAffected = await DbContext.ApprovalToken
+                .Where(t => t.Id == approvalToken!.Id && t.UsedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.UsedAt, DateTime.Now));
+            
+            if (rowsAffected == 0)
+            {
+                actionMessage = "Token tanda tangan sudah digunakan atau tidak valid (kemungkinan double-click).";
+                isSubmitting = false;
+                return;
+            }
+
             // Transaksi database
             await using var tx = await DbContext.Database.BeginTransactionAsync();
             ba.Status = "Approved";
             ba.PjSignedAt = DateTime.Now;
             ba.ApprovedAt = DateTime.Now;
             ba.ExcelExported = false;
-            approvalToken!.UsedAt = DateTime.Now;
+            // approvalToken!.UsedAt = DateTime.Now; // Sudah diupdate secara atomic di atas
             await DbContext.SaveChangesAsync();
 
             // Export Excel di luar TX

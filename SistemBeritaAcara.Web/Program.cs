@@ -288,10 +288,29 @@ app.MapGet("/api/preview/pdf/{baId:int}", async (
     var ba = await db.BeritaAcara.FindAsync(baId);
     if (ba == null || (ba.DocxPath == null && ba.DocxFinalPath == null)) return Results.NotFound();
 
+    // IDOR Check
+    if (ba.Status != "Approved" && ba.Status != "Archived")
+    {
+        var role = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        if (role != "AdminIT" && role != "Reviewer")
+        {
+            var userIdStr = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                if (ba.CreatedBy != userId && ba.MengetahuiId != userId && ba.MenyerahkanId != userId)
+                    return Results.Forbid();
+            }
+            else
+            {
+                return Results.Forbid();
+            }
+        }
+    }
+
     // prefer final (with Reviewer + PJ signatures) over draft
     string targetDocx = !string.IsNullOrEmpty(ba.DocxFinalPath) ? ba.DocxFinalPath : ba.DocxPath!;
-    var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-        targetDocx.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+    var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
+        targetDocx.TrimStart('/').Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
 
     if (!File.Exists(pdfPath)) return Results.NotFound();
 
@@ -302,16 +321,36 @@ app.MapGet("/api/preview/pdf/{baId:int}", async (
 // Endpoint download PDF
 app.MapGet("/api/ba/{baId:int}/download", async (
     int baId,
+    HttpContext ctx,
     SistemBeritaAcara.Infrastructure.Data.AppDbContext db) =>
 {
     var ba = await db.BeritaAcara.FindAsync(baId);
     if (ba == null) return Results.NotFound();
 
+    // IDOR Check
+    if (ba.Status != "Approved" && ba.Status != "Archived")
+    {
+        var role = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        if (role != "AdminIT" && role != "Reviewer")
+        {
+            var userIdStr = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdStr, out int userId))
+            {
+                if (ba.CreatedBy != userId && ba.MengetahuiId != userId && ba.MenyerahkanId != userId)
+                    return Results.Forbid();
+            }
+            else
+            {
+                return Results.Forbid();
+            }
+        }
+    }
+
     string targetPath = ba.DocxFinalPath ?? ba.DocxPath;
     if (string.IsNullOrEmpty(targetPath)) return Results.NotFound();
 
-    var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-        targetPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+    var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
+        targetPath.TrimStart('/').Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
 
     if (!File.Exists(pdfPath)) return Results.NotFound();
 
@@ -322,6 +361,30 @@ app.MapGet("/api/ba/{baId:int}/download", async (
     var bytes = await File.ReadAllBytesAsync(pdfPath);
     return Results.File(bytes, "application/pdf", filename);
 }).RequireAuthorization().DisableAntiforgery();
+
+// Endpoint untuk serve file sensitif dengan autorisasi
+app.MapGet("/files/{category}/{**filename}", async (
+    string category, 
+    string filename,
+    HttpContext ctx) => 
+{
+    var physicalPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", category, filename.Replace("/", Path.DirectorySeparatorChar.ToString()));
+    if (!File.Exists(physicalPath)) return Results.NotFound();
+    
+    // Tentukan content type sederhana
+    string ext = Path.GetExtension(physicalPath).ToLower();
+    string contentType = ext switch {
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        ".pdf" => "application/pdf",
+        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        _ => "application/octet-stream"
+    };
+    
+    var bytes = await File.ReadAllBytesAsync(physicalPath);
+    return Results.File(bytes, contentType, enableRangeProcessing: true);
+}).RequireAuthorization().DisableAntiforgery();
+
 
 // Database and roles are ensured earlier before app start
 

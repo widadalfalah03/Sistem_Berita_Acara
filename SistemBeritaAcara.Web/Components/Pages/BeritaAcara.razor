@@ -842,7 +842,7 @@ _currentUserId);
                         if (bf != null)
                         {
                             DbContext.BuktiFoto.Remove(bf);
-                            var physPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", bf.FilePath.TrimStart('/').Replace('/',
+                            var physPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", bf.FilePath.TrimStart('/').Replace("files/", "").Replace('/',
 Path.DirectorySeparatorChar));
                             if (File.Exists(physPath)) File.Delete(physPath);
                         }
@@ -1008,7 +1008,7 @@ Path.DirectorySeparatorChar));
             StateHasChanged();
             try
             {
-                var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
+                var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "photos");
                 Directory.CreateDirectory(photoFolder);
                 int idx = existingPhotoUrls.Count + 1;
                 foreach (var file in newFiles)
@@ -1105,7 +1105,7 @@ Path.DirectorySeparatorChar));
                 {
                     DbContext.BuktiFoto.Remove(foto);
                     await DbContext.SaveChangesAsync();
-                    var physPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relPath.TrimStart('/').Replace('/',
+                    var physPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", relPath.TrimStart('/').Replace("files/", "").Replace('/',
 Path.DirectorySeparatorChar));
                     if (File.Exists(physPath)) File.Delete(physPath);
                 }
@@ -1269,7 +1269,7 @@ existing.PjSignedAt.HasValue;
 
                 if (photoFiles.Any() && !existingPhotoUrls.Any())
                 {
-                    var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "photos");
+                    var photoFolder = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "photos");
                     Directory.CreateDirectory(photoFolder);
                     int idx2 = 1;
                     foreach (var file in photoFiles)

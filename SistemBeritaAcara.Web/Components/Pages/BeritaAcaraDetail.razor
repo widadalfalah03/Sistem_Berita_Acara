@@ -592,8 +592,7 @@ ex.InnerException.Message : "")}";
             var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
             var reviewerTtdPhysical = string.IsNullOrWhiteSpace(currentUser?.TtdPath)
                 ? null
-                : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.TrimStart('/').Replace('/',
-Path.DirectorySeparatorChar));
+                : Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", currentUser.TtdPath.TrimStart('/').Replace("files/", "").Replace('/', Path.DirectorySeparatorChar));
             if (currentUser is null || reviewerTtdPhysical is null || !File.Exists(reviewerTtdPhysical))
             {
                 actionIsError = true; actionMessage = "Gagal: Reviewer belum memiliki file TTD yang valid. Silakan setup TTD di halaman Profil terlebih dahulu.";

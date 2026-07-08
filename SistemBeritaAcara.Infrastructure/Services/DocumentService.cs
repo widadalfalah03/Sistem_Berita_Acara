@@ -27,11 +27,11 @@ public class DocumentService : IDocumentService
         _db = db;
         _logger = logger;
         _config = config;
-        _outputRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
-        _templatesDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "templates");
+        _outputRoot = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "documents");
+        _templatesDir = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "templates");
         Directory.CreateDirectory(_outputRoot);
         Directory.CreateDirectory(_templatesDir);
-        Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures"));
+        Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "signatures"));
     }
 
     private string GetTemplatePath(string jenis)
@@ -55,7 +55,7 @@ public class DocumentService : IDocumentService
         var templatePath = GetTemplatePath(ba.Jenis ?? "Alokasi");
         if (!File.Exists(templatePath))
         {
-            throw new FileNotFoundException($"Template DOCX tidak ditemukan: {Path.GetFileName(templatePath)}. Pastikan file ada di wwwroot/files/templates/");
+            throw new FileNotFoundException($"Template DOCX tidak ditemukan: {Path.GetFileName(templatePath)}. Pastikan file ada di AppFiles/templates/");
         }
 
         string relativePath = GetRelativePath($"ba-{ba.Id}-draft.docx");
@@ -291,8 +291,8 @@ public class DocumentService : IDocumentService
             {
                 foreach (var foto in ba.BuktiFotos)
                 {
-                    var physical = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                        foto.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    var physical = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
+                        foto.FilePath.TrimStart('/').Replace("files/", "").Replace('/', Path.DirectorySeparatorChar));
                     if (!File.Exists(physical)) continue;
                     var ext = Path.GetExtension(physical).ToLowerInvariant();
                     if (ext != ".png" && ext != ".jpg" && ext != ".jpeg")
@@ -705,7 +705,7 @@ public class DocumentService : IDocumentService
     {
         if (string.IsNullOrEmpty(relativePath))
             throw new InvalidOperationException("Path dokumen belum tersimpan (DocxPath kosong). Pastikan dokumen berhasil di-generate terlebih dahulu.");
-        return Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+        return Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", relativePath.Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()));
     }
 
     private static void EnsureFileExists(string path)
@@ -851,7 +851,7 @@ public class DocumentService : IDocumentService
 
     public async Task<string> GenerateLainnyaDocxAsync(BeritaAcara ba)
     {
-        var docFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "documents");
+        var docFolder = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "documents");
         Directory.CreateDirectory(docFolder);
         var fileName = $"BA-Lainnya-{ba.Id}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}.docx";
         var fullPath = Path.Combine(docFolder, fileName);

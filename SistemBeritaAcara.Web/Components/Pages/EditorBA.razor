@@ -292,7 +292,7 @@
                         var currentUser = await DbContext.Users.FindAsync(_currentUserId);
                         if (currentUser != null && !string.IsNullOrEmpty(currentUser.TtdPath))
                         {
-                            var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser.TtdPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                            var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", currentUser.TtdPath.Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()));
                             await DocumentService.EmbedTtdMenyerahkanAsync(Id, ttdPhysicalPath);
                             _menyerahkanEmbedded = true;
                         }
@@ -309,8 +309,8 @@
             {
                 try
                 {
-                    var ttdPjPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-                        ba.TtdPjPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    var ttdPjPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
+                        ba.TtdPjPath.TrimStart('/').Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()));
                     if (System.IO.File.Exists(ttdPjPhysicalPath))
                     {
                         await DocumentService.EmbedTtdPjAsync(Id, ttdPjPhysicalPath);
@@ -326,8 +326,8 @@
         if (!string.IsNullOrEmpty(ba?.DocxPath))
         {
             var pdfPhysicalPath = Path.Combine(
-                Directory.GetCurrentDirectory(), "wwwroot",
-                ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+                Directory.GetCurrentDirectory(), "AppFiles",
+                ba.DocxPath.TrimStart('/').Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
             pdfExists = File.Exists(pdfPhysicalPath);
             if (!pdfExists && string.IsNullOrEmpty(errorMessage))
                 errorMessage = "Pratinjau PDF tidak dapat ditampilkan. Dokumen DOCX berhasil dibuat.";
@@ -350,8 +350,8 @@
         if (!string.IsNullOrEmpty(ba?.DocxPath))
         {
             var pdfPhysicalPath = Path.Combine(
-                Directory.GetCurrentDirectory(), "wwwroot",
-                ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+                Directory.GetCurrentDirectory(), "AppFiles",
+                ba.DocxPath.TrimStart('/').Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
             pdfExists = File.Exists(pdfPhysicalPath);
         }
 
@@ -444,7 +444,7 @@
             }
             else
             {
-                var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", currentUser!.TtdPath!.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                var ttdPhysicalPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", currentUser!.TtdPath!.Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()));
                 if (!_menyerahkanEmbedded)
                 {
                     await DocumentService.EmbedTtdMenyerahkanAsync(trackedBa.Id, ttdPhysicalPath);

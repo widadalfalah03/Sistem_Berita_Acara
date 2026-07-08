@@ -223,11 +223,7 @@
     </div>
 </div>
 
-<form id="autoLoginForm" method="post" action="/account/login" style="display:none;">
-    <input type="hidden" name="email" value="@email" />
-    <input type="hidden" name="password" value="@password" />
-    <input type="hidden" name="returnUrl" value="/dashboard" />
-</form>
+
 
 @code {
     private int    step  = 1;
@@ -422,7 +418,8 @@
             await UserManager.AddToRoleAsync(user, "AdminIT");
             FirstRunMiddleware.MarkHasUsers();
 
-            await JS.InvokeVoidAsync("eval", "document.getElementById('autoLoginForm').submit();");
+            // Arahkan ke halaman login
+            Navigation.NavigateTo("/login", forceLoad: true);
         }
         catch (Exception ex)
         {

@@ -137,11 +137,7 @@
     </div>
 </div>
 
-<form id="invitationAutoLoginForm" method="post" action="/account/login" style="display:none;">
-    <input type="hidden" name="email" value="@email" />
-    <input type="hidden" name="password" value="@newPassword" />
-    <input type="hidden" name="returnUrl" value="/dashboard" />
-</form>
+
 
 @code {
     [SupplyParameterFromQuery]
@@ -298,7 +294,7 @@
                 return;
             }
 
-            var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files", "signatures");
+            var dir = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "signatures");
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
             var fileName = $"ttd-user-{user.Id}.png";
@@ -310,8 +306,8 @@
 
             var updateResult = await UserManager.UpdateAsync(user);
 
-            // Auto-login langsung ke dashboard via hidden form
-            await JS.InvokeVoidAsync("eval", "document.getElementById('invitationAutoLoginForm').submit();");
+            // Arahkan ke halaman login secara manual demi keamanan
+            Navigation.NavigateTo("/login", forceLoad: true);
         }
         catch (Exception ex)
         {

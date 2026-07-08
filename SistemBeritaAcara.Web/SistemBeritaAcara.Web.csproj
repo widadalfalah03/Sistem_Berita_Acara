@@ -6,12 +6,12 @@
   </ItemGroup>
 
   <!-- File yang di-upload user (foto, dokumen, TTD, profil) tidak perlu di-bundle saat publish.
-       File-file ini ada di disk server dan diakses langsung via wwwroot. -->
+       File-file ini ada di disk server dan diakses melalui API. -->
   <ItemGroup>
-    <Content Remove="wwwroot\files\photos\**" />
-    <Content Remove="wwwroot\files\documents\**" />
-    <Content Remove="wwwroot\files\signatures\**" />
-    <Content Remove="wwwroot\files\profiles\**" />
+    <Content Remove="AppFiles\photos\**" />
+    <Content Remove="AppFiles\documents\**" />
+    <Content Remove="AppFiles\signatures\**" />
+    <Content Remove="AppFiles\profiles\**" />
   </ItemGroup>
 
   <ItemGroup>
