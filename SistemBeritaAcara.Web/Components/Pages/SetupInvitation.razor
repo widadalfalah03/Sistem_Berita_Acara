@@ -57,7 +57,7 @@
 
                     <div class="form-group">
                         <div class="login-pw-wrap">
-                            <input class="login-input" type="@pwType" @bind="newPassword" placeholder="Password Baru (Min. 8 Karakter, 1 Huruf Besar, Angka, & Simbol)" />
+                            <input class="login-input" type="@pwType" @bind="newPassword" placeholder="Password Baru" />
                             <button type="button" class="login-pw-toggle" @onclick="TogglePwType" tabindex="-1">
                                 <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
                             </button>
@@ -210,8 +210,32 @@
     {
         errorMessage = string.Empty;
 
+        bool formatOk = !string.IsNullOrWhiteSpace(newPassword)
+                        && newPassword.Length >= 8
+                        && newPassword.Any(char.IsUpper)
+                        && newPassword.Any(char.IsDigit)
+                        && newPassword.Any(ch => !char.IsLetterOrDigit(ch));
+
+        bool confirmFormatOk = !string.IsNullOrWhiteSpace(confirmPassword)
+                               && confirmPassword.Length >= 8
+                               && confirmPassword.Any(char.IsUpper)
+                               && confirmPassword.Any(char.IsDigit)
+                               && confirmPassword.Any(ch => !char.IsLetterOrDigit(ch));
+
+        if (!formatOk || !confirmFormatOk)
+        {
+            errorMessage = "Password minimal 8 karakter dan harus mengandung huruf besar, angka, serta simbol (contoh: Abc123!).";
+            return;
+        }
+
+        if (newPassword != confirmPassword)
+        {
+            errorMessage = "Password tidak cocok. Pastikan kedua kolom password diisi dengan nilai yang sama.";
+            return;
+        }
 
         step = 2;
+        _canvasInitialized = false;
     }
 
     private async Task SwitchSetupMode(string mode)

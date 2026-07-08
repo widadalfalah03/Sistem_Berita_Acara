@@ -97,46 +97,6 @@ else
         </div>
 
         <div class="side-cards">
-            
-            <div class="side-card">
-                <h4>Pengaturan Akun</h4>
-                <div class="form-group" style="margin-top:12px;">
-                    <label class="form-label">Role</label>
-                    @if (appUser.Role == "AdminIT")
-                    {
-                        <input class="form-control readonly" readonly value="Admin IT" />
-                        <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">
-                            <i class="bi bi-shield-lock-fill" style="color:#3b82f6;margin-right:4px;"></i>
-                            Role Admin IT tidak dapat diubah.
-                        </div>
-                    }
-                    else
-                    {
-                        <div style="position:relative;">
-                            <div @onclick="() => showRoleDropdown = !showRoleDropdown"
-                                 style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                                <span style="font-weight:500;">@GetRoleLabel(editRole)</span>
-                                <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showRoleDropdown ? "transform:rotate(180deg);" : "")"></i>
-                            </div>
-                            @if (showRoleDropdown)
-                            {
-                                <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
-                                <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
-                                    @foreach (var roleOpt in new[] { "AdminIT", "AdminBA", "Reviewer" })
-                                    {
-                                        <div @onclick="@(() => SelectRole(roleOpt))"
-                                             style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(editRole == roleOpt ? "600" : "400");background:@(editRole == roleOpt ? "var(--primary)" : "transparent");color:@(editRole == roleOpt ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
-                                             onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
-                                             onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
-                                            @GetRoleLabel(roleOpt)
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-            </div>
 
             <div class="side-card">
                 <h4>Status Akun</h4>
@@ -177,8 +137,6 @@ else
     private ApplicationUser? appUser;
     private SistemBeritaAcara.Core.Entities.Pegawai? pegawai;
     private bool isLoading = true;
-    private bool showRoleDropdown = false;
-    private string editRole = string.Empty;
     private string successMsg = string.Empty;
     private string errorMsg = string.Empty;
 
@@ -188,36 +146,8 @@ else
         if (appUser is not null)
         {
             pegawai = appUser.Pegawai;
-            editRole = appUser.Role;
         }
         isLoading = false;
-    }
-
-    private async Task SelectRole(string newRole)
-    {
-        showRoleDropdown = false;
-        if (appUser is null || appUser.Role == "AdminIT") return;
-        if (string.IsNullOrEmpty(newRole) || newRole == editRole) return;
-
-        try
-        {
-            errorMsg = string.Empty;
-            successMsg = string.Empty;
-
-            var oldRoles = await UserManager.GetRolesAsync(appUser);
-            await UserManager.RemoveFromRolesAsync(appUser, oldRoles);
-            await UserManager.AddToRoleAsync(appUser, newRole);
-
-            appUser.Role = newRole;
-            editRole = newRole;
-
-            await UserManager.UpdateAsync(appUser);
-            successMsg = "Role berhasil diperbarui.";
-        }
-        catch (Exception ex)
-        {
-            errorMsg = $"Gagal menyimpan data: {ex.Message}";
-        }
     }
 
     private async Task ToggleStatusAsync()

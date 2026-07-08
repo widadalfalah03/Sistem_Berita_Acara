@@ -383,10 +383,10 @@
         { errorMessage = "Nama lengkap wajib diisi."; return; }
 
         if (string.IsNullOrWhiteSpace(password) || password.Length < 8 || !password.Any(char.IsUpper) || !password.Any(char.IsDigit) || !password.Any(ch => !char.IsLetterOrDigit(ch)))
-        { errorMessage = "Password minimal 8 karakter, serta mengandung huruf besar, angka, dan simbol."; return; }
+        { errorMessage = "Password minimal 8 karakter dan harus mengandung huruf besar, angka, serta simbol (contoh: Abc123!)."; return; }
 
         if (password != confirmPassword)
-        { errorMessage = "Konfirmasi password tidak cocok."; return; }
+        { errorMessage = "Password tidak cocok. Pastikan kedua kolom password diisi dengan nilai yang sama."; return; }
 
         isSaving = true;
         try
