@@ -65,9 +65,9 @@ GO
 
 --  BAGIAN 3: HAPUS DATA PENGGUNA (USER & ROLES)
 --  Setelah ini: aplikasi restart → halaman /setup muncul →
---  akun pertama yang dibuat otomatis menjadi Super Admin.
+--  akun pertama yang dibuat menjadi Admin IT (hanya 1 akun).
 
--- Identity tables (termasuk Super Admin & semua Admin IT)
+-- Identity tables (termasuk Admin IT)
 DELETE FROM [AspNetUserTokens];
 DELETE FROM [AspNetUserLogins];
 DELETE FROM [AspNetUserClaims];
