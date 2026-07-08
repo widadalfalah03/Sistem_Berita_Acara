@@ -238,6 +238,9 @@ else
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "newUserId")]
+    public int? NewUserId { get; set; }
+
     private bool isLoading = true;
     private bool isProcessing = false;
     private List<ApplicationUser> allUsers = new();
@@ -290,6 +293,11 @@ else
     protected override async Task OnInitializedAsync()
     {
         await LoadUsersAsync();
+
+        // Jika baru saja tambah pengguna baru, langsung set cooldown untuk user tersebut
+        if (NewUserId.HasValue && NewUserId.Value > 0)
+            StartCooldownFor(NewUserId.Value);
+
         isLoading = false;
     }
 
@@ -319,27 +327,7 @@ else
             ShowToast("Undangan berhasil dikirim ulang ke " + user.Email, isError: false);
 
             // Mulai cooldown 60 detik untuk user ini
-            resendCooldowns[user.Id] = 60;
-            if (_cooldownTimer == null)
-            {
-                _cooldownTimer = new System.Threading.Timer(_ =>
-                {
-                    var keys = resendCooldowns.Keys.ToList();
-                    foreach (var k in keys)
-                    {
-                        if (resendCooldowns[k] > 0)
-                            resendCooldowns[k]--;
-                        if (resendCooldowns[k] <= 0)
-                            resendCooldowns.Remove(k);
-                    }
-                    InvokeAsync(StateHasChanged);
-                    if (resendCooldowns.Count == 0)
-                    {
-                        _cooldownTimer?.Dispose();
-                        _cooldownTimer = null;
-                    }
-                }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
-            }
+            StartCooldownFor(user.Id);
         }
         catch
         {
@@ -389,6 +377,31 @@ else
             toastMsg = string.Empty;
             InvokeAsync(StateHasChanged);
         }, null, 3500, System.Threading.Timeout.Infinite);
+    }
+
+    private void StartCooldownFor(int userId)
+    {
+        resendCooldowns[userId] = 60;
+        if (_cooldownTimer == null)
+        {
+            _cooldownTimer = new System.Threading.Timer(_ =>
+            {
+                var keys = resendCooldowns.Keys.ToList();
+                foreach (var k in keys)
+                {
+                    if (resendCooldowns[k] > 0)
+                        resendCooldowns[k]--;
+                    if (resendCooldowns[k] <= 0)
+                        resendCooldowns.Remove(k);
+                }
+                InvokeAsync(StateHasChanged);
+                if (resendCooldowns.Count == 0)
+                {
+                    _cooldownTimer?.Dispose();
+                    _cooldownTimer = null;
+                }
+            }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        }
     }
 
     public void Dispose()

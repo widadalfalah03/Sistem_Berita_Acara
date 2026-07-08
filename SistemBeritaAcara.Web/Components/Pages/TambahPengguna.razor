@@ -315,6 +315,7 @@
             savedName  = nama;
             savedRole  = GetRoleLabel(selectedRole);
             formSaved  = true;
+            Navigation.NavigateTo($"/pengguna?newUserId={user.Id}");
         }
         catch (Exception ex) { errorMsg = ex.Message; }
         finally { isSaving = false; }
@@ -379,6 +380,7 @@
             savedName  = selectedPegawai.Nama;
             savedRole  = "Reviewer";
             formSaved  = true;
+            Navigation.NavigateTo($"/pengguna?newUserId={user.Id}");
         }
         catch (Exception ex) { errorMsg = ex.Message; }
         finally { isSaving = false; }
