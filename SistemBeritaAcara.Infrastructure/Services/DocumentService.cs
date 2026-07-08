@@ -128,17 +128,12 @@ public class DocumentService : IDocumentService
                 { "{{TiketSscNo}}", ba.TiketSscNo ?? "-" },
                 { "{{TanggalKembali}}", tanggalKembaliStr },
                 { "{{Keterangan}}", ba.Keterangan ?? "" },
+                { "Tiket di My SSC NO.", "Nota Dinas/Tiket di My SSC No." },
             };
 
             if (!string.IsNullOrWhiteSpace(ba.PengunaAlihDaya))
             {
                 replacements.Add("Nama Penanggung Jawab", "Nama Pengguna/Penanggung Jawab");
-            }
-
-            if (ba.DasarAlokasi == "Nota Dinas")
-            {
-                replacements.Add("Tiket di My SSC NO.", "Nota Dinas NO.");
-                replacements.Add("Tiket di My SSC No.", "Nota Dinas No.");
             }
 
             int namaPjCount = 0;
@@ -150,7 +145,7 @@ public class DocumentService : IDocumentService
                     var fullText = string.Concat(para.Descendants<Text>().Select(t => t.Text));
                     if (fullText.Contains("Catatan: Perangkat IT ini dialokasikan") ||
                         fullText.Contains("Catatan: Perangkat IT ini ditarik") ||
-                        fullText.Contains("Tiket di My SSC") ||
+                        fullText.Contains("Nota Dinas/Tiket di My SSC") ||
                         fullText.Contains("Nota Dinas"))
                     {
                         para.RemoveAllChildren<Run>();
@@ -158,6 +153,47 @@ public class DocumentService : IDocumentService
                     }
                 }
                 NormalizeParagraphPlaceholders(para, replacements, ref namaPjCount, ba);
+            }
+
+            // Perbaiki posisi tanggal pengembalian: ganti spasi panjang dengan tab stop kanan
+            foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
+            {
+                var firstRun = para.Elements<Run>().FirstOrDefault();
+                if (firstRun == null) continue;
+                var firstText = firstRun.GetFirstChild<Text>();
+                if (firstText == null) continue;
+
+                const string tanggalMarker = "Tanggal pengembalian:";
+                string text = firstText.Text;
+                if (!text.Contains(tanggalMarker)) continue;
+
+                int markerIdx = text.IndexOf(tanggalMarker);
+                string beforeMarker = text[..markerIdx].TrimEnd();
+                string afterMarker = text[markerIdx..];
+
+                firstText.Text = beforeMarker;
+                if (beforeMarker.Length > 0 && beforeMarker[^1] == ' ')
+                    firstText.Space = SpaceProcessingModeValues.Preserve;
+
+                var tabRun = new Run();
+                if (firstRun.RunProperties != null)
+                    tabRun.RunProperties = (RunProperties)firstRun.RunProperties.CloneNode(true);
+                tabRun.AppendChild(new TabChar());
+                firstRun.InsertAfterSelf(tabRun);
+
+                var dateRun = new Run();
+                if (firstRun.RunProperties != null)
+                    dateRun.RunProperties = (RunProperties)firstRun.RunProperties.CloneNode(true);
+                dateRun.AppendChild(new Text(afterMarker));
+                tabRun.InsertAfterSelf(dateRun);
+
+                var pPr = para.ParagraphProperties ?? new ParagraphProperties();
+                if (para.ParagraphProperties == null) para.InsertAt(pPr, 0);
+                var tabs = pPr.GetFirstChild<Tabs>() ?? new Tabs();
+                if (pPr.GetFirstChild<Tabs>() == null) pPr.Append(tabs);
+                tabs.AppendChild(new TabStop { Val = TabStopValues.Right, Position = 9160 });
+
+                break;
             }
 
             foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
@@ -203,6 +239,8 @@ public class DocumentService : IDocumentService
                     tblBorders.RightBorder = new RightBorder { Val = BorderValues.Nil };
                     tblBorders.InsideHorizontalBorder = new InsideHorizontalBorder { Val = BorderValues.Nil };
                     tblBorders.InsideVerticalBorder = new InsideVerticalBorder { Val = BorderValues.Nil };
+
+
                 }
             }
 

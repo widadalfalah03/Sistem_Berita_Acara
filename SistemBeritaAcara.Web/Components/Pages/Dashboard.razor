@@ -254,7 +254,7 @@ else if (currentRole == "AdminBA")
                             <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;width:35%;">No. Surat</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@(modalBA.NomorSurat ?? "Belum dibuat")</td></tr>
                             <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">Tanggal Terbit</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@modalBA.Tanggal.ToString("dd MMMM yyyy")</td></tr>
                             <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">Tanggal Kembali</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;color:@(mDaysLeft < 0 ? "var(--danger)" : "var(--text-primary)");">@(modalBA.TanggalKembali?.ToString("dd MMMM yyyy") ?? "-")</td></tr>
-                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">No. Tiket My SSC</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@(modalBA.TiketSscNo ?? "-")</td></tr>
+                            <tr><td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">Nota Dinas/No. Tiket My SSC</td><td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-all;">@(modalBA.TiketSscNo ?? "-")</td></tr>
                             <tr>
                                 <td style="padding:8px 0;color:var(--text-secondary);font-size:13px;">Penanggung Jawab</td>
                                 <td style="padding:8px 0;font-weight:600;font-size:13px;word-break:break-word;">@modalBA.Pj?.Nama</td>
