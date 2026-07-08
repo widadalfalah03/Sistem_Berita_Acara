@@ -61,6 +61,12 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     await db.Database.ExecuteSqlRawAsync(@"
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'ProfilePicPath')
             ALTER TABLE [Users] ADD [ProfilePicPath] nvarchar(500) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'IsSuperAdmin')
+            ALTER TABLE [Users] ADD [IsSuperAdmin] bit NOT NULL DEFAULT 0;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'Keterangan')
+            ALTER TABLE [BeritaAcara] ADD [Keterangan] nvarchar(max) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('PerangkatBA') AND name = 'Keterangan')
+            ALTER TABLE [PerangkatBA] ADD [Keterangan] nvarchar(max) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'PjNoTelp')
             ALTER TABLE [BeritaAcara] ADD [PjNoTelp] nvarchar(50) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'IsReturned')
@@ -325,10 +331,5 @@ RecurringJob.AddOrUpdate<DueDateCheckerJob>(
     "cek-jatuh-tempo",
     job => job.CheckDueDatesAsync(),
     Cron.Daily(7));
-
-RecurringJob.AddOrUpdate<AutoApproveJob>(
-    "cek-auto-approve-pj",
-    job => job.ProcessAutoApproveAsync(),
-    Cron.Hourly());
 
 app.Run();

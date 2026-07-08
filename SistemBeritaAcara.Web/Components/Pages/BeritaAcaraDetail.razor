@@ -209,10 +209,11 @@ else
                             <i class="bi bi-x-circle-fill"></i> Ditolak
                         </div>                        <div style="font-size:14px;color:var(--text-secondary);">@ba.AlasanReject</div>
                     </div>
-                </div>
-            }
+                }
+            </div>
+        }
 
-            <div class="info-grid-2">
+        <div class="info-grid-2">
                 <div class="card">
                     <div class="card-header">
                         <h3>Informasi Dokumen</h3>
@@ -348,29 +349,6 @@ else
                                             </div>
                                         }
 
-                                        @if (currentRole == "AdminGudangBarang")
-                                        {
-                                            <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                                                @if (ba.Status == "Draft")
-                                                {
-                                                    <button class="btn btn-primary @(isProcessing ? "btn-loading" : "")" @onclick="SendMagicLinkAsync"
-                                                            disabled="@isProcessing">
-                                                        <i class="bi bi-send"></i> Kirim Notifikasi ke PJ
-                                                    </button>
-                                                }
-                                                else if (ba.Status == "WaitingPJSign")
-                                                {
-                                                    <div
-                                                        style="background:var(--primary-light);border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:10px;color:var(--primary);">
-                                                        <i class="bi bi-hourglass-split"></i>
-                                                        Menunggu PJ menandatangani dokumen
-                                                    </div>
-                                                }
-                                                else if (ba.Status == "Rejected")
-                                                {
-                                                }
-                                            </div>
-                                        }
                                     }
                                 }
 
