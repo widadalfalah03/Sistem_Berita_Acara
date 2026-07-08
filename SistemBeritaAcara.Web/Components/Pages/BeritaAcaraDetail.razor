@@ -493,10 +493,13 @@ else
                 return;
             }
 
-            // Jika link dari email reject tapi yang login bukan Admin GB, minta login ulang
-            if (From == "rejected" && currentRole != "AdminGudangBarang")
+            // Authorization check: pastikan user punya akses ke BA ini
+            bool isCreator = appUser.Id == ba.CreatedBy;
+            bool isRelatedParty = appUser.Id == ba.MengetahuiId || appUser.Id == ba.MenyerahkanId;
+            
+            if (!isCreator && !isRelatedParty && currentRole != "AdminIT")
             {
-                Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}", true);
+                Navigation.NavigateTo("/akses-ditolak", true);
                 return;
             }
 
