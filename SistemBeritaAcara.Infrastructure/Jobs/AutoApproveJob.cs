@@ -99,9 +99,9 @@ public class AutoApproveJob(
                     {
                         string namaBarang = p.Barang?.NamaBarang ?? "Perangkat";
                         string detail = $"{p.Jumlah} {p.Satuan}";
-                        if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                        if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" â€” S/N: {p.NoSerial}";
                         if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                        return $"{namaBarang} — {detail}";
+                        return $"{namaBarang} â€” {detail}";
                     })
                     .ToList();
 
@@ -119,7 +119,6 @@ public class AutoApproveJob(
                 {
                     await emailService.SendApprovalResultAsync(ba.Mengetahui.Email, ba.Mengetahui.Nama, ba.Jenis, true, ba.Id, BaseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
                 }
-
                 logger.LogInformation($"[AutoApproveJob] BA {ba.Id} ({ba.NomorSurat}) berhasil di-auto-approve dan selesai.");
             }
             catch (Exception ex)

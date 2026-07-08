@@ -1,5 +1,4 @@
 using Hangfire;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -15,24 +14,26 @@ using SistemBeritaAcara.Web.Services;
 using System.Globalization;
 using System.Threading.RateLimiting;
 
+// ── Atur kultur global ke Bahasa Indonesia ──────────────────────────────────
+// Semua format tanggal (ToString("MMMM"), dll.) otomatis menggunakan nama bulan
+// dalam Bahasa Indonesia (misal: "Juni" bukan "June") tanpa perlu CultureInfo
+// per-panggilan di seluruh aplikasi.
 var idCulture = new CultureInfo("id-ID");
 CultureInfo.DefaultThreadCurrentCulture   = idCulture;
 CultureInfo.DefaultThreadCurrentUICulture = idCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new System.IO.DirectoryInfo(@"C:\BeritaAcaraData\DataProtectionKeys"))
-    .SetApplicationName("SistemBeritaAcara");
-
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddHubOptions(o => o.MaximumReceiveMessageSize = 10 * 1024 * 1024); // 10MB untuk base64 gambar TTD
 
+// Register revalidating authentication state provider
 builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, SistemBeritaAcara.Web.Security.IdentityRevalidatingAuthenticationStateProvider>();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// M-6: Rate limiting pada endpoint login — maks 10 percobaan per menit per IP
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("login", limiter =>
@@ -45,6 +46,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
+// Ensure database and initial roles are created before the app (and Hangfire) starts
 using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
 {
     var db = preScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -53,11 +55,18 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     try { db.Database.EnsureCreated(); }
     catch (Exception ex) { startupLogger.LogCritical(ex, "Gagal membuat/memverifikasi database. Pastikan SQL Server berjalan dan connection string benar."); throw; }
 
+    // Add columns that may be missing when DB was created before the entity was updated
     try
     {
     await db.Database.ExecuteSqlRawAsync(@"
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'ProfilePicPath')
             ALTER TABLE [Users] ADD [ProfilePicPath] nvarchar(500) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'IsSuperAdmin')
+            ALTER TABLE [Users] ADD [IsSuperAdmin] bit NOT NULL DEFAULT 0;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'Keterangan')
+            ALTER TABLE [BeritaAcara] ADD [Keterangan] nvarchar(max) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('PerangkatBA') AND name = 'Keterangan')
+            ALTER TABLE [PerangkatBA] ADD [Keterangan] nvarchar(max) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'PjNoTelp')
             ALTER TABLE [BeritaAcara] ADD [PjNoTelp] nvarchar(50) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'IsReturned')
@@ -139,34 +148,6 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             ALTER TABLE [BeritaAcara] ADD CONSTRAINT [FK_BeritaAcara_Users_MenyerahkanId]
                 FOREIGN KEY ([MenyerahkanId]) REFERENCES [Users]([Id]) ON DELETE NO ACTION
         END
-
-        -- Tambah kolom IsSuperAdmin ke Users jika belum ada
-        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'IsSuperAdmin')
-        BEGIN
-            ALTER TABLE [Users] ADD [IsSuperAdmin] BIT NOT NULL DEFAULT 0
-        END
-
-        -- Hapus kolom BeritaAcaraId dari ApprovalToken yang di-generate otomatis oleh EF Core sebelumnya
-        IF EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'BeritaAcaraId' AND Object_ID = Object_ID(N'ApprovalToken'))
-        BEGIN
-            -- Hapus FK constraint dulu (EF Core buat FK_ApprovalToken_BeritaAcara_BeritaAcaraId)
-            DECLARE @fkApprToken nvarchar(200)
-            SELECT TOP 1 @fkApprToken = fk.name
-            FROM sys.foreign_keys fk
-            INNER JOIN sys.foreign_key_columns fkc ON fk.object_id = fkc.constraint_object_id
-            INNER JOIN sys.columns c ON fkc.parent_object_id = c.object_id AND fkc.parent_column_id = c.column_id
-            WHERE fkc.parent_object_id = OBJECT_ID(N'ApprovalToken') AND c.name = N'BeritaAcaraId'
-            IF @fkApprToken IS NOT NULL
-                EXEC('ALTER TABLE [ApprovalToken] DROP CONSTRAINT [' + @fkApprToken + ']')
-
-            -- Hapus index yang bergantung pada kolom tersebut jika ada
-            IF EXISTS (SELECT 1 FROM sys.indexes WHERE Name = N'IX_ApprovalToken_BeritaAcaraId' AND Object_ID = Object_ID(N'ApprovalToken'))
-            BEGIN
-                EXEC('DROP INDEX [IX_ApprovalToken_BeritaAcaraId] ON [ApprovalToken]')
-            END
-
-            EXEC('ALTER TABLE [ApprovalToken] DROP COLUMN [BeritaAcaraId]')
-        END
     ");
     }
     catch (Exception ex)
@@ -177,37 +158,27 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
     var userManager = preScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
+    // ── 1. Roles ──────────────────────────────────────────────────────────
     foreach (var role in new[] { "AdminIT", "AdminBA", "Reviewer" })
     {
         if (!await roleManager.RoleExistsAsync(role))
             await roleManager.CreateAsync(new IdentityRole<int>(role));
     }
 
+    // ── 2. Seed Users: Sync Jabatan & fix Identity Roles untuk user yang sudah ada ──
+    // (Akun Admin IT dibuat via halaman /setup saat pertama kali aplikasi dijalankan)
     var usersNeedJabatan = db.Users.Include(u => u.Pegawai).Where(u => u.Jabatan == null && u.PegawaiId != null).ToList();
     foreach (var u in usersNeedJabatan)
         u.Jabatan = u.Pegawai?.Jabatan;
     if (usersNeedJabatan.Any())
         await db.SaveChangesAsync();
 
+    // Fix: Sync Identity Roles untuk user yang mungkin hilang dari AspNetUserRoles
     var allUsers = await db.Users.ToListAsync();
     foreach (var u in allUsers)
     {
         if (!string.IsNullOrEmpty(u.Role) && !await userManager.IsInRoleAsync(u, u.Role))
             await userManager.AddToRoleAsync(u, u.Role);
-    }
-
-    // Tandai AdminIT pertama sebagai SuperAdmin jika belum ada SuperAdmin
-    if (!db.Users.Any(u => u.IsSuperAdmin))
-    {
-        var firstAdminIT = db.Users
-            .Where(u => u.Role == "AdminIT" && !u.IsDeleted && u.EmailConfirmed)
-            .OrderBy(u => u.Id)
-            .FirstOrDefault();
-        if (firstAdminIT != null)
-        {
-            firstAdminIT.IsSuperAdmin = true;
-            await db.SaveChangesAsync();
-        }
     }
 }
 
@@ -221,6 +192,7 @@ builder.Services.ConfigureApplicationCookie(opt =>
 
 builder.Services.AddAuthorization();
 
+// ── SignalR untuk real-time update status BA ──────────────────────────────
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<BaUpdateService>();
 
@@ -232,12 +204,15 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Baca X-Forwarded-* headers dari reverse proxy/ngrok agar redirect URL pakai host ngrok
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
+    // Hanya terima forwarded headers dari loopback (reverse proxy di server yang sama)
     KnownProxies = { System.Net.IPAddress.Loopback, System.Net.IPAddress.IPv6Loopback }
 });
 
+// Izinkan ngrok melewati header verifikasi (hanya berpengaruh saat pakai ngrok di development)
 app.Use(async (context, next) =>
 {
     context.Request.Headers["ngrok-skip-browser-warning"] = "true";
@@ -251,6 +226,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
+// ── First-Run Middleware: redirect ke /setup jika belum ada user di DB ──
 app.UseMiddleware<SistemBeritaAcara.Web.Security.FirstRunMiddleware>();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
@@ -262,8 +238,10 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+// ── Map SignalR Hub ───────────────────────────────────────────────────────
 app.MapHub<BaHub>("/hubs/ba");
 
+// ── Auth Endpoints (POST must be used for cookie auth from Blazor Server) ──
 app.MapPost("/account/login", async (
     HttpContext ctx,
     SignInManager<ApplicationUser> signInManager,
@@ -273,6 +251,7 @@ app.MapPost("/account/login", async (
     var email = form["email"].ToString();
     var password = form["password"].ToString();
     var returnUrl = form["returnUrl"].ToString();
+    // Cegah open redirect: hanya izinkan path lokal (mulai dengan '/')
     if (string.IsNullOrEmpty(returnUrl) || !returnUrl.StartsWith('/') || returnUrl.StartsWith("//"))
         returnUrl = "/dashboard";
 
@@ -322,6 +301,7 @@ app.MapGet("/api/preview/pdf/{baId:int}", async (
     return Results.File(bytes, "application/pdf", enableRangeProcessing: true);
 }).RequireAuthorization().DisableAntiforgery();
 
+// Endpoint download PDF
 app.MapGet("/api/ba/{baId:int}/download", async (
     int baId,
     SistemBeritaAcara.Infrastructure.Data.AppDbContext db) =>
@@ -337,14 +317,15 @@ app.MapGet("/api/ba/{baId:int}/download", async (
 
     if (!File.Exists(pdfPath)) return Results.NotFound();
 
-    string filename = !string.IsNullOrEmpty(ba.NomorSurat)
-        ? $"{ba.NomorSurat.Replace("/", "_")}.pdf"
-        : $"{ba.Id}.pdf";
+    string filename = !string.IsNullOrEmpty(ba.NomorSurat) 
+        ? $"Berita_Acara_{ba.NomorSurat.Replace("/", "_")}.pdf" 
+        : $"Berita_Acara_{ba.Id}.pdf";
 
     var bytes = await File.ReadAllBytesAsync(pdfPath);
     return Results.File(bytes, "application/pdf", filename);
 }).RequireAuthorization().DisableAntiforgery();
 
+// Database and roles are ensured earlier before app start
 
 RecurringJob.AddOrUpdate<DueDateCheckerJob>(
     "cek-jatuh-tempo",

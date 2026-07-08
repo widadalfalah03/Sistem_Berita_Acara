@@ -19,10 +19,10 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @implements IAsyncDisposable
 
-<PageTitle>Detail Berita Acara — Sistem Berita Acara</PageTitle>
+<PageTitle>Detail Berita Acara â€” Sistem Berita Acara</PageTitle>
 
 
-@* ── Fullscreen overlay saat reviewer memproses Setuju / Tolak ── *@
+@* â”€â”€ Fullscreen overlay saat reviewer memproses Setuju / Tolak â”€â”€ *@
 @if (isProcessing && isReviewerAction)
 {
     <div
@@ -53,6 +53,22 @@ else if (notFound || ba is null)
     <div style="text-align:center;padding:60px;color:var(--text-muted);">
         <i class="bi bi-file-x" style="font-size:48px;display:block;margin-bottom:16px;"></i>
         <div style="font-size:18px;font-weight:700;">Berita Acara tidak ditemukan</div>
+    </div>
+}
+else if (reviewerLinkInvalid)
+{
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;text-align:center;">
+        <div style="width:72px;height:72px;border-radius:50%;background:var(--danger-light,#FEE2E2);display:flex;align-items:center;justify-content:center;margin-bottom:24px;">
+            <i class="bi bi-link-45deg" style="font-size:34px;color:var(--danger);"></i>
+        </div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:10px;">Tautan Tidak Valid</div>
+        <div style="font-size:14px;color:var(--text-secondary);max-width:400px;line-height:1.7;margin-bottom:28px;">
+            Berita Acara yang ditujukan kepada Anda sudah <strong>dibatalkan oleh Admin BA</strong>
+            sebelum Anda sempat memprosesnya. Tautan dari email ini tidak lagi berlaku.
+        </div>
+        <button class="btn btn-primary" @onclick="@(() => Navigation.NavigateTo("/dashboard"))">
+            Kembali ke Dashboard
+        </button>
     </div>
 }
 else
@@ -185,18 +201,35 @@ else
                 </div>
             </div>
 
-            @if (ba.Status == "Rejected" && currentRole == "AdminBA")
-            {
-                <div style="background:var(--danger-light);border-radius:var(--radius);padding:14px 20px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;">
-                    <i class="bi bi-x-circle-fill" style="color:var(--danger);margin-top:2px;flex-shrink:0;"></i>
-                    <div>
-                        <div style="color:var(--danger);font-weight:700;margin-bottom:4px;">Ditolak</div>
-                        <div style="font-size:14px;color:var(--text-secondary);">@ba.AlasanReject</div>
+        <!-- Action buttons for AdminBA -->
+        @if (currentRole == "AdminBA")
+        {
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                @if (ba.Status == "Draft")
+                {
+                    <button class="btn btn-primary @(isProcessing ? "btn-loading" : "")" @onclick="SubmitToReviewerAsync" disabled="@isProcessing">
+                        <i class="bi bi-person-check"></i> Ajukan ke Reviewer
+                    </button>
+                }
+                else if (ba.Status == "WaitingPJSign")
+                {
+                    <div style="background:var(--primary-light);border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:10px;color:var(--primary);">
+                        <i class="bi bi-hourglass-split"></i>
+                        Menunggu PJ menandatangani dokumen
                     </div>
-                </div>
-            }
+                }
+                else if (ba.Status == "Rejected")
+                {
+                    <div style="background:var(--danger-light);border-radius:var(--radius);padding:14px 20px;flex:1;">
+                        <div style="color:var(--danger);font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+                            <i class="bi bi-x-circle-fill"></i> Ditolak
+                        </div>                        <div style="font-size:14px;color:var(--text-secondary);">@ba.AlasanReject</div>
+                    </div>
+                }
+            </div>
+        }
 
-            <div class="info-grid-2">
+        <div class="info-grid-2">
                 <div class="card">
                     <div class="card-header">
                         <h3>Informasi Dokumen</h3>
@@ -332,29 +365,6 @@ else
                                             </div>
                                         }
 
-                                        @if (currentRole == "AdminBA")
-                                        {
-                                            <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                                                @if (ba.Status == "Draft")
-                                                {
-                                                    <button class="btn btn-primary @(isProcessing ? "btn-loading" : "")" @onclick="SendMagicLinkAsync"
-                                                            disabled="@isProcessing">
-                                                        <i class="bi bi-send"></i> Kirim Notifikasi ke PJ
-                                                    </button>
-                                                }
-                                                else if (ba.Status == "WaitingPJSign")
-                                                {
-                                                    <div
-                                                        style="background:var(--primary-light);border-radius:var(--radius);padding:14px 20px;display:flex;align-items:center;gap:10px;color:var(--primary);">
-                                                        <i class="bi bi-hourglass-split"></i>
-                                                        Menunggu PJ menandatangani dokumen
-                                                    </div>
-                                                }
-                                                else if (ba.Status == "Rejected")
-                                                {
-                                                }
-                                            </div>
-                                        }
                                     }
                                 }
 
@@ -395,6 +405,7 @@ else
     private BeritaAcaraEntity? ba;
     private bool isLoading = true;
     private bool notFound;
+    private bool reviewerLinkInvalid;
     private string? _initialFrom;
     private bool isReviewer;
     private bool showRejectModal = false;
@@ -465,10 +476,37 @@ else
                 return;
             }
 
-            // Jika link dari email reject tapi yang login bukan Admin GB, minta login ulang
+            // Jika link dari email reject tapi yang login bukan Admin BA, minta login ulang
             if (From == "rejected" && currentRole != "AdminBA")
             {
-                Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}", true);
+                Navigation.NavigateTo("/akses-ditolak", true);
+                return;
+            }
+
+            // Jika Reviewer membuka link dari email tapi BA sudah dibatalkan (bukan WaitingApproval lagi)
+            // → tampilkan halaman fallback "Tautan Tidak Valid", jangan tampilkan konten BA
+            if (From == "review" && isReviewer && ba.Status != "WaitingApproval")
+            {
+                reviewerLinkInvalid = true;
+                isLoading = false;
+                return;
+            }
+
+            // Setelah SignalR reload: jika BA yang sebelumnya valid kini dibatalkan,
+            // update state agar fallback muncul tanpa full-redirect
+            if (_initialFrom == "review" && isReviewer && ba.Status != "WaitingApproval")
+            {
+                reviewerLinkInvalid = true;
+                return;
+            }
+
+            // Authorization check: pastikan user punya akses ke BA ini
+            bool isCreator = appUser.Id == ba.CreatedBy;
+            bool isRelatedParty = appUser.Id == ba.MengetahuiId || appUser.Id == ba.MenyerahkanId;
+            
+            if (!isCreator && !isRelatedParty && currentRole != "AdminIT" && currentRole != "AdminBA")
+            {
+                Navigation.NavigateTo("/akses-ditolak", true);
                 return;
             }
 
@@ -486,50 +524,55 @@ else
         }
     }
 
-    private async Task SendMagicLinkAsync()
+    private async Task SubmitToReviewerAsync()
     {
         isProcessing = true;
         try
         {
-            var oldTokens = await DbContext.ApprovalToken
-                .Where(t => t.BaId == ba!.Id && t.TokenType == "PJ_SIGNATURE" && t.UsedAt == null)
-                .ToListAsync();
-            foreach (var old in oldTokens)
-                old.UsedAt = DateTime.Now;
-
-            var tokenValue = Guid.NewGuid().ToString("N");
-            var newToken = new ApprovalToken
-            {
-                BaId = ba!.Id,
-                Token = tokenValue,
-                TokenType = "PJ_SIGNATURE",
-                ExpiresAt =
-DateTime.Now.AddDays(7)
-            };
-            DbContext.ApprovalToken.Add(newToken);
-            ba!.Status = "WaitingPJSign";
-            ba.SubmittedAt = DateTime.Now;
+            ba!.Status = "WaitingApproval";            ba.SubmittedAt = DateTime.Now;
+            ba.AlasanReject = null; 
             await DbContext.SaveChangesAsync();
-            var baseUrl = (Configuration["App:BaseUrl"] ??
-Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
-            var barangListMagic = ba.Perangkat
-                .Select(p =>
-                {
-                    string nama = p.Barang?.NamaBarang ?? "Perangkat";
+
+            await NotificationService.SendAsync(
+                ba.MengetahuiId ?? 0,
+                "WAITING_APPROVAL",
+                $"Berita Acara {ba.Jenis} {(ba.NomorSurat ?? "")} telah diajukan dan membutuhkan persetujuan Anda.".Replace("  ", " ").Trim(),
+                ba.Id
+            );
+
+            await NotificationService.SendAsync(
+                ba.CreatedBy,
+                "WAITING_APPROVAL",
+                $"Berita Acara {ba.Jenis} telah diajukan. Menunggu persetujuan Reviewer.",
+                ba.Id
+            );
+
+            var baseUrlReviewer = (Configuration["App:BaseUrl"] ?? Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
+            var barangListReviewer = ba.Perangkat
+                .Select(p => {                    string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
-                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" â€” S/N: {p.NoSerial}";
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                    return $"{nama} — {detail}";
+                    return $"{nama} â€” {detail}";
                 }).ToList();
-            await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis,
-barangListMagic);
-            await NotificationService.SendToRoleAsync("AdminBA", "WAITING_PJ_SIGN", $"Berita Acara {ba.Jenis} {ba.NomorSurat} dikirim ke PJ untuk ditandatangani.", ba.Id);
-            actionIsError = false; actionMessage = "Magic link berhasil dikirim ke email PJ.";
-            await LoadAsync();
+
+            if (!string.IsNullOrEmpty(ba.Mengetahui?.Email))
+            {
+                await EmailService.SendApprovalRequestAsync(
+                    ba.Mengetahui.Email,
+                    ba.Mengetahui.Nama ?? "Reviewer",
+                    baseUrlReviewer,
+                    ba.Id,
+                    ba.Jenis ?? "Berita Acara",
+                    barangListReviewer
+                );
+            }
+
+            actionIsError = false; actionMessage = "Berita Acara berhasil diajukan ke Reviewer.";            await LoadAsync();
         }
         catch (Exception ex)
         {
-            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " +
+            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " â€” " +
 ex.InnerException.Message : "")}";
         }
         finally { isProcessing = false; }
@@ -586,9 +629,10 @@ DateTime.Now.AddDays(7)
             ba.Status = "WaitingPJSign";
             await DbContext.SaveChangesAsync();
 
+            // Schedule Auto-Approve Job (Real-time delay)
             Hangfire.BackgroundJob.Schedule<SistemBeritaAcara.Infrastructure.Jobs.AutoApproveJob>(
                 job => job.ProcessSingleAutoApproveAsync(ba.Id),
-                TimeSpan.FromMinutes(2)
+                TimeSpan.FromHours(24)
             );
 
             var baseUrl = (Configuration["App:BaseUrl"] ??
@@ -598,9 +642,9 @@ Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
                 {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
-                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" â€” S/N: {p.NoSerial}";
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                    return $"{nama} — {detail}";
+                    return $"{nama} â€” {detail}";
                 }).ToList();
 
             await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis,
@@ -614,7 +658,7 @@ Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
         }
         catch (Exception ex)
         {
-            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " +
+            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " â€” " +
 ex.InnerException.Message : "")}";
         }
         finally { isProcessing = false; isReviewerAction = false; }
@@ -670,9 +714,9 @@ Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
                 {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
-                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" â€” S/N: {p.NoSerial}";
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                    return $"{nama} — {detail}";
+                    return $"{nama} â€” {detail}";
                 }).ToList();
 
             var creatorUserReject = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
