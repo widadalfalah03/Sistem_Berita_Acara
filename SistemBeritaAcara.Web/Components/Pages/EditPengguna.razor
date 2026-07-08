@@ -335,6 +335,9 @@ else
             showTransferForm    = false;
             transferNama        = string.Empty;
             transferEmail       = string.Empty;
+
+            // Mulai cooldown agar tombol kirim ulang tidak langsung bisa diklik
+            StartCooldown();
         }
         catch (Exception ex)
         {
@@ -363,19 +366,7 @@ else
             transferSuccessMsg = $"Undangan berhasil dikirim ulang ke {appUser.PendingEmail}.";
 
             // Mulai cooldown 60 detik
-            resendCooldownSeconds = 60;
-            _cooldownTimer?.Dispose();
-            _cooldownTimer = new System.Threading.Timer(_ =>
-            {
-                if (resendCooldownSeconds > 0)
-                    resendCooldownSeconds--;
-                InvokeAsync(StateHasChanged);
-                if (resendCooldownSeconds <= 0)
-                {
-                    _cooldownTimer?.Dispose();
-                    _cooldownTimer = null;
-                }
-            }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+            StartCooldown();
         }
         catch (Exception ex)
         {
@@ -433,6 +424,23 @@ else
         "Reviewer" => "pill-reviewer",
         _ => "pill-draft"
     };
+
+    private void StartCooldown()
+    {
+        resendCooldownSeconds = 60;
+        _cooldownTimer?.Dispose();
+        _cooldownTimer = new System.Threading.Timer(_ =>
+        {
+            if (resendCooldownSeconds > 0)
+                resendCooldownSeconds--;
+            InvokeAsync(StateHasChanged);
+            if (resendCooldownSeconds <= 0)
+            {
+                _cooldownTimer?.Dispose();
+                _cooldownTimer = null;
+            }
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
 
     public void Dispose() => _cooldownTimer?.Dispose();
 }
