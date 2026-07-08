@@ -21,7 +21,7 @@
 <PageTitle>Setup Awal — Sistem Berita Acara</PageTitle>
 
 <div class="login-page" style="overflow-y:auto;align-items:flex-start;padding:32px 24px;">
-    <div class="login-card" style="margin:auto;@(step == 3 ? "max-width:620px;" : "")"  >
+    <div class="login-card" style="margin:auto;@(step == 3 ? "max-width:620px;" : "")">
         <div class="login-card-body">
 
             <div class="login-logo" style="display:flex;flex-direction:column;align-items:center;margin-bottom:8px;">
@@ -35,19 +35,28 @@
                 @for (int i = 1; i <= 3; i++)
                 {
                     var s = i;
-                    bool done   = step > s;
+                    bool done = step > s;
                     bool active = step == s;
                     <div style="display:flex;align-items:center;">
                         <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-                                    font-size:12px;font-weight:700;transition:background .3s,color .3s;
-                                    background:@(done || active ? "var(--primary)" : "var(--border)");
-                                    color:@(done || active ? "white" : "var(--text-muted)");">
-                            @if (done) { <i class="bi bi-check-lg"></i> }
-                            else { @s }
+                            font-size:12px;font-weight:700;transition:background .3s,color .3s;
+                            background:@(done || active ? "var(--primary)" : "var(--border)");
+                            color:@(done || active ? "white" : "var(--text-muted)");">
+                            @if (done)
+                            {
+                                <i class="bi bi-check-lg"></i>
+                            }
+                            else
+                            {
+
+                                @s
+                            }
                         </div>
                         @if (s < 3)
                         {
-                            <div style="width:48px;height:2px;transition:background .3s;background:@(step > s ? "var(--primary)" : "var(--border)");"></div>
+                            <div
+                                style="width:48px;height:2px;transition:background .3s;background:@(step > s ? "var(--primary)" : "var(--border)");">
+                            </div>
                         }
                     </div>
                 }
@@ -68,17 +77,18 @@
                 <div style="text-align:center;margin-bottom:20px;">
                     <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Verifikasi Email</h3>
                     <p style="font-size:12px;color:var(--text-secondary);margin:0;">
-                        Masukkan email yang akan digunakan sebagai akun Admin IT.
+                        Masukkan alamat email yang akan digunakan sebagai<br>
+                        akun Admin IT.
                     </p>
                 </div>
 
                 <form @onsubmit="SendOtpAsync" @onsubmit:preventDefault>
                     <div>
-                        <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                        <label
+                            style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
                             EMAIL <span style="color:var(--danger);">*</span>
                         </label>
-                        <input class="login-input" type="email" @bind="email"
-                               placeholder="Email aktif untuk login" />
+                        <input class="login-input" type="email" @bind="email" placeholder="Email aktif untuk login" />
                     </div>
 
                     <button type="submit" class="login-btn" style="margin-top:16px;">
@@ -99,46 +109,41 @@
                 </div>
 
                 <form @onsubmit="VerifyOtpAsync" @onsubmit:preventDefault>
-                
-                <div style="display:flex;gap:10px;justify-content:center;margin:24px 0;">
-                    @for (int i = 0; i < 6; i++)
-                    {
-                        var idx = i;
-                        bool filled = _digits[idx] != '\0';
-                        <input id="otp-@idx"
-                               type="text"
-                               inputmode="numeric"
-                               maxlength="1"
-                               value="@(filled ? _digits[idx].ToString() : "")"
-                               style="width:50px;height:60px;text-align:center;
-                                      font-size:26px;font-weight:600;font-family:inherit;
-                                      border:2px solid @(filled ? "var(--primary)" : "var(--border)");
-                                      border-radius:10px;
-                                      background:@(filled ? "color-mix(in srgb,var(--primary) 8%,var(--surface))" : "var(--surface)");
-                                      color:var(--text-primary);
-                                      outline:none;transition:border-color .15s,background .15s;"
-                               @oninput="@(e => OnDigitInput(e, idx))"
-                               @onkeydown="@(e => OnDigitKeyDown(e, idx))" />
-                    }
-                </div>
+
+                    <div style="display:flex;gap:10px;justify-content:center;margin:24px 0;">
+                        @for (int i = 0; i < 6; i++)
+                        {
+                            var idx = i;
+                            bool filled = _digits[idx] != '\0';
+                            <input id="otp-@idx" type="text" inputmode="numeric" maxlength="1"
+                                   value="@(filled ? _digits[idx].ToString() : "")" style="width:50px;height:60px;text-align:center;
+                            font-size:26px;font-weight:600;font-family:inherit;
+                            border:2px solid @(filled ? "var(--primary)" : "var(--border)");
+                            border-radius:10px;
+                            background:@(filled ? "color-mix(in srgb,var(--primary) 8%,var(--surface))" : "var(--surface)");
+                            color:var(--text-primary);
+                            outline:none;transition:border-color .15s,background .15s;"
+                                   @oninput="@(e => OnDigitInput(e, idx))" @onkeydown="@(e => OnDigitKeyDown(e, idx))" />
+                        }
+                    </div>
 
                 
-                <div style="text-align:center;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
-                    @if (_resendCooldown > 0)
-                    {
-                        <span>Kirim ulang dalam <strong>@_resendCooldown</strong> detik</span>
-                    }
-                    else
-                    {
-                        <button type="button" class="btn btn-outline btn-sm" @onclick="SendOtpAsync">
-                            Kirim Ulang
-                        </button>
-                    }
-                </div>
+                    <div style="text-align:center;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
+                        @if (_resendCooldown > 0)
+                        {
+                            <span>Kirim ulang dalam <strong>@_resendCooldown</strong> detik</span>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-outline btn-sm" @onclick="SendOtpAsync">
+                                Kirim Ulang
+                            </button>
+                        }
+                    </div>
 
-                <button type="submit" class="login-btn" disabled="@(GetOtpString().Length < 6)">
-                    Verifikasi
-                </button>
+                    <button type="submit" class="login-btn" disabled="@(GetOtpString().Length < 6)">
+                        Verifikasi
+                    </button>
                 </form>
             }
 
@@ -157,23 +162,25 @@
 
                         
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">EMAIL</label>
+                            <label
+                            style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">EMAIL</label>
                             <input class="login-input" type="email" value="@email" readonly
                                    style="background:var(--bg);cursor:not-allowed;color:var(--text-muted);" />
                         </div>
 
                         
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                            <label
+                                style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
                                 NAMA LENGKAP <span style="color:var(--danger);">*</span>
                             </label>
-                            <input class="login-input" type="text" @bind="namaLengkap"
-                                   placeholder="Nama lengkap" />
+                            <input class="login-input" type="text" @bind="namaLengkap" placeholder="Nama lengkap" />
                         </div>
 
                         
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                            <label
+                                style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
                                 PASSWORD <span style="color:var(--danger);">*</span>
                             </label>
                             <div class="login-pw-wrap">
@@ -187,7 +194,8 @@
 
                         
                         <div>
-                            <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
+                            <label
+                                style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
                                 KONFIRMASI PASSWORD <span style="color:var(--danger);">*</span>
                             </label>
                             <div class="login-pw-wrap">
@@ -202,17 +210,19 @@
                     </div>
 
                     <div style="margin-top:10px;padding:8px 12px;
-                                background:color-mix(in srgb,var(--info) 10%,transparent);
-                                border:1px solid color-mix(in srgb,var(--info) 30%,transparent);
-                                border-radius:var(--radius);font-size:11px;color:var(--text-secondary);">
+                        background:color-mix(in srgb,var(--info) 10%,transparent);
+                        border:1px solid color-mix(in srgb,var(--info) 30%,transparent);
+                        border-radius:var(--radius);font-size:11px;color:var(--text-secondary);">
                         <i class="bi bi-info-circle" style="color:var(--info);margin-right:5px;"></i>
-                        Halaman ini hanya muncul <strong>sekali</strong>. Setelah akun Admin IT dibuat, halaman ini tidak dapat diakses kembali.
+                        Halaman ini hanya muncul <strong>sekali</strong>. Setelah akun Admin IT dibuat, halaman ini tidak
+                        dapat diakses kembali.
                     </div>
 
                     <button type="submit" class="login-btn" style="margin-top:14px;" disabled="@isSaving">
                         @if (isSaving)
                         {
-                            <span class="spinner" style="width:16px;height:16px;border-width:2px;margin-right:8px;display:inline-block;vertical-align:middle;"></span>
+                            <span class="spinner"
+                                  style="width:16px;height:16px;border-width:2px;margin-right:8px;display:inline-block;vertical-align:middle;"></span>
                         }
                         Buat Akun
                     </button>
@@ -226,30 +236,30 @@
 
 
 @code {
-    private int    step  = 1;
+    private int step = 1;
     private string email = string.Empty;
 
     
-    private char[]   _digits        = new char[6];
-    private string   _otpCode       = string.Empty;
+    private char[] _digits = new char[6];
+    private string _otpCode = string.Empty;
     private DateTime _otpExpiry;
-    private int      _failedAttempts  = 0;
-    private int      _resendCooldown  = 0;
-    private bool     _pasteInitialized = false;
+    private int _failedAttempts = 0;
+    private int _resendCooldown = 0;
+    private bool _pasteInitialized = false;
     private DotNetObjectReference<SetupAdminIT>? _selfRef;
     private System.Threading.Timer? _countdownTimer;
 
     
-    private string namaLengkap    = string.Empty;
-    private string password       = string.Empty;
+    private string namaLengkap = string.Empty;
+    private string password = string.Empty;
     private string confirmPassword = string.Empty;
-    private string pwType  = "password";
+    private string pwType = "password";
     private string pwType2 = "password";
 
     private string errorMessage = string.Empty;
-    private bool   isSaving     = false;
+    private bool isSaving = false;
 
-    private void TogglePw()  => pwType  = pwType  == "password" ? "text" : "password";
+    private void TogglePw() => pwType = pwType == "password" ? "text" : "password";
     private void TogglePw2() => pwType2 = pwType2 == "password" ? "text" : "password";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -314,7 +324,7 @@
                 await JS.InvokeVoidAsync("otpInput.focus", $"otp-{idx - 1}");
             }
         }
-        else if (e.Key == "ArrowLeft"  && idx > 0) await JS.InvokeVoidAsync("otpInput.focus", $"otp-{idx - 1}");
+        else if (e.Key == "ArrowLeft" && idx > 0) await JS.InvokeVoidAsync("otpInput.focus", $"otp-{idx - 1}");
         else if (e.Key == "ArrowRight" && idx < 5) await JS.InvokeVoidAsync("otpInput.focus", $"otp-{idx + 1}");
     }
 
@@ -331,9 +341,9 @@
         if (existing is not null)
         { errorMessage = "Email sudah terdaftar di sistem."; return; }
 
-        _otpCode          = GenerateOtp();
-        _otpExpiry        = DateTime.UtcNow.AddMinutes(10);
-        _failedAttempts   = 0;
+        _otpCode = GenerateOtp();
+        _otpExpiry = DateTime.UtcNow.AddMinutes(10);
+        _failedAttempts = 0;
         _pasteInitialized = false;
         Array.Clear(_digits, 0, 6);
 
@@ -382,8 +392,12 @@
         if (string.IsNullOrWhiteSpace(namaLengkap))
         { errorMessage = "Nama lengkap wajib diisi."; return; }
 
-        if (string.IsNullOrWhiteSpace(password) || password.Length < 8 || !password.Any(char.IsUpper) || !password.Any(char.IsDigit) || !password.Any(ch => !char.IsLetterOrDigit(ch)))
-        { errorMessage = "Password minimal 8 karakter dan harus mengandung huruf besar, angka, serta simbol (contoh: Abc123!)."; return; }
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 8 || !password.Any(char.IsUpper) ||
+!password.Any(char.IsDigit) || !password.Any(ch => !char.IsLetterOrDigit(ch)))
+        {
+            errorMessage = "Password minimal 8 karakter dan harus mengandung huruf besar, angka, serta simbol (contoh: Abc123!).";
+            return;
+        }
 
         if (password != confirmPassword)
         { errorMessage = "Password tidak cocok. Pastikan kedua kolom password diisi dengan nilai yang sama."; return; }
@@ -399,12 +413,12 @@
 
             var user = new CoreEntities.ApplicationUser
             {
-                UserName       = email.Trim().ToLower(),
-                Email          = email.Trim().ToLower(),
+                UserName = email.Trim().ToLower(),
+                Email = email.Trim().ToLower(),
                 EmailConfirmed = true,
-                Nama           = namaLengkap.Trim(),
-                Role           = "AdminIT",
-                PegawaiId      = null
+                Nama = namaLengkap.Trim(),
+                Role = "AdminIT",
+                PegawaiId = null
             };
 
             var result = await UserManager.CreateAsync(user, password);
@@ -430,8 +444,8 @@
 
     private void BackToStep1()
     {
-        step              = 1;
-        errorMessage      = string.Empty;
+        step = 1;
+        errorMessage = string.Empty;
         _pasteInitialized = false;
         Array.Clear(_digits, 0, 6);
         _countdownTimer?.Dispose();
