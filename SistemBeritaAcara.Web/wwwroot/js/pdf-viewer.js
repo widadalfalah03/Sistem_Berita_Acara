@@ -1,4 +1,4 @@
-window.pdfViewer = {
+﻿window.pdfViewer = {
     loadPdfJs: function () {
         return new Promise((resolve, reject) => {
             if (window.pdfjsLib) {
@@ -22,14 +22,14 @@ window.pdfViewer = {
             const container = document.getElementById(containerId);
             if (!container) return;
             
-            // Tampilkan loading di dalam container
+            
             container.innerHTML = '<div style="padding:40px;text-align:center;color:#6b7280;"><div class="spinner" style="margin-bottom:16px;display:inline-block;"></div><div>Memuat dokumen PDF...</div></div>';
             
             const pdfjsLib = window.pdfjsLib;
             const loadingTask = pdfjsLib.getDocument(pdfUrl);
             const pdf = await loadingTask.promise;
             
-            container.innerHTML = ''; // Bersihkan container
+            container.innerHTML = ''; 
             container.style.overflowY = 'auto';
             container.style.padding = '16px';
             container.style.background = '#E8EAF0';
@@ -37,14 +37,14 @@ window.pdfViewer = {
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 const page = await pdf.getPage(pageNum);
                 
-                // Set scale to fit container width
-                const containerWidth = container.clientWidth - 32; // Kurangi padding
+                
+                const containerWidth = container.clientWidth - 32; 
                 const unscaledViewport = page.getViewport({ scale: 1.0 });
                 const baseScale = containerWidth / unscaledViewport.width;
                 const scale = Math.min(1.5, baseScale);
                 const viewport = page.getViewport({ scale: scale });
 
-                // Mendukung High-DPI / Retina display agar PDF tidak pecah
+                
                 const dpr = window.devicePixelRatio || 1;
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
@@ -69,7 +69,7 @@ window.pdfViewer = {
                     viewport: viewport
                 };
                 
-                // Tunggu render page 1 selesai sebelum lanjut ke page 2 dst agar tidak nge-lag
+                
                 await page.render(renderContext).promise;
             }
         } catch (e) {

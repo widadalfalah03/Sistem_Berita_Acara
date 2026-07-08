@@ -1,4 +1,4 @@
-@page "/progress"
+﻿@page "/progress"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -174,7 +174,7 @@ else if (currentRole == "Reviewer")
     }
 }
 
-@* ── Modal Konfirmasi Batalkan Pengajuan ── *@
+
 @if (showCancelConfirm && cancelTarget != null)
 {
     <div class="modal-overlay" @onclick="CloseCancelConfirm">
@@ -227,7 +227,7 @@ else if (currentRole == "Reviewer")
     private int currentPage = 1;
     private int pageSize = 10;
 
-    // ── Cancel Submission State ──
+    
     private bool showCancelConfirm = false;
     private BeritaAcaraEntity? cancelTarget = null;
     private bool isCancelling = false;
@@ -256,8 +256,8 @@ else if (currentRole == "Reviewer")
 
         try
         {
-            // Ambil status TERBARU dari DB — antisipasi race condition di mana
-            // Reviewer sudah mulai memproses BA ini di tab/device lain secara bersamaan
+            
+            
             var freshBa = await DbContext.BeritaAcara.FindAsync(cancelTarget.Id);
             if (freshBa == null)
             {
@@ -268,26 +268,26 @@ else if (currentRole == "Reviewer")
             if (freshBa.Status != "WaitingApproval")
             {
                 cancelErrorMsg = $"Gagal: BA sudah diproses oleh Reviewer (status: {freshBa.Status}). Halaman akan diperbarui.";
-                // Reload list agar tampilan kembali sinkron dengan DB
+                
                 await ReloadListAsync();
                 StateHasChanged();
                 return;
             }
 
-            // Kembalikan ke Draft, hapus timestamp pengajuan
+            
             freshBa.Status = "Draft";
             freshBa.SubmittedAt = null;
             await DbContext.SaveChangesAsync();
 
-            // Broadcast via SignalR ke SEMUA klien:
-            // - Halaman Progress Reviewer → BA hilang dari antrian mereka
-            // - Halaman Detail BA (jika ada Reviewer yang sedang membukanya) →
-            //   event BaDetailUpdated akan menyebabkan mereka reload dan melihat
-            //   status sudah bukan WaitingApproval lagi, sehingga tombol Approve/Reject
-            //   tidak bisa diklik (guard check status di BeritaAcaraDetail.razor)
+            
+            
+            
+            
+            
+            
             await BaUpdateService.NotifyBaDetailUpdated(freshBa.Id);
 
-            // Tutup modal & reload list lokal
+            
             showCancelConfirm = false;
             cancelTarget = null;
             await ReloadListAsync();
@@ -347,7 +347,7 @@ else if (currentRole == "Reviewer")
     {
         if (firstRender)
         {
-            // Fire-and-forget: koneksi SignalR di latar belakang, tidak memblokir render
+            
             _ = ConnectSignalRAsync();
         }
         return Task.CompletedTask;
@@ -375,7 +375,7 @@ else if (currentRole == "Reviewer")
         }
         catch
         {
-            // SignalR gagal connect — page tetap berjalan normal tanpa real-time
+            
         }
     }
 

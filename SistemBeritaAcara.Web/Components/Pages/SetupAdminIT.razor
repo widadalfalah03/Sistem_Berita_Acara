@@ -30,7 +30,7 @@
                      alt="SIMBA" />
             </div>
 
-            @* ── Step Indicator ── *@
+            
             <div style="display:flex;align-items:center;justify-content:center;margin-bottom:24px;">
                 @for (int i = 1; i <= 3; i++)
                 {
@@ -53,7 +53,7 @@
                 }
             </div>
 
-            @* ── Error ── *@
+            
             @if (!string.IsNullOrEmpty(errorMessage))
             {
                 <div class="login-error" style="margin-bottom:12px;font-size:13px;">
@@ -62,7 +62,7 @@
                 </div>
             }
 
-            @* ══════════ STEP 1 — Email ══════════ *@
+            
             @if (step == 1)
             {
                 <div style="text-align:center;margin-bottom:20px;">
@@ -87,7 +87,7 @@
                 </form>
             }
 
-            @* ══════════ STEP 2 — OTP ══════════ *@
+            
             else if (step == 2)
             {
                 <div style="text-align:center;margin-bottom:4px;">
@@ -99,7 +99,7 @@
                 </div>
 
                 <form @onsubmit="VerifyOtpAsync" @onsubmit:preventDefault>
-                @* 6 kotak digit *@
+                
                 <div style="display:flex;gap:10px;justify-content:center;margin:24px 0;">
                     @for (int i = 0; i < 6; i++)
                     {
@@ -122,7 +122,7 @@
                     }
                 </div>
 
-                @* Countdown / Kirim Ulang *@
+                
                 <div style="text-align:center;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
                     @if (_resendCooldown > 0)
                     {
@@ -142,7 +142,7 @@
                 </form>
             }
 
-            @* ══════════ STEP 3 — Data & Password ══════════ *@
+            
             else if (step == 3)
             {
                 <div style="text-align:center;margin-bottom:20px;">
@@ -155,14 +155,14 @@
                 <form @onsubmit="HandleSubmit" @onsubmit:preventDefault>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
 
-                        @* Kiri atas: Email *@
+                        
                         <div>
                             <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">EMAIL</label>
                             <input class="login-input" type="email" value="@email" readonly
                                    style="background:var(--bg);cursor:not-allowed;color:var(--text-muted);" />
                         </div>
 
-                        @* Kanan atas: Nama Lengkap *@
+                        
                         <div>
                             <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
                                 NAMA LENGKAP <span style="color:var(--danger);">*</span>
@@ -171,21 +171,21 @@
                                    placeholder="Nama lengkap" />
                         </div>
 
-                        @* Kiri bawah: Password *@
+                        
                         <div>
                             <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
                                 PASSWORD <span style="color:var(--danger);">*</span>
                             </label>
                             <div class="login-pw-wrap">
                                 <input class="login-input" type="@pwType" @bind="password"
-                                       placeholder="Min. 8 karakter" />
+                                       placeholder="Min. 8 karakter, 1 Huruf Besar, Angka, & Simbol" />
                                 <button type="button" class="login-pw-toggle" @onclick="TogglePw" tabindex="-1">
                                     <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
                                 </button>
                             </div>
                         </div>
 
-                        @* Kanan bawah: Konfirmasi Password *@
+                        
                         <div>
                             <label style="font-size:11px;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:4px;">
                                 KONFIRMASI PASSWORD <span style="color:var(--danger);">*</span>
@@ -229,7 +229,7 @@
     private int    step  = 1;
     private string email = string.Empty;
 
-    // ── OTP ─────────────────────────────────────────────────────────────────
+    
     private char[]   _digits        = new char[6];
     private string   _otpCode       = string.Empty;
     private DateTime _otpExpiry;
@@ -239,7 +239,7 @@
     private DotNetObjectReference<SetupAdminIT>? _selfRef;
     private System.Threading.Timer? _countdownTimer;
 
-    // ── Step 3 ───────────────────────────────────────────────────────────────
+    
     private string namaLengkap    = string.Empty;
     private string password       = string.Empty;
     private string confirmPassword = string.Empty;
@@ -281,7 +281,7 @@
         await JS.InvokeVoidAsync("otpInput.focus", $"otp-{focusIdx}");
     }
 
-    // ── OTP helpers ──────────────────────────────────────────────────────────
+    
 
     private string GetOtpString()
         => new string(_digits.Where(c => c != '\0').ToArray());
@@ -318,7 +318,7 @@
         else if (e.Key == "ArrowRight" && idx < 5) await JS.InvokeVoidAsync("otpInput.focus", $"otp-{idx + 1}");
     }
 
-    // ── Step handlers ────────────────────────────────────────────────────────
+    
 
     private async Task SendOtpAsync()
     {
@@ -337,7 +337,7 @@
         _pasteInitialized = false;
         Array.Clear(_digits, 0, 6);
 
-        // Pindah ke step 2 langsung — email dikirim di background
+        
         step = 2;
         StartCountdown();
 
@@ -370,7 +370,7 @@
             return;
         }
 
-        // OTP benar
+        
         _countdownTimer?.Dispose();
         step = 3;
     }
@@ -382,8 +382,8 @@
         if (string.IsNullOrWhiteSpace(namaLengkap))
         { errorMessage = "Nama lengkap wajib diisi."; return; }
 
-        if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
-        { errorMessage = "Password minimal 8 karakter."; return; }
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 8 || !password.Any(char.IsUpper) || !password.Any(char.IsDigit) || !password.Any(ch => !char.IsLetterOrDigit(ch)))
+        { errorMessage = "Password minimal 8 karakter, serta mengandung huruf besar, angka, dan simbol."; return; }
 
         if (password != confirmPassword)
         { errorMessage = "Konfirmasi password tidak cocok."; return; }
@@ -418,7 +418,7 @@
             await UserManager.AddToRoleAsync(user, "AdminIT");
             FirstRunMiddleware.MarkHasUsers();
 
-            // Arahkan ke halaman login
+            
             Navigation.NavigateTo("/login", forceLoad: true);
         }
         catch (Exception ex)

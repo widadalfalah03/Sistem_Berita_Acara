@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 
 <head>
@@ -70,7 +70,7 @@
             }
         }
 
-        // Initialize theme on load
+        
         (function() {
             const savedTheme = localStorage.getItem('theme');
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -92,7 +92,7 @@
             }
         }
 
-        // Ripple effect on button click
+        
         document.addEventListener('pointerdown', function(e) {
             const btn = e.target.closest('.btn, .btn-create-ba, .btn-review, .btn-icon, .login-btn, .quick-link-btn');
             if (!btn || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -107,7 +107,7 @@
             ripple.addEventListener('animationend', () => ripple.remove());
         });
 
-        // Auto-reload when Blazor circuit error occurs (blazor-error-ui becomes visible)
+        
         (function () {
             let reloadTimer = null;
             function startErrorMonitor() {
@@ -136,16 +136,16 @@
             document.addEventListener('DOMContentLoaded', startErrorMonitor);
         })();
 
-        // Update icon after DOM loads
+        
         window.addEventListener('DOMContentLoaded', () => {
             updateThemeIcon();
             
-            // Standard Blazor enhanced navigation event
+            
             if (window.Blazor) {
                 Blazor.addEventListener('enhancedload', updateThemeIcon);
             }
 
-            // Fallback MutationObserver to catch any other DOM replacements
+            
             const observer = new MutationObserver(() => {
                 const savedTheme = localStorage.getItem('theme');
                 const isDark = document.documentElement.getAttribute('data-theme') === 'dark';

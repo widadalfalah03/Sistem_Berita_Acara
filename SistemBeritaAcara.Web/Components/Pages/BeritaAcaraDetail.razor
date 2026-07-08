@@ -1,4 +1,4 @@
-@page "/berita-acara/{Id:int}"
+﻿@page "/berita-acara/{Id:int}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.EntityFrameworkCore
@@ -22,7 +22,7 @@
 <PageTitle>Detail Berita Acara â€” Sistem Berita Acara</PageTitle>
 
 
-@* â”€â”€ Fullscreen overlay saat reviewer memproses Setuju / Tolak â”€â”€ *@
+
 @if (isProcessing && isReviewerAction)
 {
     <div
@@ -201,7 +201,7 @@ else
                 </div>
             </div>
 
-        <!-- Action buttons for AdminBA -->
+        
         @if (currentRole == "AdminBA")
         {
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
@@ -469,22 +469,22 @@ else
 
             isReviewer = currentRole == "Reviewer" && appUser.Id == ba.MengetahuiId;
 
-            // Jika link dari email reviewer tapi yang login bukan reviewer yang ditugaskan, minta login ulang
+            
             if (From == "review" && !isReviewer)
             {
                 Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}", true);
                 return;
             }
 
-            // Jika link dari email reject tapi yang login bukan Admin BA, minta login ulang
+            
             if (From == "rejected" && currentRole != "AdminBA")
             {
                 Navigation.NavigateTo("/akses-ditolak", true);
                 return;
             }
 
-            // Jika Reviewer mencoba membuka BA yang sudah dibatalkan/masih Draft
-            // Tampilkan halaman fallback "Pengajuan Dibatalkan"
+            
+            
             if (isReviewer && ba.Status == "Draft")
             {
                 reviewerLinkInvalid = true;
@@ -494,7 +494,7 @@ else
 
 
 
-            // Authorization check: pastikan user punya akses ke BA ini
+            
             bool isCreator = appUser.Id == ba.CreatedBy;
             bool isRelatedParty = appUser.Id == ba.MengetahuiId || appUser.Id == ba.MenyerahkanId;
             
@@ -622,7 +622,7 @@ DateTime.Now.AddDays(7)
             ba.Status = "WaitingPJSign";
             await DbContext.SaveChangesAsync();
 
-            // Schedule Auto-Approve Job (Real-time delay)
+            
             Hangfire.BackgroundJob.Schedule<SistemBeritaAcara.Infrastructure.Jobs.AutoApproveJob>(
                 job => job.ProcessSingleAutoApproveAsync(ba.Id),
                 TimeSpan.FromHours(24)
@@ -646,7 +646,7 @@ Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
             await NotificationService.SendAsync(ba.CreatedBy, "WAITING_PJ_SIGN", $"Berita Acara {ba.Jenis} telah disetujui Reviewer dan diteruskan ke PJ.", ba.Id);
 
             actionIsError = false; actionMessage = "Berita Acara disetujui. Menunggu TTD PJ.";
-            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
+            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); 
             await LoadAsync();
         }
         catch (Exception ex)
@@ -721,7 +721,7 @@ barangListReject);
             showRejectModal = false;
             rejectReason = string.Empty;
             actionIsError = false; actionMessage = "Berita Acara telah ditolak.";
-            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
+            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); 
             await LoadAsync();
         }
         catch (Exception ex) { rejectError = $"Gagal: {ex.Message}"; }

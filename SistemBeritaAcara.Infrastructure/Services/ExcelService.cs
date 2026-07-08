@@ -1,4 +1,4 @@
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SistemBeritaAcara.Core.Entities;
@@ -24,10 +24,10 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
         using var workbook = new XLWorkbook(ms);
         var sheet = workbook.Worksheet(1);
 
-        // Normalisasi header: lowercase, hanya alfanumerik + spasi
+        
         static string Norm(string s) => new string(s.ToLowerInvariant().Where(c => char.IsLetterOrDigit(c) || c == ' ').ToArray()).Trim();
 
-        // Baca semua header dari baris 1, petakan nama → indeks kolom
+        
         var headerRow = sheet.Row(1);
         var colMap = new Dictionary<string, int>();
         int lastCol = headerRow.LastCellUsed()?.Address.ColumnNumber ?? 0;
@@ -37,11 +37,11 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
             if (!string.IsNullOrEmpty(h) && !colMap.ContainsKey(h))
                 colMap[h] = c;
         }
-        // "fungsi" dan "fungsi direktorat" keduanya diarahkan ke key yang sama
+        
         if (!colMap.ContainsKey("fungsi direktorat") && colMap.ContainsKey("fungsi"))
             colMap["fungsi direktorat"] = colMap["fungsi"];
 
-        // Validasi kolom wajib: Nama, No. Pekerja, Email
+        
         foreach (var required in new[] { "nama", "no pekerja", "email" })
         {
             if (!colMap.ContainsKey(required))
@@ -69,7 +69,7 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
             string costCenter = colCostCenter > 0 ? row.Cell(colCostCenter).Value.ToString().Trim() : string.Empty;
 
             if (string.IsNullOrEmpty(noPekerja)) continue;
-            if (!noPekerjaInExcel.Add(noPekerja)) continue; // Skip duplicates within the file
+            if (!noPekerjaInExcel.Add(noPekerja)) continue; 
 
             if (nama.Length > 100) nama = nama.Substring(0, 100);
             if (noPekerja.Length > 20) noPekerja = noPekerja.Substring(0, 20);
@@ -157,7 +157,7 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
         using var workbook = new XLWorkbook(ms);
         var sheet = workbook.Worksheet(1);
 
-        // Validasi kolom wajib Data Barang (normalisasi: lowercase, hanya alfanumerik+spasi)
+        
         static string NormB(string s) => new string(s.ToLowerInvariant().Where(c => char.IsLetterOrDigit(c) || c == ' ').ToArray()).Trim();
         var col1Norm = NormB(sheet.Cell(1, 1).Value.ToString());
         if (col1Norm != "nama barang")
@@ -175,7 +175,7 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
 
             if (nama.Length > 100) nama = nama.Substring(0, 100);
 
-            if (!namaInExcel.Add(nama)) continue; // Skip duplikat di dalam file yang sama
+            if (!namaInExcel.Add(nama)) continue; 
 
             MasterBarang? existing = await db.MasterBarang.FirstOrDefaultAsync(b => b.NamaBarang == nama);
 

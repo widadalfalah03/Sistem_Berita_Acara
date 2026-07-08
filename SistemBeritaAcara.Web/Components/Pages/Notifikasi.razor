@@ -1,4 +1,4 @@
-@page "/notifikasi"
+﻿@page "/notifikasi"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
@@ -302,8 +302,8 @@ else
 
     private async Task LoadAsync()
     {
-        // AsNoTracking() memastikan data selalu dibaca segar dari DB,
-        // tidak terpengaruh oleh entity yang sudah di-cache di change tracker.
+        
+        
         notifications = await DbContext.Notification
             .AsNoTracking()
             .Where(n => n.UserId == currentUserId)
@@ -317,8 +317,8 @@ else
         markAllReadConfirm = false;
         isLoading = true;
         await NotificationService.MarkAllReadAsync(currentUserId);
-        // Bersihkan change tracker agar LoadAsync membaca data segar dari DB,
-        // bukan entity lama yang masih di-cache dengan IsRead = false.
+        
+        
         DbContext.ChangeTracker.Clear();
         await LoadAsync();
     }
@@ -336,11 +336,11 @@ else
     {
         if (!n.IsRead)
         {
-            // Gunakan ExecuteUpdateAsync karena entity di-load dengan AsNoTracking
+            
             await DbContext.Notification
                 .Where(x => x.Id == n.Id)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsRead, true));
-            n.IsRead = true; // update in-memory agar UI langsung berubah
+            n.IsRead = true; 
         }
         if (n.BaId.HasValue)
             Navigation.NavigateTo($"/berita-acara/{n.BaId.Value}?from=notifikasi_{activeTab}");
@@ -410,7 +410,7 @@ else
         msg = System.Text.RegularExpressions.Regex.Replace(msg, @"\bBA\b", "Berita Acara");
         msg = msg.Replace("Peminjaman Berita Acara", "Berita Acara Peminjaman");
         
-        // Capitalize the first letter if the message starts with a lowercase letter after removing Draft
+        
         if (msg.Length > 0)
         {
             msg = char.ToUpper(msg[0]) + msg.Substring(1);
@@ -443,7 +443,7 @@ else
         }
         catch
         {
-            // Fallback: stay static if SignalR fails
+            
         }
     }
 

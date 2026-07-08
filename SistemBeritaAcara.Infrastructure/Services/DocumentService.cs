@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -155,7 +155,7 @@ public class DocumentService : IDocumentService
                 NormalizeParagraphPlaceholders(para, replacements, ref namaPjCount, ba);
             }
 
-            // Perbaiki posisi tanggal pengembalian: ganti spasi panjang dengan tab stop kanan
+            
             foreach (var para in mainPart.Document.Body!.Descendants<Paragraph>())
             {
                 var firstRun = para.Elements<Run>().FirstOrDefault();
@@ -316,7 +316,7 @@ public class DocumentService : IDocumentService
             {
                 if (!validFotos.Any())
                 {
-                    // Hapus page break yang memulai halaman 3 agar tidak muncul halaman kosong
+                    
                     var pageBreakPara = drawingParas[0].PreviousSibling<Paragraph>();
                     if (pageBreakPara != null && pageBreakPara.Descendants<Break>()
                             .Any(b => b.Type == BreakValues.Page))
@@ -521,7 +521,7 @@ public class DocumentService : IDocumentService
                 {
                     DistanceFromTop    = 0U,
                     DistanceFromBottom = 0U,
-                    DistanceFromLeft   = 0U,   // â† tidak ada offset kiri agar sejajar kiri sel
+                    DistanceFromLeft   = 0U,   
                     DistanceFromRight  = 0U
                 });
 
@@ -606,15 +606,15 @@ public class DocumentService : IDocumentService
         int n = fotos.Count;
         if (n == 0) return;
 
-        // Jumlah kolom berdasarkan jumlah foto
+        
         int cols = n switch { 1 => 1, 2 => 2, <= 3 => 3, 4 => 2, <= 6 => 3, _ => 4 };
         int rows = (int)Math.Ceiling((double)n / cols);
 
-        // A4 dengan margin 2.54cm: content width ~159mm, height page 3 ~208mm
-        const long CONTENT_W    = 5_731_200L; // EMU
-        const long CONTENT_H    = 7_500_000L; // EMU – aman agar tidak melebihi page 3
-        const long ROW_GAP      = 200_000L;   // ~5.5mm antar baris
-        const int  H_PAD_DXA    = 80;         // padding horizontal per sisi cell
+        
+        const long CONTENT_W    = 5_731_200L; 
+        const long CONTENT_H    = 7_500_000L; 
+        const long ROW_GAP      = 200_000L;   
+        const int  H_PAD_DXA    = 80;         
 
         int tableW_dxa = (int)(CONTENT_W / 635);
         int cellW_dxa  = tableW_dxa / cols;

@@ -1,4 +1,4 @@
-@page "/buat-ba"
+﻿@page "/buat-ba"
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
@@ -403,7 +403,7 @@
                                     {
                                         <span style="font-weight:600;color:var(--text-primary);">
                                             <i class="bi bi-person-check" style="color:var(--success);"></i>
-                                            @(adminGudangUsers.FirstOrDefault(u => u.Id == model.MenyerahkanId)?.Nama ??
+                                            @(adminBAUsers.FirstOrDefault(u => u.Id == model.MenyerahkanId)?.Nama ??
                                     currentUserObj?.Nama ?? "Admin BA")
                                         </span>
                                     }
@@ -569,7 +569,7 @@
     private List<PegawaiEntity> allPegawai = new();
     private List<PegawaiEntity> pjResults = new();
     private List<ApplicationUser> reviewers = new();
-    private List<ApplicationUser> adminGudangUsers = new();
+    private List<ApplicationUser> adminBAUsers = new();
     private List<MasterBarangEntity> barangOptions = new();
 
     private List<IBrowserFile> photoFiles = new();
@@ -595,7 +595,7 @@
     private List<MasterBarangEntity> barangSearchResults = new();
     private PerangkatRow? activeSearchRow = null;
 
-    private bool showMenyerahkanSearch;
+
     private string menyerahkanSearchQuery = string.Empty;
     private List<ApplicationUser> menyerahkanSearchResults = new();
 
@@ -618,11 +618,10 @@
 
         allPegawai = await DbContext.Pegawai.Where(p => p.IsAktif).OrderBy(p => p.Nama).ToListAsync();
         reviewers = await DbContext.Users.Where(u => u.Role == "Reviewer" && !u.IsDeleted).OrderBy(u => u.Nama).ToListAsync();
-        adminGudangUsers = await DbContext.Users.Where(u => u.Role == "AdminBA" && !u.IsDeleted).OrderBy(u =>
-u.Nama).ToListAsync();
+        adminBAUsers = await DbContext.Users.Where(u => u.Role == "AdminBA" && !u.IsDeleted).OrderBy(u => u.Nama).ToListAsync();
         barangOptions = await DbContext.MasterBarang.Where(b => b.IsAktif).OrderBy(b => b.NamaBarang).ToListAsync();
 
-        currentUserObj = adminGudangUsers.FirstOrDefault(u => u.Id == _currentUserId);
+        currentUserObj = adminBAUsers.FirstOrDefault(u => u.Id == _currentUserId);
         if (currentUserObj != null && !editId.HasValue)
             model.MenyerahkanId = _currentUserId;
 
@@ -933,7 +932,6 @@ Path.DirectorySeparatorChar));
         barangSearchResults = new();
         showBarangSearch = false;
         activeSearchRow = null;
-        showMenyerahkanSearch = false;
         menyerahkanSearchQuery = string.Empty;
         menyerahkanSearchResults = new();
         showMengetahuiSearch = false;
@@ -1076,8 +1074,8 @@ Path.DirectorySeparatorChar));
     private static bool IsValidImageBytes(byte[] bytes)
     {
         if (bytes.Length < 4) return false;
-        if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return true; // PNG
-        if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return true; // JPEG
+        if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) return true; 
+        if (bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return true; 
         return false;
     }
 
@@ -1338,25 +1336,23 @@ $"files/photos/{saveName}"
     private void OpenMenyerahkanSearch()
     {
         menyerahkanSearchQuery = string.Empty;
-        menyerahkanSearchResults = adminGudangUsers.Take(8).ToList();
-        showMenyerahkanSearch = true;
+        menyerahkanSearchResults = adminBAUsers.Take(8).ToList();
     }
 
-    private void CloseMenyerahkanSearch() => showMenyerahkanSearch = false;
+    private void CloseMenyerahkanSearch() { }
 
     private void OnMenyerahkanSearchInput(ChangeEventArgs e)
     {
         menyerahkanSearchQuery = e.Value?.ToString() ?? string.Empty;
         menyerahkanSearchResults = string.IsNullOrWhiteSpace(menyerahkanSearchQuery)
-            ? adminGudangUsers.Take(8).ToList()
-            : adminGudangUsers.Where(u => u.Nama?.Contains(menyerahkanSearchQuery, StringComparison.OrdinalIgnoreCase) ??
+            ? adminBAUsers.Take(8).ToList()
+            : adminBAUsers.Where(u => u.Nama?.Contains(menyerahkanSearchQuery, StringComparison.OrdinalIgnoreCase) ??
 false).Take(8).ToList();
     }
 
     private void SelectMenyerahkan(ApplicationUser u)
     {
         model.MenyerahkanId = u.Id;
-        showMenyerahkanSearch = false;
         _ = AutoSaveAsync();
     }
 

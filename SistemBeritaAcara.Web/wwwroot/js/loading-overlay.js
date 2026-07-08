@@ -1,6 +1,6 @@
-// Overlay loading global — dikontrol via JS, tidak bergantung pada Blazor rendering cycle.
-// Muncul SEGERA saat dipanggil (sebelum SignalR DOM patch dikirim ke browser).
-// Bertahan melewati in-app Blazor navigation karena tidak berada dalam component tree Blazor.
+﻿
+
+
 window.appLoading = {
     _el: null,
     show: function (message, subtext) {

@@ -1,4 +1,4 @@
-@page "/draft"
+﻿@page "/draft"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -230,11 +230,11 @@ else
             .FirstOrDefaultAsync(b => b.Id == deleteConfirmId.Value && b.CreatedBy == currentUserId);
         if (ba is not null)
         {
-            // Hapus file dokumen (DOCX + PDF) dari disk
+            
             DeleteFileIfExists(ba.DocxPath);
             DeleteFileIfExists(ba.DocxPath?.Replace(".docx", ".pdf"));
 
-            // Hapus semua foto bukti dari disk
+            
             if (ba.BuktiFotos != null)
                 foreach (var foto in ba.BuktiFotos)
                     DeleteFileIfExists(foto.FilePath);
@@ -255,7 +255,7 @@ else
                 relativePath.TrimStart('/').Replace("files/", "").Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(physical)) File.Delete(physical);
         }
-        catch { /* abaikan jika file sedang dipakai atau sudah tidak ada */ }
+        catch {  }
     }
 
     private static string GetRelativeTime(DateTime dt)

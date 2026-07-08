@@ -1,4 +1,4 @@
-// Chart.js Interop untuk Sistem Berita Acara
+﻿
 window.chartInterop = {
     _charts: {},
 

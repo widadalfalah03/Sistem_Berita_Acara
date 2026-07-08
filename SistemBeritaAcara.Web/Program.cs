@@ -14,10 +14,10 @@ using SistemBeritaAcara.Web.Services;
 using System.Globalization;
 using System.Threading.RateLimiting;
 
-// ── Atur kultur global ke Bahasa Indonesia ──────────────────────────────────
-// Semua format tanggal (ToString("MMMM"), dll.) otomatis menggunakan nama bulan
-// dalam Bahasa Indonesia (misal: "Juni" bukan "June") tanpa perlu CultureInfo
-// per-panggilan di seluruh aplikasi.
+
+
+
+
 var idCulture = new CultureInfo("id-ID");
 CultureInfo.DefaultThreadCurrentCulture   = idCulture;
 CultureInfo.DefaultThreadCurrentUICulture = idCulture;
@@ -26,14 +26,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
-    .AddHubOptions(o => o.MaximumReceiveMessageSize = 10 * 1024 * 1024); // 10MB untuk base64 gambar TTD
+    .AddHubOptions(o => o.MaximumReceiveMessageSize = 10 * 1024 * 1024); 
 
-// Register revalidating authentication state provider
+
 builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, SistemBeritaAcara.Web.Security.IdentityRevalidatingAuthenticationStateProvider>();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// M-6: Rate limiting pada endpoint login — maks 10 percobaan per menit per IP
+
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("login", limiter =>
@@ -46,7 +46,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
-// Ensure database and initial roles are created before the app (and Hangfire) starts
+
 using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
 {
     var db = preScope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -55,7 +55,7 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     try { db.Database.EnsureCreated(); }
     catch (Exception ex) { startupLogger.LogCritical(ex, "Gagal membuat/memverifikasi database. Pastikan SQL Server berjalan dan connection string benar."); throw; }
 
-    // Add columns that may be missing when DB was created before the entity was updated
+    
     try
     {
     await db.Database.ExecuteSqlRawAsync(@"
@@ -156,22 +156,22 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     var roleManager = preScope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<int>>>();
     var userManager = preScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-    // ── 1. Roles ──────────────────────────────────────────────────────────
+    
     foreach (var role in new[] { "AdminIT", "AdminBA", "Reviewer" })
     {
         if (!await roleManager.RoleExistsAsync(role))
             await roleManager.CreateAsync(new IdentityRole<int>(role));
     }
 
-    // ── 2. Seed Users: Sync Jabatan & fix Identity Roles untuk user yang sudah ada ──
-    // (Akun Admin IT dibuat via halaman /setup saat pertama kali aplikasi dijalankan)
+    
+    
     var usersNeedJabatan = db.Users.Include(u => u.Pegawai).Where(u => u.Jabatan == null && u.PegawaiId != null).ToList();
     foreach (var u in usersNeedJabatan)
         u.Jabatan = u.Pegawai?.Jabatan;
     if (usersNeedJabatan.Any())
         await db.SaveChangesAsync();
 
-    // Fix: Sync Identity Roles untuk user yang mungkin hilang dari AspNetUserRoles
+    
     var allUsers = await db.Users.ToListAsync();
     foreach (var u in allUsers)
     {
@@ -190,7 +190,7 @@ builder.Services.ConfigureApplicationCookie(opt =>
 
 builder.Services.AddAuthorization();
 
-// ── SignalR untuk real-time update status BA ──────────────────────────────
+
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<BaUpdateService>();
 
@@ -202,15 +202,15 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// Baca X-Forwarded-* headers dari reverse proxy/ngrok agar redirect URL pakai host ngrok
+
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
-    // Hanya terima forwarded headers dari loopback (reverse proxy di server yang sama)
+    
     KnownProxies = { System.Net.IPAddress.Loopback, System.Net.IPAddress.IPv6Loopback }
 });
 
-// Izinkan ngrok melewati header verifikasi (hanya berpengaruh saat pakai ngrok di development)
+
 app.Use(async (context, next) =>
 {
     context.Request.Headers["ngrok-skip-browser-warning"] = "true";
@@ -218,13 +218,13 @@ app.Use(async (context, next) =>
 });
 
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // serve runtime-generated files (DOCX/PDF) from wwwroot
+app.UseStaticFiles(); 
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
-// ── First-Run Middleware: redirect ke /setup jika belum ada user di DB ──
+
 app.UseMiddleware<SistemBeritaAcara.Web.Security.FirstRunMiddleware>();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
@@ -236,10 +236,10 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// ── Map SignalR Hub ───────────────────────────────────────────────────────
+
 app.MapHub<BaHub>("/hubs/ba");
 
-// ── Auth Endpoints (POST must be used for cookie auth from Blazor Server) ──
+
 app.MapPost("/account/login", async (
     HttpContext ctx,
     SignInManager<ApplicationUser> signInManager,
@@ -249,8 +249,8 @@ app.MapPost("/account/login", async (
     var email = form["email"].ToString();
     var password = form["password"].ToString();
     var returnUrl = form["returnUrl"].ToString();
-    // Cegah open redirect: hanya izinkan path lokal (mulai dengan '/')
-    if (string.IsNullOrEmpty(returnUrl) || !returnUrl.StartsWith('/') || returnUrl.StartsWith("//"))
+    
+    if (string.IsNullOrEmpty(returnUrl) || !returnUrl.StartsWith('/') || returnUrl.StartsWith("/" + "/") || returnUrl.StartsWith("/\\"))
         returnUrl = "/dashboard";
 
     var user = await userManager.FindByEmailAsync(email);
@@ -288,7 +288,7 @@ app.MapGet("/api/preview/pdf/{baId:int}", async (
     var ba = await db.BeritaAcara.FindAsync(baId);
     if (ba == null || (ba.DocxPath == null && ba.DocxFinalPath == null)) return Results.NotFound();
 
-    // IDOR Check
+    
     if (ba.Status != "Approved" && ba.Status != "Archived")
     {
         var role = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
@@ -307,7 +307,7 @@ app.MapGet("/api/preview/pdf/{baId:int}", async (
         }
     }
 
-    // prefer final (with Reviewer + PJ signatures) over draft
+    
     string targetDocx = !string.IsNullOrEmpty(ba.DocxFinalPath) ? ba.DocxFinalPath : ba.DocxPath!;
     var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
         targetDocx.TrimStart('/').Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
@@ -318,7 +318,7 @@ app.MapGet("/api/preview/pdf/{baId:int}", async (
     return Results.File(bytes, "application/pdf", enableRangeProcessing: true);
 }).RequireAuthorization().DisableAntiforgery();
 
-// Endpoint download PDF
+
 app.MapGet("/api/ba/{baId:int}/download", async (
     int baId,
     HttpContext ctx,
@@ -327,7 +327,7 @@ app.MapGet("/api/ba/{baId:int}/download", async (
     var ba = await db.BeritaAcara.FindAsync(baId);
     if (ba == null) return Results.NotFound();
 
-    // IDOR Check
+    
     if (ba.Status != "Approved" && ba.Status != "Archived")
     {
         var role = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
@@ -362,7 +362,7 @@ app.MapGet("/api/ba/{baId:int}/download", async (
     return Results.File(bytes, "application/pdf", filename);
 }).RequireAuthorization().DisableAntiforgery();
 
-// Endpoint untuk serve file sensitif dengan autorisasi
+
 app.MapGet("/files/{category}/{**filename}", async (
     string category, 
     string filename,
@@ -371,7 +371,7 @@ app.MapGet("/files/{category}/{**filename}", async (
     var physicalPath = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", category, filename.Replace("/", Path.DirectorySeparatorChar.ToString()));
     if (!File.Exists(physicalPath)) return Results.NotFound();
     
-    // Tentukan content type sederhana
+    
     string ext = Path.GetExtension(physicalPath).ToLower();
     string contentType = ext switch {
         ".jpg" or ".jpeg" => "image/jpeg",
@@ -386,7 +386,7 @@ app.MapGet("/files/{category}/{**filename}", async (
 }).RequireAuthorization().DisableAntiforgery();
 
 
-// Database and roles are ensured earlier before app start
+
 
 RecurringJob.AddOrUpdate<DueDateCheckerJob>(
     "cek-jatuh-tempo",

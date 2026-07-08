@@ -1,4 +1,4 @@
-@page "/tambah-pengguna"
+﻿@page "/tambah-pengguna"
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
 @using PegawaiEntity = SistemBeritaAcara.Core.Entities.Pegawai
@@ -18,7 +18,7 @@
 
     @if (!formSaved)
     {
-        @* ── Langkah 1: Pilih Role ── *@
+        
         <div class="form-group">
             <label class="form-label">Role <span style="color:var(--danger)">*</span></label>
             <div style="position:relative;margin-top:4px;">
@@ -45,7 +45,7 @@
             </div>
         </div>
 
-        @* ── Langkah 2a: AdminIT / Admin GB — input email TAD ── *@
+        
         @if (selectedRole is "AdminIT" or "AdminBA")
         {
             <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
@@ -78,7 +78,7 @@
             </div>
         }
 
-        @* ── Langkah 2b: Reviewer — cari dari data Pegawai ── *@
+        
         @if (selectedRole == "Reviewer")
         {
             <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
@@ -161,7 +161,7 @@
     }
     else
     {
-        @* ── Sukses ── *@
+        
         <div style="text-align:center;padding:32px;">
             <div style="width:64px;height:64px;border-radius:50%;background:#F0FDF4;color:#22C55E;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;">
                 <i class="bi bi-check-circle-fill"></i>
@@ -181,7 +181,7 @@
 </div>
 
 @code {
-    // ── Shared ──────────────────────────────────────────────────────────
+    
     private string selectedRole  = string.Empty;
     private bool   showRoleDropdown = false;
     private string errorMsg      = string.Empty;
@@ -191,11 +191,11 @@
     private string savedName     = string.Empty;
     private string savedRole     = string.Empty;
 
-    // ── AdminIT / Admin GB (TAD) ─────────────────────────────────────────
+    
     private string tadNama  = string.Empty;
     private string tadEmail = string.Empty;
 
-    // ── Reviewer (Pegawai) ───────────────────────────────────────────────
+    
     private List<PegawaiEntity> allPegawai    = new();
     private List<PegawaiEntity> results       = new();
     private HashSet<int>        existingUserIds = new();
@@ -218,7 +218,7 @@
     {
         selectedRole    = role;
         showRoleDropdown = false;
-        // reset sub-form state saat ganti role
+        
         tadNama         = string.Empty;
         tadEmail        = string.Empty;
         selectedPegawai = null;
@@ -227,7 +227,7 @@
         errorMsg        = string.Empty;
     }
 
-    // ── Kirim undangan untuk AdminIT / Admin GB (TAD) ────────────────────
+    
     private async Task CreateTadUserAsync()
     {
         errorMsg = string.Empty;
@@ -250,7 +250,7 @@
             return;
         }
 
-        // Validasi: hanya boleh 1 AdminIT di sistem
+        
         if (selectedRole == "AdminIT")
         {
             var existingAdminIT = await DbContext.Users
@@ -274,7 +274,7 @@
                 return;
             }
 
-            // Jika ada akun lama yang sudah dihapus (soft-delete), hapus dulu supaya bisa dibuat ulang
+            
             if (existing != null && existing.IsDeleted)
             {
                 DbContext.Users.Remove(existing);
@@ -287,7 +287,7 @@
                 Email          = email,
                 Nama           = nama,
                 Role           = selectedRole,
-                PegawaiId      = null,    // TAD, tidak ada di tabel Pegawai
+                PegawaiId      = null,    
                 EmailConfirmed = false,
                 IsDeleted      = false,
                 Jabatan        = null
@@ -316,7 +316,7 @@
         finally { isSaving = false; }
     }
 
-    // ── Kirim undangan untuk Reviewer (dari data Pegawai) ────────────────
+    
     private async Task CreateReviewerAsync()
     {
         if (selectedPegawai is null) return;
@@ -380,7 +380,7 @@
         finally { isSaving = false; }
     }
 
-    // ── Pegawai search (Reviewer) ─────────────────────────────────────────
+    
     private async Task OnSearch(ChangeEventArgs e)
     {
         searchQuery = e.Value?.ToString() ?? string.Empty;

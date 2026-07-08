@@ -1,4 +1,4 @@
-@using Microsoft.AspNetCore.Components.Authorization
+﻿@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
 @using System.Security.Claims
@@ -170,9 +170,9 @@ else
                     box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0,0,0,0.1));
                     min-width: 180px;
                     z-index: 100;
-                    overflow: visible; /* Changed from hidden to visible so ::before is active */
+                    overflow: visible; 
                 }
-                /* Bridge the gap so hover state isn't lost */
+                
                 .profile-dropdown-menu::before {
                     content: "";
                     position: absolute;

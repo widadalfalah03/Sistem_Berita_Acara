@@ -19,19 +19,18 @@ public static class DependencyInjection
         string connectionString = config.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' tidak ditemukan.");
 
-        // Factory (Singleton) + AppDbContext (Scoped) — AddDbContextFactory mendaftarkan keduanya.
         services.AddDbContextFactory<AppDbContext>(opt =>
             opt.UseSqlServer(connectionString));
 
         services.AddIdentity<ApplicationUser, IdentityRole<int>>(opt =>
         {
-            opt.Password.RequireDigit = false;
+            opt.Password.RequireDigit = true;
             opt.Password.RequireLowercase = false;
-            opt.Password.RequireUppercase = false;
-            opt.Password.RequireNonAlphanumeric = false;
-            opt.Password.RequiredLength = 6;
+            opt.Password.RequireUppercase = true;
+            opt.Password.RequireNonAlphanumeric = true;
+            opt.Password.RequiredLength = 8;
             opt.User.RequireUniqueEmail = true;
-            // Kunci akun 5 menit setelah 5x salah password
+            
             opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
             opt.Lockout.MaxFailedAccessAttempts = 5;
             opt.Lockout.AllowedForNewUsers = true;

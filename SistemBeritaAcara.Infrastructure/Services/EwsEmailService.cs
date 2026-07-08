@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -59,7 +59,7 @@ public class EwsEmailService(IConfiguration config, ILogger<EwsEmailService> log
 
     private async Task<string> PostSoapAsync(string soap)
     {
-        // Gunakan NTLM — Exchange Pertamina tidak menerima Basic auth
+        
         var handler = new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = (_, _, _, _) => true,

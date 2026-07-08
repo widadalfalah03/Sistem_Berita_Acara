@@ -1,4 +1,4 @@
-@page "/dashboard"
+﻿@page "/dashboard"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.SignalR.Client
@@ -612,7 +612,7 @@ else if (currentRole == "AdminIT")
             <div class="stat-card-icon approved"><i class="bi bi-box-seam"></i></div>
             <div class="stat-card-info">
                 <div class="stat-card-label">Admin BA</div>
-                <div class="stat-card-value green">@userStats.AdminGudang</div>
+                <div class="stat-card-value green">@userStats.AdminBA</div>
                 <div class="stat-card-desc">Pembuat Berita Acara</div>
             </div>
         </div>
@@ -653,7 +653,7 @@ else if (currentRole == "AdminIT")
     private (int Alokasi, int Peminjaman, int Penarikan, int Lainnya) jenisData;
     private List<int> reviewerTrendApproved = new();
     private List<BAEntity> activePeminjaman = new();
-    private List<int[]> trendData = new(); // [month-6..month-0]
+    private List<int[]> trendData = new(); 
 
     private int? confirmReturnId = null;
     private string confirmReturnNomorSurat = string.Empty;
@@ -670,7 +670,7 @@ else if (currentRole == "AdminIT")
     private (int Pending, int Total, int ApprovedThisMonth, int RejectedThisMonth, int ApprovedAlokasi, int ApprovedPeminjaman, int ApprovedPenarikan, int ApprovedLainnya) reviewerStat;
     private List<BAEntity> reviewerQueue = new();
 
-    private (int Total, int AdminGudang, int Reviewer) userStats;
+    private (int Total, int AdminBA, int Reviewer) userStats;
     private AdminITStats itStats = new();
 
     private sealed class AdminITStats
@@ -762,7 +762,7 @@ else if (currentRole == "AdminIT")
             {
                 await JS.InvokeVoidAsync("chartInterop.createDonutChart", "adminITDonut",
                     new[] { "Admin BA", "Reviewer" },
-                    new[] { userStats.AdminGudang, userStats.Reviewer },
+                    new[] { userStats.AdminBA, userStats.Reviewer },
                     new[] { "#22C55E", "#3B82F6" });
             }
         }
@@ -816,7 +816,7 @@ else if (currentRole == "AdminIT")
 
         reviewerStat.Total = myQueue.Count(b => b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected");
         reviewerStat.ApprovedThisMonth = approvedBA.Count(b => b.ApprovedAt?.Month == currentMonth && b.ApprovedAt?.Year == currentYear);
-        reviewerStat.RejectedThisMonth = rejectedBA.Count; // Simplification, or let's use Tanggal as a proxy for this month if there's no RejectedAt
+        reviewerStat.RejectedThisMonth = rejectedBA.Count; 
         
         reviewerStat.ApprovedAlokasi = myQueue.Count(b => b.Jenis == "Alokasi" && (b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected"));
         reviewerStat.ApprovedPeminjaman = myQueue.Count(b => b.Jenis == "Peminjaman" && (b.Status == "Approved" || b.Status == "Archived" || b.Status == "Rejected"));
@@ -841,7 +841,7 @@ else if (currentRole == "AdminIT")
     {
         var allUsers = await DbCtx.Users.ToListAsync();
         userStats.Total = allUsers.Count(u => !u.IsDeleted);
-        userStats.AdminGudang = allUsers.Count(u => u.Role == "AdminBA" && !u.IsDeleted);
+        userStats.AdminBA = allUsers.Count(u => u.Role == "AdminBA" && !u.IsDeleted);
         userStats.Reviewer = allUsers.Count(u => u.Role == "Reviewer" && !u.IsDeleted);
     }
 
@@ -1065,7 +1065,7 @@ else if (currentRole == "AdminIT")
         }
         catch
         {
-            // Fallback: stay static if SignalR fails
+            
         }
     }
 

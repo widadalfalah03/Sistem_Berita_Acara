@@ -1,4 +1,4 @@
-// ── TTD Upload: hapus background otomatis via Canvas pixel manipulation ──────
+﻿
 window.ttdUpload = {
     _threshold: 200,
     _dataUrl: null,
@@ -60,8 +60,8 @@ window.ttdUpload = {
             var data = imageData.data;
             var W = canvas.width, H = canvas.height;
 
-            // Deteksi warna background dengan sampling sudut gambar (corner detection).
-            // Sudut gambar hampir selalu berisi background (bukan tanda tangan).
+            
+            
             var bgR = 0, bgG = 0, bgB = 0, samples = 0;
             var r = Math.max(1, Math.min(8, Math.floor(Math.min(W, H) * 0.08)));
             var corners = [[0, 0], [W - 1, 0], [0, H - 1], [W - 1, H - 1]];
@@ -80,10 +80,10 @@ window.ttdUpload = {
             bgG = Math.round(bgG / samples);
             bgB = Math.round(bgB / samples);
 
-            // Hapus pixel yang warnanya mirip dengan background (color distance).
-            // Ini bekerja untuk background putih, abu-abu, kuning kertas, dll.
-            var removeThreshold = 45;  // jarak warna → transparan penuh
-            var edgeThreshold = 70;    // jarak warna → transparan sebagian (anti-alias)
+            
+            
+            var removeThreshold = 45;  
+            var edgeThreshold = 70;    
             for (var i = 0; i < data.length; i += 4) {
                 var dr = data[i] - bgR, dg = data[i + 1] - bgG, db = data[i + 2] - bgB;
                 var dist = Math.sqrt(dr * dr + dg * dg + db * db);
@@ -147,7 +147,7 @@ window.setupCanvas = {
         var oldC = document.getElementById('setup-ttd-canvas');
         if (!oldC) return;
         
-        // Mencegah duplicate listeners
+        
         var c = oldC.cloneNode(true);
         oldC.parentNode.replaceChild(c, oldC);
 
@@ -252,7 +252,7 @@ window.ttdCanvas = {
         }, { passive: false });
         canvas.addEventListener('touchend', (e) => { e.preventDefault(); this.isDrawing = false; }, { passive: false });
 
-        // Add mouse events for desktop
+        
         canvas.addEventListener('mousedown', (e) => {
             hidePlaceholder();
             const r = canvas.getBoundingClientRect();

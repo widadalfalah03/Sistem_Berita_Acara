@@ -1,4 +1,4 @@
-@page "/rejected"
+﻿@page "/rejected"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
@@ -247,7 +247,7 @@ else
 
     private async Task LoadAdminGbAsync()
     {
-        // Revisi: BAs still in Rejected status created by this user, augmented with latest history for WaktuTolak
+        
         var rejectedBAs = await DbContext.BeritaAcara
             .AsNoTracking()
             .Where(b => b.Status == "Rejected" && b.CreatedBy == currentUserId)
@@ -280,7 +280,7 @@ else
             }).OrderByDescending(e => e.WaktuTolak).ToList();
         }
 
-        // Riwayat: all rejection history for BAs created by this user
+        
         var riwayatHistory = await DbContext.BeritaAcaraHistory
             .AsNoTracking()
             .Where(h => h.BaCreatedBy == currentUserId)
@@ -300,7 +300,7 @@ else
 
     private async Task LoadReviewerAsync()
     {
-        // Riwayat only: rejections performed by this reviewer, with Admin GB name
+        
         var history = await DbContext.BeritaAcaraHistory
             .AsNoTracking()
             .Where(h => h.RejectedByUserId == currentUserId)
@@ -352,7 +352,7 @@ else
         }
         catch
         {
-            // Fallback: stay static if SignalR fails
+            
         }
     }
 

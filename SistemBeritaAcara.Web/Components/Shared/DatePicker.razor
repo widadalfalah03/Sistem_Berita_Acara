@@ -1,9 +1,9 @@
-@using System.Globalization
+﻿@using System.Globalization
 @inject IJSRuntime JS
 
 <div id="dp-@_uid" style="position:relative;user-select:none;" @onkeydown="OnKeyDown">
 
-    @* Input trigger *@
+    
     <div @onclick="Toggle"
          style="display:flex;align-items:center;gap:8px;border:@(isOpen ? "2px solid var(--primary)" : "1.5px solid var(--border)");border-radius:var(--radius);background:var(--surface);padding:@InputPadding;cursor:pointer;transition:border-color .15s,border-width .15s;min-height:38px;box-sizing:border-box;">
         <i class="bi bi-calendar3" style="font-size:14px;color:@(Value.HasValue ? "var(--primary)" : "var(--text-muted)");flex-shrink:0;"></i>
@@ -20,14 +20,14 @@
         }
     </div>
 
-    @* Calendar popup *@
+    
     @if (isOpen)
     {
         <div @onclick="CloseBackdrop" style="position:fixed;inset:0;z-index:199;"></div>
         <div style="@PopupPositionStyle z-index:200;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);width:300px;overflow:hidden;"
              @onclick:stopPropagation>
 
-            @* Month / Year navigation *@
+            
             <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 16px 12px;border-bottom:1px solid var(--border-light);">
                 <button type="button" @onclick="PrevMonth"
                         style="width:32px;height:32px;border:none;border-radius:8px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);font-size:16px;"
@@ -53,7 +53,7 @@
                 </button>
             </div>
 
-            @* Year/Month quick-pick *@
+            
             @if (showYearMonthPicker)
             {
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border-light);">
@@ -88,7 +88,7 @@
                 </div>
             }
 
-            @* Day-of-week header *@
+            
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:0;padding:10px 12px 4px;">
                 @foreach (var day in DayLabels)
                 {
@@ -96,7 +96,7 @@
                 }
             </div>
 
-            @* Day cells *@
+            
             <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 12px 12px;">
                 @foreach (var cell in CalendarCells)
                 {
@@ -130,7 +130,7 @@
                 }
             </div>
 
-            @* Footer *@
+            
             <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-top:1px solid var(--border-light);">
                 <button type="button" @onclick="Clear"
                         style="background:none;border:none;font-size:13px;color:var(--danger);cursor:pointer;font-weight:500;padding:0;"
@@ -189,7 +189,7 @@
         get
         {
             var first = new DateTime(viewDate.Year, viewDate.Month, 1);
-            int startOffset = ((int)first.DayOfWeek); // Sunday = 0
+            int startOffset = ((int)first.DayOfWeek); 
             for (int i = 0; i < startOffset; i++)
                 yield return new CalendarCell(DateTime.MinValue);
 

@@ -1,4 +1,4 @@
-@page "/pj/sign/{Token}"
+﻿@page "/pj/sign/{Token}"
 @attribute [AllowAnonymous]
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.EntityFrameworkCore
@@ -223,9 +223,9 @@ else
         getDataUrl() {
             var c = document.getElementById('pjSignCanvas');
             if (!c) return null;
-            // Auto-crop: trim semua whitespace di sekitar tanda tangan.
-            // Caranya: scan pixel data untuk temukan bounding box yang ada tanda tangan,
-            // lalu gambar ulang ke canvas sementara seukuran bounding box + padding.
+            
+            
+            
             var ctx = c.getContext('2d');
             var data = ctx.getImageData(0, 0, c.width, c.height).data;
             var minX = c.width, maxX = 0, minY = c.height, maxY = 0;
@@ -240,9 +240,9 @@ else
                     }
                 }
             }
-            // Jika tidak ada tanda tangan, kembalikan canvas kosong
+            
             if (maxX <= minX || maxY <= minY) return c.toDataURL('image/png');
-            // Tambahkan padding kecil (4px) di semua sisi
+            
             var pad = 4;
             minX = Math.max(0, minX - pad);
             minY = Math.max(0, minY - pad);
@@ -274,7 +274,7 @@ else
     private long cacheBreaker;
 
     private bool _isDrawing = false;
-    private string pjTtdMode = "draw"; // "draw" | "upload"
+    private string pjTtdMode = "draw"; 
 
     protected override async Task OnInitializedAsync()
     {
@@ -402,10 +402,10 @@ else
             if (string.IsNullOrEmpty(dataUrl)) { actionMessage = "Gagal membaca data tanda tangan."; isSubmitting = false; return; }
             var bytes = Convert.FromBase64String(dataUrl.Split(',')[1]);
 
-            // H-6: Validasi magic bytes — tolak file yang bukan PNG atau JPEG
+            
             if (bytes.Length < 4 ||
-                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && // PNG
-                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) // JPEG
+                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && 
+                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) 
             {
                 actionMessage = "Gagal: File yang diupload bukan gambar yang valid (PNG/JPEG).";
                 isSubmitting = false;
@@ -416,11 +416,11 @@ else
             fpath = Path.Combine(folder, fname);
             await File.WriteAllBytesAsync(fpath, bytes);
 
-            // File TTD PJ di-embed dan langsung dihapus setelahnya
+            
             await DocumentService.EmbedTtdPjAsync(ba.Id, fpath);
             try { File.Delete(fpath); } catch { }
 
-            // Generate nomor surat saat PJ selesai tanda tangan (Final)
+            
             if (string.IsNullOrEmpty(ba!.NomorSurat))
             {
                 var next = await BACounterService.GetNextNomorSuratAsync(ba.Tanggal, ba.Jenis);
@@ -428,7 +428,7 @@ else
                 ba.NomorSurat = next.nomorSurat;
             }
 
-            // Patch NomorSurat atau Generate Docx
+            
             var docxPhysicalPath = string.IsNullOrEmpty(ba!.DocxPath)
                 ? null
                 : Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
@@ -442,7 +442,7 @@ else
                 ba.DocxPath = await DocumentService.GenerateDocxAsync(ba);
             }
 
-            // Cek dan konsumsi token secara atomic untuk mencegah race condition (double click)
+            
             var rowsAffected = await DbContext.ApprovalToken
                 .Where(t => t.Id == approvalToken!.Id && t.UsedAt == null)
                 .ExecuteUpdateAsync(s => s.SetProperty(t => t.UsedAt, DateTime.Now));
@@ -454,22 +454,22 @@ else
                 return;
             }
 
-            // Transaksi database
+            
             await using var tx = await DbContext.Database.BeginTransactionAsync();
             ba.Status = "Approved";
             ba.PjSignedAt = DateTime.Now;
             ba.ApprovedAt = DateTime.Now;
             ba.ExcelExported = false;
-            // approvalToken!.UsedAt = DateTime.Now; // Sudah diupdate secara atomic di atas
+            
             await DbContext.SaveChangesAsync();
 
-            // Export Excel di luar TX
+            
             await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
             ba.ExcelExported = true;
             await DbContext.SaveChangesAsync();
             await tx.CommitAsync();
 
-            // Kirim notifikasi ke Admin Gudang Barang
+            
             await NotificationService.SendAsync(ba.CreatedBy, "BA_APPROVED", $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah selesai dan disetujui sepenuhnya.", ba.Id);
             
             var creatorUser = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
@@ -486,15 +486,15 @@ else
             if (!string.IsNullOrEmpty(creatorUser?.Email))
                 await EmailService.SendApprovalResultAsync(creatorUser.Email, creatorUser.Nama ?? creatorUser.Email, ba.Jenis, true, ba.Id, baseUrl, isForPj: false, nomorSurat: ba.NomorSurat, barangList: barangList);
             
-            // Email salinan ke PJ
+            
             if (!string.IsNullOrEmpty(ba.Pj?.Email))
                 await EmailService.SendApprovalResultAsync(ba.Pj.Email, ba.Pj.Nama, ba.Jenis, true, ba.Id, baseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
 
-            // Email salinan ke Reviewer
+            
             if (!string.IsNullOrEmpty(ba.Mengetahui?.Email))
                 await EmailService.SendApprovalResultAsync(ba.Mengetahui.Email, ba.Mengetahui.Nama, ba.Jenis, true, ba.Id, baseUrl, isForPj: true, nomorSurat: ba.NomorSurat, barangList: barangList);
 
-            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); // broadcast real-time
+            await BaUpdateService.NotifyBaDetailUpdated(ba.Id); 
 
             alreadySigned = true;
         }

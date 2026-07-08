@@ -1,4 +1,4 @@
-@if (TotalPages > 1)
+﻿@if (TotalPages > 1)
 {
     <div class="pagination-container" style="gap:6px;">
         <button class="page-btn" disabled="@(!HasPreviousPage)" @onclick="OnPreviousPage">
@@ -34,7 +34,7 @@
         var startPage = Math.Max(1, CurrentPage - 1);
         var endPage = Math.Min(TotalPages, startPage + 3);
 
-        // Adjust if we hit the end
+        
         if (endPage - startPage < 3 && TotalPages >= 4)
         {
             startPage = Math.Max(1, endPage - 3);

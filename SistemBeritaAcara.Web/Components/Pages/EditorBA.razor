@@ -1,4 +1,4 @@
-@page "/editor/{Id:int}"
+﻿@page "/editor/{Id:int}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
@@ -19,7 +19,7 @@
 
 <PageTitle>Editor Berita Acara — Sistem Berita Acara</PageTitle>
 
-@* Fullscreen overlay saat generate/embed dokumen — position:fixed, muncul di atas segalanya *@
+
 @if (isLoading)
 {
     <div style="position:fixed;inset:0;z-index:10000;background:rgba(255,255,255,0.93);backdrop-filter:blur(6px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
@@ -33,7 +33,7 @@
     </div>
 }
 
-@* Konten utama hanya di-render setelah loading selesai, menghindari NRE saat ba masih null *@
+
 @if (!isLoading)
 {
     @if (ba is null)
@@ -201,7 +201,7 @@
     private bool _menyerahkanEmbedded = false;
     private long pdfVersion = 0;
     private bool pdfExists = false;
-    private int _loadedId = 0; // Id terakhir yang sudah di-load
+    private int _loadedId = 0; 
 
     protected override void OnInitialized()
     {

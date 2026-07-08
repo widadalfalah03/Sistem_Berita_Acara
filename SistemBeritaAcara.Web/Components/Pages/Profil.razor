@@ -1,4 +1,4 @@
-@page "/profil"
+﻿@page "/profil"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
@@ -11,7 +11,7 @@
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
-<PageTitle>Profil Anda — Pertamina Patra Niaga</PageTitle>
+<PageTitle>Profil Anda â€” Pertamina Patra Niaga</PageTitle>
 
 <style>
     .profile-pic-container:hover .profile-hover-overlay {
@@ -263,7 +263,7 @@ else
                     <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
                         <i class="bi bi-image" style="font-size:30px;color:var(--primary);margin-bottom:8px;"></i>
                         <div style="font-weight:600;font-size:14px;margin-bottom:3px;">Klik untuk pilih TTD</div>
-                        <div style="font-size:12px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
+                        <div style="font-size:12px;color:var(--text-muted);">JPG, PNG, JPEG Â· Maks. 5MB</div>
                     </div>
                     <div id="ttd-ul-wrap" style="display:none;position:absolute;inset:0;background:white;padding:8px;">
                         <canvas id="ttd-ul-canvas" style="display:block;max-width:100%;max-height:184px;margin:auto;"></canvas>
@@ -289,29 +289,22 @@ else
     private SistemBeritaAcara.Core.Entities.Pegawai? linkedPegawai;
     private bool isLoading = true;
     private string globalMessage = string.Empty;
-
-    // Modals
+    
     private bool showTtdModal = false;
     private bool isOpeningModal = false;
-
-    // Profile pic
-    private IBrowserFile? profilePicFile;
+    
     private bool isSavingPic;
-
-    // TTD
+    
     private string ttdCacheBuster = Guid.NewGuid().ToString();
     private bool isSavingTtd;
-    private bool isCanvasEmpty = true;
-    private bool isDrawingActive = false;
-    private string ttdMode = "draw"; // "draw" | "upload"
-
-
+    private string ttdMode = "draw"; 
 
     protected override async Task OnInitializedAsync()
     {
-        var auth = await AuthStateProvider.GetAuthenticationStateAsync();
-        var email = auth.User.Identity?.Name;
-        if (email is null) { Navigation.NavigateTo("/login", true); return; }
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var email = user.Identity?.Name;
+        if (string.IsNullOrEmpty(email)) return;
 
         currentUser = await UserManager.FindByEmailAsync(email);
         if (currentUser?.PegawaiId is not null)
@@ -323,16 +316,17 @@ else
     private async Task OpenTtdModal()
     {
         isOpeningModal = true;
-        
         showTtdModal = true;
         ttdMode = "draw";
-        isCanvasEmpty = true;
-        isDrawingActive = false;
         await Task.Delay(100);
         await JS.InvokeVoidAsync("ttdCanvas.init");
         try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
-        
         isOpeningModal = false;
+    }
+
+    private void CloseTtdModal()
+    {
+        showTtdModal = false;
     }
 
     private async Task SwitchTtdMode(string mode)
@@ -345,22 +339,10 @@ else
             try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
     }
 
-    private void CloseTtdModal()
-    {
-        showTtdModal = false;
-        ttdMode = "draw";
-    }
-
-    // ── Canvas drawing events ──
-    // Event listener sekarang ditangani sepenuhnya oleh JavaScript (ttdCanvas) untuk mencegah lag di HP.
-
     private async Task ClearCanvasAsync()
     {
         await JS.InvokeVoidAsync("ttdCanvas.clear");
-        isCanvasEmpty = true;
     }
-
-    // ── Save drawn TTD ──
 
     private async Task SaveDrawnTtdAsync()
     {
@@ -382,15 +364,13 @@ else
                 dataUrl = await JS.InvokeAsync<string>("ttdCanvas.getDataUrl");
             }
             if (string.IsNullOrEmpty(dataUrl)) { globalMessage = "Gagal membaca data TTD."; return; }
-
-            // dataUrl format: "data:image/png;base64,XXXXX"
+            
             var base64 = dataUrl.Split(',')[1];
             var bytes = Convert.FromBase64String(base64);
-
-            // H-6: Validasi magic bytes — tolak file yang bukan PNG atau JPEG
+            
             if (bytes.Length < 4 ||
-                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && // PNG
-                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) // JPEG
+                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && 
+                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) 
             {
                 globalMessage = "Gagal: File yang diupload bukan gambar yang valid (PNG/JPEG).";
                 return;
@@ -398,21 +378,20 @@ else
 
             var folder = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "signatures");
             Directory.CreateDirectory(folder);
-            var fname = $"ttd-user-{currentUser!.Id}.png";
+            var fname = "ttd-user-$($currentUser!.Id).png";
             var fpath = Path.Combine(folder, fname);
             await File.WriteAllBytesAsync(fpath, bytes);
 
-            currentUser.TtdPath = $"files/signatures/{fname}";
+            currentUser.TtdPath = "files/signatures/$fname";
             await UserManager.UpdateAsync(currentUser);
             globalMessage = "Tanda tangan berhasil disimpan!";
             ttdCacheBuster = Guid.NewGuid().ToString();
             showTtdModal = false;
         }
-        catch (Exception ex) { globalMessage = $"Gagal menyimpan TTD: {ex.Message}"; }
+        catch (Exception ex) { globalMessage = "Gagal menyimpan TTD: $($ex.Message)"; }
         finally { isSavingTtd = false; }
     }
-
-    // ── Profile Picture ──
+    
     private bool showCropperModal = false;
 
     private async Task ConfirmCrop()
@@ -438,11 +417,11 @@ else
                     if (File.Exists(oldPath)) File.Delete(oldPath);
                 }
 
-                var fname = $"profile-{currentUser.Id}-{DateTime.UtcNow.Ticks}{ext}";
+                var fname = "profile-$($currentUser.Id)-$($DateTime.UtcNow.Ticks)$ext";
                 var fpath = Path.Combine(folder, fname);
                 await File.WriteAllBytesAsync(fpath, bytes);
 
-                currentUser.ProfilePicPath = $"files/profiles/{fname}";
+                currentUser.ProfilePicPath = "files/profiles/$fname";
                 await UserManager.UpdateAsync(currentUser);
                 
                 globalMessage = "Foto profil berhasil diperbarui!";
@@ -451,7 +430,7 @@ else
         } 
         catch (Exception ex) 
         {
-            globalMessage = $"Gagal memotong gambar: {ex.Message}";
+            globalMessage = "Gagal memotong gambar: $($ex.Message)";
         }
         finally 
         {
@@ -465,8 +444,6 @@ else
         showCropperModal = false;
         _ = JS.InvokeVoidAsync("cropperInterop.destroyCropper");
     }
-
-
 
     private static string GetInitials(string name)
     {

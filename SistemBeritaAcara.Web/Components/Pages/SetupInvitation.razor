@@ -1,4 +1,4 @@
-@page "/invitation"
+﻿@page "/invitation"
 @layout EmptyLayout
 @using Microsoft.AspNetCore.Identity
 @using SistemBeritaAcara.Core.Entities
@@ -8,7 +8,7 @@
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @rendermode InteractiveServer
 
-<PageTitle>Setup Akun — Sistem Berita Acara</PageTitle>
+<PageTitle>Setup Akun Ã¢â‚¬â€ Sistem Berita Acara</PageTitle>
 
 <div class="login-page" style="overflow-y:auto;align-items:flex-start;padding:32px 24px;">
     <div class="login-card" style="max-width:480px;width:100%;margin:auto;">
@@ -57,7 +57,7 @@
 
                     <div class="form-group">
                         <div class="login-pw-wrap">
-                            <input class="login-input" type="@pwType" @bind="newPassword" placeholder="Password Baru (Min. 8 Karakter)" />
+                            <input class="login-input" type="@pwType" @bind="newPassword" placeholder="Password Baru (Min. 8 Karakter, 1 Huruf Besar, Angka, & Simbol)" />
                             <button type="button" class="login-pw-toggle" @onclick="TogglePwType" tabindex="-1">
                                 <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
                             </button>
@@ -118,7 +118,7 @@
                                onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
                             <i class="bi bi-image" style="font-size:26px;color:var(--primary);margin-bottom:6px;"></i>
                             <div style="font-weight:600;font-size:13px;margin-bottom:2px;">Klik untuk pilih gambar</div>
-                            <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
+                            <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG Ã‚Â· Maks. 5MB</div>
                             <input type="file" id="setup-ul-input" accept="image/*" style="display:none"
                                    onchange="ttdUpload.onFileChange('setup-ul-input', 'setup-ul-canvas', 'setup-ul-wrap')" />
                         </label>
@@ -156,9 +156,8 @@
     private string pwType2 = "password";
     private string newPassword = string.Empty;
     private string confirmPassword = string.Empty;
-    private bool _canvasInitialized = false;
-    private bool isDrawingActive = false;
-    private string setupTtdMode = "draw"; // "draw" | "upload"
+    private string setupTtdMode = "draw"; 
+    private bool _canvasInitialized = false; 
 
     protected override async Task OnInitializedAsync()
     {
@@ -211,21 +210,6 @@
     {
         errorMessage = string.Empty;
 
-        if (string.IsNullOrWhiteSpace(newPassword))
-        {
-            errorMessage = "Password baru wajib diisi.";
-            return;
-        }
-        if (newPassword.Length < 8)
-        {
-            errorMessage = "Password baru minimal 8 karakter.";
-            return;
-        }
-        if (newPassword != confirmPassword)
-        {
-            errorMessage = "Konfirmasi password tidak cocok.";
-            return;
-        }
 
         step = 2;
     }
@@ -271,7 +255,7 @@
         isSaving = true;
         try
         {
-            // Reset Password First
+            
             var resetResult = await UserManager.ResetPasswordAsync(user, token, newPassword);
             if (!resetResult.Succeeded)
             {
@@ -280,14 +264,14 @@
                 return;
             }
 
-            // Save Signature — dataUrl already obtained above
+            
             var base64 = dataUrl.Split(',')[1];
             var bytes = Convert.FromBase64String(base64);
 
-            // Validasi magic bytes — tolak file yang bukan PNG atau JPEG
+            
             if (bytes.Length < 4 ||
-                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && // PNG
-                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) // JPEG
+                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && 
+                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) 
             {
                 errorMessage = "Gagal: File tanda tangan bukan gambar PNG atau JPEG yang valid.";
                 isSaving = false;
@@ -302,11 +286,11 @@
             await File.WriteAllBytesAsync(filePath, bytes);
 
             user.TtdPath = $"files/signatures/{fileName}";
-            user.EmailConfirmed = true;  // Aktifkan akun setelah setup selesai
+            user.EmailConfirmed = true;  
 
             var updateResult = await UserManager.UpdateAsync(user);
 
-            // Arahkan ke halaman login secara manual demi keamanan
+            
             Navigation.NavigateTo("/login", forceLoad: true);
         }
         catch (Exception ex)

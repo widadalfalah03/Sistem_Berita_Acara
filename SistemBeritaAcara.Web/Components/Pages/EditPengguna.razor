@@ -1,4 +1,4 @@
-@page "/edit-pengguna/{Id:int}"
+﻿@page "/edit-pengguna/{Id:int}"
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -97,7 +97,7 @@ else
         </div>
 
         <div class="side-cards">
-            <!-- Pengaturan Akun (dipindah ke kanan, di atas Status Akun) -->
+            
             <div class="side-card">
                 <h4>Pengaturan Akun</h4>
                 <div class="form-group" style="margin-top:12px;">
@@ -177,7 +177,6 @@ else
     private ApplicationUser? appUser;
     private SistemBeritaAcara.Core.Entities.Pegawai? pegawai;
     private bool isLoading = true;
-    private bool isSaving = false;
     private bool showRoleDropdown = false;
     private string editRole = string.Empty;
     private string successMsg = string.Empty;
@@ -200,10 +199,11 @@ else
         if (appUser is null || appUser.Role == "AdminIT") return;
         if (string.IsNullOrEmpty(newRole) || newRole == editRole) return;
 
-        isSaving = true;
-        errorMsg = string.Empty;
         try
         {
+            errorMsg = string.Empty;
+            successMsg = string.Empty;
+
             var oldRoles = await UserManager.GetRolesAsync(appUser);
             await UserManager.RemoveFromRolesAsync(appUser, oldRoles);
             await UserManager.AddToRoleAsync(appUser, newRole);
@@ -214,8 +214,10 @@ else
             await UserManager.UpdateAsync(appUser);
             successMsg = "Role berhasil diperbarui.";
         }
-        catch (Exception ex) { errorMsg = ex.Message; }
-        finally { isSaving = false; }
+        catch (Exception ex)
+        {
+            errorMsg = $"Gagal menyimpan data: {ex.Message}";
+        }
     }
 
     private async Task ToggleStatusAsync()
