@@ -178,7 +178,7 @@
                             </label>
                             <div class="login-pw-wrap">
                                 <input class="login-input" type="@pwType" @bind="password"
-                                       placeholder="Min. 8 karakter, 1 Huruf Besar, Angka, & Simbol" />
+                                       placeholder="Masukkan Password" />
                                 <button type="button" class="login-pw-toggle" @onclick="TogglePw" tabindex="-1">
                                     <i class="bi @(pwType == "password" ? "bi-eye" : "bi-eye-slash")"></i>
                                 </button>
@@ -192,7 +192,7 @@
                             </label>
                             <div class="login-pw-wrap">
                                 <input class="login-input" type="@pwType2" @bind="confirmPassword"
-                                       placeholder="Ketik ulang" />
+                                       placeholder="Konfirmasi Password" />
                                 <button type="button" class="login-pw-toggle" @onclick="TogglePw2" tabindex="-1">
                                     <i class="bi @(pwType2 == "password" ? "bi-eye" : "bi-eye-slash")"></i>
                                 </button>
