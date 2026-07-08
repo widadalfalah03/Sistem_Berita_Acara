@@ -9,6 +9,7 @@ public interface IEmailService
     Task SendApprovalResultAsync(string toEmail, string recipientName, string jenisBA, bool approved, int baId, string baseUrl, bool isForPj, string? nomorSurat = null, string? alasan = null, List<string>? barangList = null);
     Task SendDueDateReminderAsync(string toEmail, string recipientName, string nomorSurat, string pjNama, string tanggalKembali, int daysUntilDue, bool isForPj, int baId, string baseUrl, List<string>? barangList = null);
     Task SendUserInvitationAsync(string toEmail, string userName, string token, string baseUrl);
+    Task SendAdminITTransferAsync(string toEmail, string namaBaruAdmin, string token, string baseUrl);
     Task SendPasswordResetLinkAsync(string toEmail, string userName, string token, string baseUrl);
     Task SendOtpAsync(string toEmail, string otp);
 }

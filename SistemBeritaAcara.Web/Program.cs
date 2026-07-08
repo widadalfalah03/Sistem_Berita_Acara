@@ -61,6 +61,10 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
     await db.Database.ExecuteSqlRawAsync(@"
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'ProfilePicPath')
             ALTER TABLE [Users] ADD [ProfilePicPath] nvarchar(500) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'PendingNama')
+            ALTER TABLE [Users] ADD [PendingNama] nvarchar(200) NULL;
+        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'PendingEmail')
+            ALTER TABLE [Users] ADD [PendingEmail] nvarchar(256) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'Keterangan')
             ALTER TABLE [BeritaAcara] ADD [Keterangan] nvarchar(max) NULL;
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('PerangkatBA') AND name = 'Keterangan')

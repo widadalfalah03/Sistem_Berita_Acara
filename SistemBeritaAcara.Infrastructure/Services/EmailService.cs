@@ -93,6 +93,32 @@ public class EmailService(IConfiguration config) : IEmailService
         await SendEmailAsync(toEmail, "Undangan: Setup Akun Sistem Berita Acara", body);
     }
 
+    public async Task SendAdminITTransferAsync(string toEmail, string namaBaruAdmin, string token, string baseUrl)
+    {
+        var encodedToken = Uri.EscapeDataString(token);
+        var encodedEmail = Uri.EscapeDataString(toEmail);
+        string link = $"{baseUrl.TrimEnd('/')}/invitation?email={encodedEmail}&token={encodedToken}";
+
+        string body = $"""
+            <h2 style="color:#000000;">Anda Ditunjuk sebagai Admin IT Baru</h2>
+            <p>Yth. <strong>{namaBaruAdmin}</strong>,</p>
+            <p>Anda telah ditunjuk untuk mengambil alih akun <strong>Admin IT</strong> pada Sistem Informasi Manajemen Berita Acara PT Pertamina Patra Niaga.</p>
+            <p>Untuk menyelesaikan proses pengalihan, silakan akses tautan di bawah ini dan lakukan setup akun (atur password baru dan tanda tangan digital Anda):</p>
+
+            <div style="text-align:center;margin:32px 0;">
+                <a href="{link}" style="background-color:#0284c7;color:#ffffff;padding:14px 28px;text-decoration:none;font-weight:bold;font-size:15px;border-radius:6px;display:inline-block;">Setup Akun Admin IT</a>
+            </div>
+
+            <p style="color:#cc0000;font-size:13px;"><strong>Perhatian:</strong><br>
+            Tautan ini hanya berlaku selama 24 jam. Selama Anda belum menyelesaikan setup, akun Admin IT yang lama masih aktif.<br>
+            Setelah Anda selesai setup, akun Admin IT lama akan otomatis keluar dari sistem.</p>
+            <br>
+            <p>Regards,<br><strong>Sistem Informasi Manajemen Berita Acara</strong></p>
+            """;
+
+        await SendEmailAsync(toEmail, "Pengalihan Akun Admin IT — Sistem Berita Acara", body);
+    }
+
     public async Task SendPasswordResetLinkAsync(string toEmail, string userName, string token, string baseUrl)
     {
         var encodedToken = Uri.EscapeDataString(token);

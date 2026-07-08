@@ -1,7 +1,10 @@
 ﻿@page "/invitation"
 @layout EmptyLayout
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
+@using SistemBeritaAcara.Infrastructure.Data
+@inject AppDbContext DbContext
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -73,7 +76,13 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="login-btn">Selanjutnya</button>
+                    <button type="submit" class="login-btn" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner" style="width:16px;height:16px;border-width:2px;margin-right:8px;display:inline-block;vertical-align:middle;"></span>
+                        }
+                        @(user != null && user.Role == "AdminIT" && !string.IsNullOrEmpty(user.PendingNama) ? "Buat Akun" : "Selanjutnya")
+                    </button>
                     </form>
                 }
                 else if (step == 2)
@@ -169,6 +178,12 @@
         }
 
         user = await UserManager.FindByEmailAsync(email);
+        // Fallback: jika tidak ditemukan via email langsung, cari akun yang
+        // sedang dalam proses transfer (PendingEmail cocok dengan query string)
+        if (user == null)
+        {
+            user = await DbContext.Users.FirstOrDefaultAsync(u => u.PendingEmail == email.ToLower());
+        }
         if (user == null || user.IsDeleted)
         {
             invalidToken = true;
@@ -206,7 +221,7 @@
         pwType2 = pwType2 == "password" ? "text" : "password";
     }
 
-    private void ProcessStep1()
+    private async Task ProcessStep1()
     {
         errorMessage = string.Empty;
 
@@ -234,8 +249,58 @@
             return;
         }
 
+        // Untuk transfer Admin IT: tidak perlu TTD, langsung selesaikan setup di sini
+        bool isAdminITTransfer = user != null
+                                 && user.Role == "AdminIT"
+                                 && !string.IsNullOrEmpty(user.PendingNama)
+                                 && !string.IsNullOrEmpty(user.PendingEmail);
+        if (isAdminITTransfer)
+        {
+            await FinalizeAdminITTransferAsync();
+            return;
+        }
+
         step = 2;
         _canvasInitialized = false;
+    }
+
+    private async Task FinalizeAdminITTransferAsync()
+    {
+        if (user == null) return;
+        isSaving = true;
+        try
+        {
+            // Reset password dengan password baru
+            var resetResult = await UserManager.ResetPasswordAsync(user, token, newPassword);
+            if (!resetResult.Succeeded)
+            {
+                errorMessage = "Gagal memproses: " + string.Join(", ", resetResult.Errors.Select(e => e.Description));
+                isSaving = false;
+                return;
+            }
+
+            // Terapkan nama & email baru dari pending
+            user.Nama              = user.PendingNama!;
+            user.Email             = user.PendingEmail!;
+            user.UserName          = user.PendingEmail!;
+            user.NormalizedEmail   = user.PendingEmail!.ToUpperInvariant();
+            user.NormalizedUserName = user.PendingEmail!.ToUpperInvariant();
+            user.PendingNama       = null;
+            user.PendingEmail      = null;
+            user.EmailConfirmed    = true;
+
+            await UserManager.UpdateAsync(user);
+
+            // Security stamp berubah → sesi Admin IT lama otomatis logout
+            await UserManager.UpdateSecurityStampAsync(user);
+
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Terjadi kesalahan: {ex.Message}";
+            isSaving = false;
+        }
     }
 
     private async Task SwitchSetupMode(string mode)
@@ -310,11 +375,13 @@
             await File.WriteAllBytesAsync(filePath, bytes);
 
             user.TtdPath = $"files/signatures/{fileName}";
-            user.EmailConfirmed = true;  
+            user.EmailConfirmed = true;
 
-            var updateResult = await UserManager.UpdateAsync(user);
+            await UserManager.UpdateAsync(user);
 
-            
+            // UpdateSecurityStamp memaksa semua sesi lain logout
+            await UserManager.UpdateSecurityStampAsync(user);
+
             Navigation.NavigateTo("/login", forceLoad: true);
         }
         catch (Exception ex)

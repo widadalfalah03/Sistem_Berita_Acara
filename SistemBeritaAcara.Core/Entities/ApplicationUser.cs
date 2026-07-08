@@ -13,6 +13,10 @@ public class ApplicationUser : IdentityUser<int>
     public int? PegawaiId { get; set; }
     public string? ProfilePicPath { get; set; }
 
+    // Diisi saat Admin IT inisiasi pergantian; dikosongkan setelah Admin IT baru selesai setup
+    public string? PendingNama { get; set; }
+    public string? PendingEmail { get; set; }
+
     public Pegawai? Pegawai { get; set; }
     public ICollection<BeritaAcara> BeritaAcaraCreated { get; set; } = [];
     public ICollection<BeritaAcara> BeritaAcaraMenyerahkan { get; set; } = [];

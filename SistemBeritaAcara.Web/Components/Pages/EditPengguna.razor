@@ -4,9 +4,12 @@
 @using Microsoft.EntityFrameworkCore
 @inject AppDbContext DbContext
 @inject UserManager<ApplicationUser> UserManager
+@inject SistemBeritaAcara.Core.Interfaces.IEmailService EmailService
+@inject IConfiguration Config
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
+@implements IDisposable
 
 <PageTitle>Edit Pengguna — Sistem Berita Acara</PageTitle>
 
@@ -126,6 +129,100 @@ else
                     }
                 </div>
             </div>
+
+            @if (appUser.Role == "AdminIT")
+            {
+                <div class="side-card">
+                    <h4>Ganti Admin IT</h4>
+
+                    @if (!string.IsNullOrEmpty(transferSuccessMsg))
+                    {
+                        <div style="background:#F0FDF4;border:1px solid #22C55E;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;color:#16A34A;font-size:13px;display:flex;align-items:flex-start;gap:8px;">
+                            <i class="bi bi-check-circle-fill" style="margin-top:1px;flex-shrink:0;"></i>
+                            <span>@transferSuccessMsg</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(transferErrorMsg))
+                    {
+                        <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;color:#DC2626;font-size:13px;display:flex;align-items:flex-start;gap:8px;">
+                            <i class="bi bi-exclamation-circle-fill" style="margin-top:1px;flex-shrink:0;"></i>
+                            <span>@transferErrorMsg</span>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(appUser.PendingEmail))
+                    {
+                        @* Status menunggu: tampilkan email + nama + tombol resend & batalkan *@
+                        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.5;">
+                            Undangan dikirim ke <strong style="color:var(--text-primary);">@appUser.PendingEmail</strong>
+                            <br/>atas nama <strong style="color:var(--text-primary);">@appUser.PendingNama</strong>.
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <button title="@(resendCooldownSeconds > 0 ? $"Tunggu {resendCooldownSeconds}s" : "Kirim Ulang Undangan")"
+                                    @onclick="ResendTransferAsync"
+                                    disabled="@(isTransferring || resendCooldownSeconds > 0)"
+                                    style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:@(resendCooldownSeconds > 0 ? "var(--bg)" : "var(--primary-light)");color:@(resendCooldownSeconds > 0 ? "var(--text-muted)" : "var(--primary)");border:none;cursor:@(resendCooldownSeconds > 0 ? "not-allowed" : "pointer");transition:all .15s;position:relative;"
+                                    onmouseover="if(!this.disabled){this.style.background='var(--primary)';this.style.color='#fff'}"
+                                    onmouseout="if(!this.disabled){this.style.background='var(--primary-light)';this.style.color='var(--primary)'}">
+                                @if (isTransferring && isResending)
+                                {
+                                    <span class="spinner" style="width:13px;height:13px;border-width:2px;display:inline-block;"></span>
+                                }
+                                else if (resendCooldownSeconds > 0)
+                                {
+                                    <span style="font-size:11px;font-weight:700;line-height:1;">@resendCooldownSeconds</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-envelope-fill" style="font-size:13px;"></i>
+                                }
+                            </button>
+                            <button title="Batalkan Pergantian"
+                                    @onclick="CancelTransferAsync"
+                                    disabled="@isTransferring"
+                                    style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;background:#fef2f2;color:#ef4444;border:none;cursor:pointer;transition:all .15s;"
+                                    onmouseover="this.style.background='#ef4444';this.style.color='#fff'"
+                                    onmouseout="this.style.background='#fef2f2';this.style.color='#ef4444'">
+                                <i class="bi bi-trash-fill" style="font-size:13px;"></i>
+                            </button>
+                        </div>
+                    }
+                    else if (showTransferForm)
+                    {
+                        @* Form input nama + email *@
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label class="form-label" style="font-size:13px;">Nama Lengkap</label>
+                            <input class="form-control" type="text" @bind="transferNama"
+                                   placeholder="Masukkan nama lengkap" style="font-size:13px;" />
+                        </div>
+                        <div class="form-group" style="margin-bottom:16px;">
+                            <label class="form-label" style="font-size:13px;">Email</label>
+                            <input class="form-control" type="email" @bind="transferEmail"
+                                   placeholder="Masukkan email" style="font-size:13px;" />
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-outline" style="font-size:13px;" @onclick="() => { showTransferForm = false; transferNama = string.Empty; transferEmail = string.Empty; transferErrorMsg = string.Empty; }" disabled="@isTransferring">
+                                Batal
+                            </button>
+                            <button class="btn btn-primary" style="flex:1;font-size:13px;" @onclick="SendTransferAsync" disabled="@isTransferring">
+                                @if (isTransferring)
+                                {
+                                    <span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px;display:inline-block;vertical-align:middle;"></span>
+                                }
+                                Kirim Undangan
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        @* Tombol awal — klik untuk tampilkan form *@
+                        <button class="btn btn-outline" style="width:100%;font-size:13px;" @onclick="() => { showTransferForm = true; transferSuccessMsg = string.Empty; transferErrorMsg = string.Empty; }">
+                            <i class="bi bi-person-gear" style="margin-right:6px;"></i>
+                            Ganti Akun
+                        </button>
+                    }
+                </div>
+            }
         </div>
     </div>
 
@@ -139,6 +236,19 @@ else
     private bool isLoading = true;
     private string successMsg = string.Empty;
     private string errorMsg = string.Empty;
+
+    // Transfer Admin IT
+    private string transferNama = string.Empty;
+    private string transferEmail = string.Empty;
+    private bool isTransferring = false;
+    private bool isResending = false;
+    private bool showTransferForm = false;
+    private string transferSuccessMsg = string.Empty;
+    private string transferErrorMsg = string.Empty;
+
+    // Cooldown kirim ulang
+    private int resendCooldownSeconds = 0;
+    private System.Threading.Timer? _cooldownTimer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -179,6 +289,127 @@ else
         successMsg = appUser.IsDeleted ? "Akun dinonaktifkan." : "Akun diaktifkan kembali.";
     }
 
+    private async Task SendTransferAsync()
+    {
+        transferSuccessMsg = string.Empty;
+        transferErrorMsg = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(transferNama))
+        {
+            transferErrorMsg = "Nama lengkap tidak boleh kosong.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(transferEmail) || !transferEmail.Contains('@'))
+        {
+            transferErrorMsg = "Masukkan alamat email yang valid.";
+            return;
+        }
+
+        // Cek apakah email sudah terdaftar di sistem (selain akun AdminIT sendiri)
+        var emailLower = transferEmail.Trim().ToLower();
+        var existing = await DbContext.Users
+            .FirstOrDefaultAsync(u => u.NormalizedEmail == emailLower.ToUpper() && u.Id != appUser!.Id);
+        if (existing != null)
+        {
+            transferErrorMsg = "Pengguna dengan email ini sudah terdaftar di sistem.";
+            return;
+        }
+
+        isTransferring = true;
+        isResending = false;
+        try
+        {
+            if (appUser is null) return;
+
+            appUser.PendingNama  = transferNama.Trim();
+            appUser.PendingEmail = emailLower;
+
+            var token   = await UserManager.GeneratePasswordResetTokenAsync(appUser);
+            var baseUrl = Config["App:BaseUrl"] ?? "http://localhost:5000";
+
+            await UserManager.UpdateAsync(appUser);
+
+            _ = EmailService.SendAdminITTransferAsync(appUser.PendingEmail, appUser.PendingNama, token, baseUrl);
+
+            transferSuccessMsg  = $"Undangan berhasil dikirim ke {appUser.PendingEmail}.";
+            showTransferForm    = false;
+            transferNama        = string.Empty;
+            transferEmail       = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            transferErrorMsg = $"Gagal mengirim undangan: {ex.Message}";
+        }
+        finally
+        {
+            isTransferring = false;
+        }
+    }
+
+    private async Task ResendTransferAsync()
+    {
+        if (appUser is null || string.IsNullOrEmpty(appUser.PendingEmail)) return;
+        if (resendCooldownSeconds > 0) return;
+
+        transferSuccessMsg = string.Empty;
+        transferErrorMsg   = string.Empty;
+        isTransferring = true;
+        isResending    = true;
+        try
+        {
+            var token   = await UserManager.GeneratePasswordResetTokenAsync(appUser);
+            var baseUrl = Config["App:BaseUrl"] ?? "http://localhost:5000";
+            _ = EmailService.SendAdminITTransferAsync(appUser.PendingEmail, appUser.PendingNama ?? appUser.PendingEmail, token, baseUrl);
+            transferSuccessMsg = $"Undangan berhasil dikirim ulang ke {appUser.PendingEmail}.";
+
+            // Mulai cooldown 60 detik
+            resendCooldownSeconds = 60;
+            _cooldownTimer?.Dispose();
+            _cooldownTimer = new System.Threading.Timer(_ =>
+            {
+                if (resendCooldownSeconds > 0)
+                    resendCooldownSeconds--;
+                InvokeAsync(StateHasChanged);
+                if (resendCooldownSeconds <= 0)
+                {
+                    _cooldownTimer?.Dispose();
+                    _cooldownTimer = null;
+                }
+            }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        }
+        catch (Exception ex)
+        {
+            transferErrorMsg = $"Gagal mengirim ulang: {ex.Message}";
+        }
+        finally
+        {
+            isTransferring = false;
+            isResending    = false;
+        }
+    }
+
+    private async Task CancelTransferAsync()
+    {
+        if (appUser is null) return;
+        isTransferring = true;
+        try
+        {
+            appUser.PendingNama  = null;
+            appUser.PendingEmail = null;
+            await UserManager.UpdateAsync(appUser);
+            transferSuccessMsg = string.Empty;
+            transferErrorMsg   = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            transferErrorMsg = $"Gagal membatalkan: {ex.Message}";
+        }
+        finally
+        {
+            isTransferring = false;
+        }
+    }
+
     private static string GetInitials(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "?";
@@ -202,4 +433,6 @@ else
         "Reviewer" => "pill-reviewer",
         _ => "pill-draft"
     };
+
+    public void Dispose() => _cooldownTimer?.Dispose();
 }
