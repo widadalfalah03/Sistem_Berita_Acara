@@ -1,5 +1,6 @@
 @page "/rejected"
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
 @inject AppDbContext DbContext
 @inject AuthenticationStateProvider AuthStateProvider
@@ -7,6 +8,7 @@
 @inject NavigationManager Navigation
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IAsyncDisposable
 
 <PageTitle>Rejected — Sistem Berita Acara</PageTitle>
 
@@ -234,6 +236,15 @@ else
         }
     }
 
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _ = ConnectSignalRAsync();
+        }
+        return Task.CompletedTask;
+    }
+
     private async Task LoadAdminGbAsync()
     {
         // Revisi: BAs still in Rejected status created by this user, augmented with latest history for WaktuTolak
@@ -310,5 +321,47 @@ else
     private void ReviseBA(int baId)
     {
         Navigation.NavigateTo($"/buat-ba?edit={baId}");
+    }
+
+    private HubConnection? _hubConnection;
+
+    private async Task ConnectSignalRAsync()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/ba"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On("BaListUpdated", async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    DbContext.ChangeTracker.Clear();
+                    if (currentRole == "AdminGudangBarang")
+                        await LoadAdminGbAsync();
+                    else if (currentRole == "Reviewer")
+                        await LoadReviewerAsync();
+                    
+                    StateHasChanged();
+                });
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch
+        {
+            // Fallback: stay static if SignalR fails
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.StopAsync();
+            await _hubConnection.DisposeAsync();
+        }
     }
 }

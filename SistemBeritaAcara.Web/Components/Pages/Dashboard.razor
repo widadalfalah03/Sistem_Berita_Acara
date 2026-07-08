@@ -1,6 +1,7 @@
 @page "/dashboard"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
 @using BAEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -11,6 +12,7 @@
 @inject IJSRuntime JS
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IAsyncDisposable
 
 <style>
     .jenis-item {
@@ -725,6 +727,11 @@ else if (currentRole == "AdminIT")
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            _ = ConnectSignalRAsync();
+        }
+
         if (isLoading || chartsRendered) return;
         chartsRendered = true;
 
@@ -1037,4 +1044,46 @@ else if (currentRole == "AdminIT")
         _ => reviewerQueue
     };
 
+    private HubConnection? _hubConnection;
+
+    private async Task ConnectSignalRAsync()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/ba"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On("BaListUpdated", async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    DbContext.ChangeTracker.Clear();
+                    if (currentRole == "AdminGudangBarang")
+                        await LoadGudangDataAsync();
+                    else if (currentRole == "Reviewer")
+                        await LoadReviewerDataAsync();
+                    
+                    chartsRendered = false;
+                    StateHasChanged();
+                });
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch
+        {
+            // Fallback: stay static if SignalR fails
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.StopAsync();
+            await _hubConnection.DisposeAsync();
+        }
+    }
 }

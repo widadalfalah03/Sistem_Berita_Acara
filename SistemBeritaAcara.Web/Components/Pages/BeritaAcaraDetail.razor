@@ -55,6 +55,22 @@ else if (notFound || ba is null)
         <div style="font-size:18px;font-weight:700;">Berita Acara tidak ditemukan</div>
     </div>
 }
+else if (reviewerLinkInvalid)
+{
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;text-align:center;">
+        <div style="width:72px;height:72px;border-radius:50%;background:var(--danger-light,#FEE2E2);display:flex;align-items:center;justify-content:center;margin-bottom:24px;">
+            <i class="bi bi-link-45deg" style="font-size:34px;color:var(--danger);"></i>
+        </div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:10px;">Tautan Tidak Valid</div>
+        <div style="font-size:14px;color:var(--text-secondary);max-width:400px;line-height:1.7;margin-bottom:28px;">
+            Berita Acara yang ditujukan kepada Anda sudah <strong>dibatalkan oleh Admin BA</strong>
+            sebelum Anda sempat memprosesnya. Tautan dari email ini tidak lagi berlaku.
+        </div>
+        <button class="btn btn-primary" @onclick="@(() => Navigation.NavigateTo("/dashboard"))">
+            Kembali ke Dashboard
+        </button>
+    </div>
+}
 else
 {
     <button class="breadcrumb-back" @onclick="GoBack">
@@ -389,6 +405,7 @@ else
     private BeritaAcaraEntity? ba;
     private bool isLoading = true;
     private bool notFound;
+    private bool reviewerLinkInvalid;
     private string? _initialFrom;
     private bool isReviewer;
     private bool showRejectModal = false;
@@ -456,6 +473,23 @@ else
             if (From == "review" && !isReviewer)
             {
                 Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery)}", true);
+                return;
+            }
+
+            // Jika Reviewer membuka link dari email tapi BA sudah dibatalkan (bukan WaitingApproval lagi)
+            // → tampilkan halaman fallback "Tautan Tidak Valid", jangan tampilkan konten BA
+            if (From == "review" && isReviewer && ba.Status != "WaitingApproval")
+            {
+                reviewerLinkInvalid = true;
+                isLoading = false;
+                return;
+            }
+
+            // Setelah SignalR reload: jika BA yang sebelumnya valid kini dibatalkan,
+            // update state agar fallback muncul tanpa full-redirect
+            if (_initialFrom == "review" && isReviewer && ba.Status != "WaitingApproval")
+            {
+                reviewerLinkInvalid = true;
                 return;
             }
 

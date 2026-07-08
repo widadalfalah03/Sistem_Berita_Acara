@@ -1,5 +1,6 @@
 @page "/archive"
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
 @inject AppDbContext DbContext
@@ -10,6 +11,7 @@
 @inject IJSRuntime JS
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IAsyncDisposable
 
 <PageTitle>Archive — Sistem Berita Acara</PageTitle>
 
@@ -19,7 +21,6 @@
         <button class="btn btn-primary btn-sm @(isExporting ? "btn-loading" : "")"
                 @onclick="ExportExcelAsync" disabled="@isExporting"
                 style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
-            <i class="bi bi-file-earmark-excel"></i>
             <span>Export ke Excel</span>
         </button>
     </div>
@@ -419,6 +420,69 @@ else
         finally
         {
             isExporting = false;
+        }
+    }
+
+    private async Task ReloadArchiveAsync()
+    {
+        try
+        {
+            DbContext.ChangeTracker.Clear();
+            IQueryable<BeritaAcaraEntity> query = DbContext.Set<BeritaAcaraEntity>()
+                .Include(b => b.Pj)
+                .Include(b => b.Menyerahkan)
+                .Include(b => b.Mengetahui)
+                .Include(b => b.Perangkat).ThenInclude(p => p.Barang)
+                .Where(b => b.Status == "Approved" || b.Status == "Archived");
+            allBA = await query.OrderByDescending(b => b.ApprovedAt).ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ArsipBA] ReloadArchiveAsync error: {ex.Message}");
+        }
+    }
+
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            _ = ConnectSignalRAsync();
+        return Task.CompletedTask;
+    }
+
+    private HubConnection? _hubConnection;
+
+    private async Task ConnectSignalRAsync()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/ba"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On("BaListUpdated", async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await ReloadArchiveAsync();
+                    StateHasChanged();
+                });
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch
+        {
+            // SignalR gagal connect — halaman tetap berjalan normal tanpa real-time
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.StopAsync();
+            await _hubConnection.DisposeAsync();
         }
     }
 }
