@@ -220,6 +220,6 @@ Proyek ini dikembangkan sebagai bagian dari program **magang** di PT Pertamina P
 
 <div align="center">
 
-*Internal — PT Pertamina Patra Niaga SSC ICT · Regional Sumbagsel*
+*Internal — PT Pertamina Patra Niaga*
 
 </div>

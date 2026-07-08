@@ -14,117 +14,163 @@
 
 <div class="add-user-card">
     <h2>Tambah Pengguna</h2>
-    <p>Cari pekerja berdasarkan nama atau No. Pekerja untuk ditambahkan sebagai pengguna sistem.</p>
+    <p>Pilih role terlebih dahulu untuk menentukan cara penambahan pengguna.</p>
 
-    <div class="form-group">
-        <label class="form-label">Cari Pekerja</label>
-        <div class="search-input">
-            <i class="bi bi-search"></i>
-            <input type="text" placeholder="Masukkan Nama atau No. Pekerja..."
-                   value="@searchQuery"
-                   @oninput="OnSearch" />
-        </div>
-    </div>
-
-    @if (isSearching)
+    @if (!formSaved)
     {
-        <div style="text-align:center;padding:32px;color:var(--text-muted);">
-            <div class="spinner" style="margin:0 auto;width:28px;height:28px;border-width:3px;"></div>
-        </div>
-    }
-    else if (results.Any())
-    {
-        <div style="margin-top:16px;">
-            @foreach (var p in results)
-            {
-                <div class="user-result">
-                    <div class="user-result-avatar">@p.Nama[0]</div>
-                    <div style="flex:1;">
-                        <div class="user-result-name">@p.Nama</div>
-                        <div class="user-result-nip">No. Pekerja: @p.NoPekerja · @p.FungsiDirektorat</div>
-                    </div>
-                    @if (existingUserIds.Contains(p.Id))
-                    {
-                        <span class="pill pill-draft">Sudah ada akun</span>
-                    }
-                    else
-                    {
-                        <button class="btn btn-primary btn-sm" @onclick="() => SelectPegawai(p)">
-                            Tambah
-                        </button>
-                    }
+        @* ── Langkah 1: Pilih Role ── *@
+        <div class="form-group">
+            <label class="form-label">Role <span style="color:var(--danger)">*</span></label>
+            <div style="position:relative;margin-top:4px;">
+                <div @onclick="() => showRoleDropdown = !showRoleDropdown"
+                     style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">
+                    <span style="font-weight:500;">@(string.IsNullOrEmpty(selectedRole) ? "Pilih role" : GetRoleLabel(selectedRole))</span>
+                    <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showRoleDropdown ? "transform:rotate(180deg);" : "")"></i>
                 </div>
-            }
-        </div>
-    }
-    else if (selectedPegawai is null && !string.IsNullOrEmpty(searchQuery))
-    {
-        <div style="text-align:center;padding:32px;color:var(--text-muted);">
-            <i class="bi bi-search" style="font-size:32px;display:block;margin-bottom:12px;"></i>
-            Pegawai tidak ditemukan
-        </div>
-    }
-
-    @if (selectedPegawai is not null && !formSaved)
-    {
-        <div style="border-top:1px solid var(--border);margin-top:24px;padding-top:24px;">
-
-            <div class="form-group">
-                <label class="form-label">Role <span style="color:var(--danger)">*</span></label>
-                <div style="position:relative;margin-top:4px;">
-                    <div @onclick="() => showRoleDropdown = !showRoleDropdown"
-                         style="padding:10px 14px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;">
-                        <span style="font-weight:500;">@(string.IsNullOrEmpty(selectedRole) ? "Pilih role..." : GetRoleLabel(selectedRole))</span>
-                        <i class="bi bi-chevron-down" style="font-size:11px;color:var(--text-muted);transition:transform 0.2s;@(showRoleDropdown ? "transform:rotate(180deg);" : "")"></i>
+                @if (showRoleDropdown)
+                {
+                    <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
+                    <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
+                        @foreach (var roleOpt in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
+                        {
+                            <div @onclick="@(() => SelectRole(roleOpt))"
+                                 style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(selectedRole == roleOpt ? "600" : "400");background:@(selectedRole == roleOpt ? "var(--primary)" : "transparent");color:@(selectedRole == roleOpt ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
+                                 onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
+                                 onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
+                                @GetRoleLabel(roleOpt)
+                            </div>
+                        }
                     </div>
-                    @if (showRoleDropdown)
-                    {
-                        <div @onclick="() => showRoleDropdown = false" style="position:fixed;inset:0;z-index:99;"></div>
-                        <div style="position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;margin-top:4px;">
-                            @foreach (var roleOpt in new[] { "AdminIT", "AdminGudangBarang", "Reviewer" })
-                            {
-                                <div @onclick="@(() => { selectedRole = roleOpt; showRoleDropdown = false; })"
-                                     style="padding:10px 14px;cursor:pointer;font-size:14px;font-weight:@(selectedRole == roleOpt ? "600" : "400");background:@(selectedRole == roleOpt ? "var(--primary)" : "transparent");color:@(selectedRole == roleOpt ? "white" : "var(--text-primary)");border-bottom:1px solid var(--border-light);"
-                                     onmouseover="if(this.style.background !== 'var(--primary)') this.style.background='var(--primary-light)'"
-                                     onmouseout="if(this.style.background !== 'var(--primary)') this.style.background='transparent'">
-                                    @GetRoleLabel(roleOpt)
+                }
+            </div>
+        </div>
+
+        @* ── Langkah 2a: AdminIT / Admin GB — input email TAD ── *@
+        @if (selectedRole is "AdminIT" or "AdminGudangBarang")
+        {
+            <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
+                <form @onsubmit="CreateTadUserAsync" @onsubmit:preventDefault>
+                <div class="form-group">
+                    <label class="form-label">Nama Lengkap <span style="color:var(--danger)">*</span></label>
+                    <input type="text" class="form-control" placeholder="Masukkan nama lengkap"
+                           @bind="tadNama" @bind:event="oninput" style="width:100%;" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email <span style="color:var(--danger)">*</span></label>
+                    <input type="email" class="form-control" placeholder="Masukkan email"
+                           @bind="tadEmail" @bind:event="oninput" style="width:100%;" />
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    <div class="login-error" style="margin-bottom:12px;">@errorMsg</div>
+                }
+
+                <div style="display:flex;gap:12px;margin-top:16px;">
+                    <button type="button" class="btn btn-outline" @onclick="Reset">Batal</button>
+                    <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                        @if (isSaving) { <span class="spinner" style="width:16px;height:16px;border-width:2px;margin-right:6px;display:inline-block;vertical-align:middle;"></span> }
+                        Kirim Undangan
+                    </button>
+                </div>
+                </form>
+            </div>
+        }
+
+        @* ── Langkah 2b: Reviewer — cari dari data Pegawai ── *@
+        @if (selectedRole == "Reviewer")
+        {
+            <div style="border-top:1px solid var(--border);margin-top:20px;padding-top:20px;">
+                <div class="form-group">
+                    <label class="form-label">Cari Pekerja</label>
+                    <div class="search-input">
+                        <i class="bi bi-search"></i>
+                        <input type="text" placeholder="Masukkan Nama atau No. Pekerja"
+                               value="@searchQuery"
+                               @oninput="OnSearch" />
+                    </div>
+                </div>
+
+                @if (isSearching)
+                {
+                    <div style="text-align:center;padding:24px;color:var(--text-muted);">
+                        <div class="spinner" style="margin:0 auto;width:28px;height:28px;border-width:3px;"></div>
+                    </div>
+                }
+                else if (results.Any())
+                {
+                    <div style="margin-top:12px;">
+                        @foreach (var p in results)
+                        {
+                            <div class="user-result">
+                                <div class="user-result-avatar">@p.Nama[0]</div>
+                                <div style="flex:1;">
+                                    <div class="user-result-name">@p.Nama</div>
+                                    <div class="user-result-nip">No. Pekerja: @p.NoPekerja · @p.FungsiDirektorat</div>
                                 </div>
-                            }
+                                @if (existingUserIds.Contains(p.Id))
+                                {
+                                    <span class="pill pill-draft">Sudah ada akun</span>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-primary btn-sm" @onclick="() => SelectPegawai(p)">
+                                        Pilih
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else if (selectedPegawai is null && !string.IsNullOrEmpty(searchQuery) && !isSearching)
+                {
+                    <div style="text-align:center;padding:24px;color:var(--text-muted);">
+                        <i class="bi bi-search" style="font-size:28px;display:block;margin-bottom:8px;"></i>
+                        Pegawai tidak ditemukan
+                    </div>
+                }
+
+                @if (selectedPegawai is not null)
+                {
+                    <div style="margin-top:16px;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-card);display:flex;align-items:center;gap:14px;">
+                        <div class="user-result-avatar" style="flex-shrink:0;">@selectedPegawai.Nama[0]</div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:600;font-size:14px;">@selectedPegawai.Nama</div>
+                            <div style="font-size:12px;color:var(--text-muted);">No. Pekerja: @selectedPegawai.NoPekerja · @selectedPegawai.FungsiDirektorat</div>
+                            <div style="font-size:12px;color:var(--text-muted);">@selectedPegawai.Email</div>
                         </div>
+                        <button class="btn btn-outline btn-sm" @onclick="() => { selectedPegawai = null; searchQuery = string.Empty; }">Ganti</button>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(errorMsg))
+                    {
+                        <div class="login-error" style="margin-bottom:12px;margin-top:8px;">@errorMsg</div>
                     }
-                </div>
-            </div>
 
-            <div class="form-group" style="margin-top:16px; background:#eff6ff; padding:12px; border-radius:6px; border:1px solid #bfdbfe;">
-                <div style="font-size:13px; color:#1e40af;">
-                    <i class="bi bi-info-circle-fill" style="margin-right:6px;"></i>
-                    Pengguna akan menerima email otomatis berisi tautan untuk Setup Akun (Password & Tanda Tangan).
-                </div>
+                    <div style="display:flex;gap:12px;margin-top:16px;">
+                        <button class="btn btn-outline" @onclick="() => { selectedPegawai = null; searchQuery = string.Empty; }">Batal</button>
+                        <button class="btn btn-primary" @onclick="CreateReviewerAsync" disabled="@isSaving">
+                            @if (isSaving) { <span class="spinner" style="width:16px;height:16px;border-width:2px;margin-right:6px;display:inline-block;vertical-align:middle;"></span> }
+                            Kirim Undangan
+                        </button>
+                    </div>
+                }
             </div>
-
-            @if (!string.IsNullOrEmpty(errorMsg))
-            {
-                <div class="login-error" style="margin-bottom:12px;">@errorMsg</div>
-            }
-
-            <div style="display:flex;gap:12px;">
-                <button class="btn btn-outline" @onclick="() => { selectedPegawai = null; selectedRole = string.Empty; }">Batal</button>
-                <button class="btn btn-primary" @onclick="CreateUserAsync" disabled="@isSaving">
-                    Buat Akun
-                </button>
-            </div>
-        </div>
+        }
     }
-
-    @if (formSaved)
+    else
     {
+        @* ── Sukses ── *@
         <div style="text-align:center;padding:32px;">
             <div style="width:64px;height:64px;border-radius:50%;background:#F0FDF4;color:#22C55E;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;">
                 <i class="bi bi-check-circle-fill"></i>
             </div>
-            <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Akun Berhasil Dibuat</div>
+            <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Undangan Berhasil Dikirim</div>
             <div style="font-size:14px;color:var(--text-secondary);margin-bottom:24px;">
-                Email undangan telah berhasil dikirim ke <strong>@(selectedPegawai?.Email ?? "pengguna")</strong> untuk akun <strong>@savedName</strong> dengan role <strong>@savedRole</strong>
+                Email undangan telah dikirim ke <strong>@savedEmail</strong>
+                @if (!string.IsNullOrEmpty(savedName)) { <span> untuk akun <strong>@savedName</strong></span> }
+                dengan role <strong>@savedRole</strong>.
             </div>
             <div style="display:flex;gap:12px;justify-content:center;">
                 <button class="btn btn-outline" @onclick="Reset">Tambah Pengguna Lain</button>
@@ -135,35 +181,195 @@
 </div>
 
 @code {
-    private List<PegawaiEntity> allPegawai = new();
-    private List<PegawaiEntity> results = new();
-    private HashSet<int> existingUserIds = new();
-    private PegawaiEntity? selectedPegawai;
-    private string searchQuery = string.Empty;
-    private string selectedRole = string.Empty;
-    private string errorMsg = string.Empty;
-    private bool isSaving = false;
-    private bool isSearching = false;
-    private bool formSaved = false;
-    private string savedName = string.Empty;
-    private string savedRole = string.Empty;
-    private bool showRoleDropdown = false;
+    // ── Shared ──────────────────────────────────────────────────────────
+    private string selectedRole  = string.Empty;
+    private bool   showRoleDropdown = false;
+    private string errorMsg      = string.Empty;
+    private bool   isSaving      = false;
+    private bool   formSaved     = false;
+    private string savedEmail    = string.Empty;
+    private string savedName     = string.Empty;
+    private string savedRole     = string.Empty;
+
+    // ── AdminIT / Admin GB (TAD) ─────────────────────────────────────────
+    private string tadNama  = string.Empty;
+    private string tadEmail = string.Empty;
+
+    // ── Reviewer (Pegawai) ───────────────────────────────────────────────
+    private List<PegawaiEntity> allPegawai    = new();
+    private List<PegawaiEntity> results       = new();
+    private HashSet<int>        existingUserIds = new();
+    private PegawaiEntity?      selectedPegawai;
+    private string              searchQuery   = string.Empty;
+    private bool                isSearching   = false;
     private CancellationTokenSource? _searchCts;
 
     protected override async Task OnInitializedAsync()
     {
         allPegawai = await DbContext.Pegawai.Where(p => p.IsAktif).OrderBy(p => p.Nama).ToListAsync();
-        var usersWithPegawai = await DbContext.Users.Where(u => u.PegawaiId != null).Select(u => u.PegawaiId!.Value).ToListAsync();
+        var usersWithPegawai = await DbContext.Users
+            .Where(u => u.PegawaiId != null)
+            .Select(u => u.PegawaiId!.Value)
+            .ToListAsync();
         existingUserIds = usersWithPegawai.ToHashSet();
     }
 
+    private void SelectRole(string role)
+    {
+        selectedRole    = role;
+        showRoleDropdown = false;
+        // reset sub-form state saat ganti role
+        tadNama         = string.Empty;
+        tadEmail        = string.Empty;
+        selectedPegawai = null;
+        searchQuery     = string.Empty;
+        results.Clear();
+        errorMsg        = string.Empty;
+    }
+
+    // ── Kirim undangan untuk AdminIT / Admin GB (TAD) ────────────────────
+    private async Task CreateTadUserAsync()
+    {
+        errorMsg = string.Empty;
+        var nama  = tadNama.Trim();
+        var email = tadEmail.Trim();
+
+        if (string.IsNullOrEmpty(nama))
+        {
+            errorMsg = "Nama lengkap wajib diisi.";
+            return;
+        }
+        if (string.IsNullOrEmpty(email))
+        {
+            errorMsg = "Email wajib diisi.";
+            return;
+        }
+        if (!IsValidEmail(email))
+        {
+            errorMsg = "Format email tidak valid.";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var existing = await UserManager.FindByEmailAsync(email);
+            if (existing != null && !existing.IsDeleted)
+            {
+                errorMsg = "Pengguna dengan email ini sudah terdaftar di sistem.";
+                return;
+            }
+
+            // Jika ada akun lama yang sudah dihapus (soft-delete), hapus dulu supaya bisa dibuat ulang
+            if (existing != null && existing.IsDeleted)
+            {
+                DbContext.Users.Remove(existing);
+                await DbContext.SaveChangesAsync();
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName       = email,
+                Email          = email,
+                Nama           = nama,
+                Role           = selectedRole,
+                PegawaiId      = null,    // TAD, tidak ada di tabel Pegawai
+                EmailConfirmed = false,
+                IsDeleted      = false,
+                Jabatan        = null
+            };
+
+            var tempPw = Guid.NewGuid().ToString("N") + "Aa1!";
+            var result = await UserManager.CreateAsync(user, tempPw);
+            if (!result.Succeeded)
+            {
+                errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                return;
+            }
+
+            await UserManager.AddToRoleAsync(user, selectedRole);
+
+            var token   = await UserManager.GeneratePasswordResetTokenAsync(user);
+            var baseUrl = Config["App:PublicUrl"] ?? Config["App:BaseUrl"] ?? "http://localhost:5000";
+            _ = EmailService.SendUserInvitationAsync(email, nama, token, baseUrl);
+
+            savedEmail = email;
+            savedName  = nama;
+            savedRole  = GetRoleLabel(selectedRole);
+            formSaved  = true;
+        }
+        catch (Exception ex) { errorMsg = ex.Message; }
+        finally { isSaving = false; }
+    }
+
+    // ── Kirim undangan untuk Reviewer (dari data Pegawai) ────────────────
+    private async Task CreateReviewerAsync()
+    {
+        if (selectedPegawai is null) return;
+        errorMsg = string.Empty;
+
+        var email = selectedPegawai.Email?.Trim();
+        if (string.IsNullOrEmpty(email))
+        {
+            errorMsg = "Data pegawai ini tidak memiliki email. Tambahkan email pegawai terlebih dahulu di menu Data Pekerja.";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var existing = await UserManager.FindByEmailAsync(email);
+            if (existing != null && !existing.IsDeleted)
+            {
+                errorMsg = "Pengguna dengan email ini sudah terdaftar di sistem.";
+                return;
+            }
+
+            if (existing != null && existing.IsDeleted)
+            {
+                DbContext.Users.Remove(existing);
+                await DbContext.SaveChangesAsync();
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName       = email,
+                Email          = email,
+                Nama           = selectedPegawai.Nama,
+                Role           = "Reviewer",
+                PegawaiId      = selectedPegawai.Id,
+                Jabatan        = selectedPegawai.Jabatan,
+                EmailConfirmed = false,
+                IsDeleted      = false
+            };
+
+            var tempPw = Guid.NewGuid().ToString("N") + "Aa1!";
+            var result = await UserManager.CreateAsync(user, tempPw);
+            if (!result.Succeeded)
+            {
+                errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
+                return;
+            }
+
+            await UserManager.AddToRoleAsync(user, "Reviewer");
+
+            var token   = await UserManager.GeneratePasswordResetTokenAsync(user);
+            var baseUrl = Config["App:PublicUrl"] ?? Config["App:BaseUrl"] ?? "http://localhost:5000";
+            _ = EmailService.SendUserInvitationAsync(email, selectedPegawai.Nama, token, baseUrl);
+
+            savedEmail = email;
+            savedName  = selectedPegawai.Nama;
+            savedRole  = "Reviewer";
+            formSaved  = true;
+        }
+        catch (Exception ex) { errorMsg = ex.Message; }
+        finally { isSaving = false; }
+    }
+
+    // ── Pegawai search (Reviewer) ─────────────────────────────────────────
     private async Task OnSearch(ChangeEventArgs e)
     {
         searchQuery = e.Value?.ToString() ?? string.Empty;
-
-        // Batalkan debounce sebelumnya — JANGAN Dispose di sini karena
-        // finally block dari search lama masih bisa berjalan dan akan throw
-        // ObjectDisposedException saat mengakses cts.IsCancellationRequested.
         _searchCts?.Cancel();
 
         if (string.IsNullOrWhiteSpace(searchQuery))
@@ -181,85 +387,51 @@
 
         try
         {
-            await Task.Delay(300, cts.Token); // debounce 300ms
-
-            // Hanya update state jika search ini tidak dibatalkan
+            await Task.Delay(300, cts.Token);
             results = allPegawai
                 .Where(p => p.Nama.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
                             p.NoPekerja.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
                 .Take(8).ToList();
-
             isSearching = false;
             StateHasChanged();
         }
-        catch (TaskCanceledException)
-        {
-            // Pencarian dibatalkan karena ada keystroke baru — biarkan OnSearch berikutnya
-            // yang menangani state. Tidak perlu update apapun di sini.
-        }
+        catch (TaskCanceledException) { }
     }
 
     private void SelectPegawai(PegawaiEntity p)
     {
         selectedPegawai = p;
-        searchQuery = p.Nama;
+        searchQuery     = p.Nama;
         results.Clear();
-        errorMsg = string.Empty;
-    }
-
-    private async Task CreateUserAsync()
-    {
-        if (string.IsNullOrEmpty(selectedRole)) { errorMsg = "Pilih role terlebih dahulu."; return; }
-        isSaving = true;
-        errorMsg = string.Empty;
-        try
-        {
-            var user = new ApplicationUser
-            {
-                UserName = selectedPegawai!.Email ?? $"user{selectedPegawai.Id}@pertamina.com",
-                Email = selectedPegawai.Email ?? $"user{selectedPegawai.Id}@pertamina.com",
-                Nama = selectedPegawai.Nama,
-                Role = selectedRole,
-                PegawaiId = selectedPegawai.Id,
-                EmailConfirmed = false,  // Belum aktif sampai user setup via link undangan
-                IsDeleted = false
-            };
-            
-            // Generate a random temporary password
-            var tempPw = Guid.NewGuid().ToString("N") + "X1!";
-            var result = await UserManager.CreateAsync(user, tempPw);
-            if (!result.Succeeded)
-            {
-                errorMsg = string.Join(", ", result.Errors.Select(e => e.Description));
-                return;
-            }
-
-            await UserManager.AddToRoleAsync(user, selectedRole);
-
-            var token = await UserManager.GeneratePasswordResetTokenAsync(user);
-            var baseUrl = Config["App:PublicUrl"] ?? Config["App:BaseUrl"] ?? "http://localhost:5000";
-            _ = EmailService.SendUserInvitationAsync(user.Email, user.Nama, token, baseUrl);
-
-            savedName = selectedPegawai.Nama;
-            savedRole = GetRoleLabel(selectedRole);
-            formSaved = true;
-        }
-        catch (Exception ex) { errorMsg = ex.Message; }
-        finally { isSaving = false; }
+        errorMsg        = string.Empty;
     }
 
     private void Reset()
     {
-        formSaved = false; selectedPegawai = null;
-        searchQuery = string.Empty; selectedRole = string.Empty;
-        savedName = string.Empty; savedRole = string.Empty;
+        formSaved       = false;
+        selectedRole    = string.Empty;
+        tadNama         = string.Empty;
+        tadEmail        = string.Empty;
+        selectedPegawai = null;
+        searchQuery     = string.Empty;
+        results.Clear();
+        errorMsg        = string.Empty;
+        savedEmail      = string.Empty;
+        savedName       = string.Empty;
+        savedRole       = string.Empty;
     }
 
     private static string GetRoleLabel(string role) => role switch
     {
-        "AdminIT" => "Admin IT",
+        "AdminIT"           => "Admin IT",
         "AdminGudangBarang" => "Admin Gudang & Barang",
-        "Reviewer" => "Reviewer",
-        _ => role
+        "Reviewer"          => "Reviewer",
+        _                   => role
     };
+
+    private static bool IsValidEmail(string email)
+    {
+        try { var addr = new System.Net.Mail.MailAddress(email); return addr.Address == email; }
+        catch { return false; }
+    }
 }

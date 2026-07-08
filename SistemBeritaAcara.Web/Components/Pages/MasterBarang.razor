@@ -294,32 +294,46 @@ else
         formError = string.Empty;
         if (string.IsNullOrWhiteSpace(formNamaBarang)) { formError = "Nama Barang wajib diisi."; return; }
 
-        var duplicate = allBarang.FirstOrDefault(b =>
-            b.NamaBarang.Equals(formNamaBarang.Trim(), StringComparison.OrdinalIgnoreCase) &&
-            b.Id != (editTarget?.Id ?? 0) && b.IsAktif);
-        if (duplicate != null) { formError = $"Barang '{formNamaBarang}' sudah ada dalam daftar."; return; }
-
         isSaving = true;
         try
         {
+            string successMsg;
             if (isEditMode && editTarget != null)
             {
                 var entity = await DbContext.MasterBarang.FindAsync(editTarget.Id);
                 if (entity == null) return;
+                var conflict = await DbContext.MasterBarang.FirstOrDefaultAsync(b =>
+                    b.NamaBarang.ToLower() == formNamaBarang.Trim().ToLower() && b.Id != entity.Id && b.IsAktif);
+                if (conflict != null) { formError = $"Barang '{formNamaBarang}' sudah ada dalam daftar."; return; }
                 entity.NamaBarang = formNamaBarang.Trim();
+                successMsg = "Barang berhasil diperbarui.";
             }
             else
             {
-                DbContext.MasterBarang.Add(new MasterBarangEntity
+                var existing = await DbContext.MasterBarang.FirstOrDefaultAsync(b =>
+                    b.NamaBarang.ToLower() == formNamaBarang.Trim().ToLower());
+                if (existing != null)
                 {
-                    NamaBarang = formNamaBarang.Trim(),
-                    IsAktif = true
-                });
+                    bool wasInactive = !existing.IsAktif;
+                    existing.NamaBarang = formNamaBarang.Trim();
+                    existing.IsAktif = true;
+                    successMsg = wasInactive
+                        ? $"Barang '{existing.NamaBarang}' sudah ada dan berhasil diaktifkan kembali."
+                        : "Barang sudah ada, data berhasil diperbarui.";
+                }
+                else
+                {
+                    DbContext.MasterBarang.Add(new MasterBarangEntity
+                    {
+                        NamaBarang = formNamaBarang.Trim(),
+                        IsAktif = true
+                    });
+                    successMsg = "Barang berhasil ditambahkan.";
+                }
             }
-
             await DbContext.SaveChangesAsync();
             showForm = false;
-            SetAlert(isEditMode ? "Barang berhasil diperbarui." : "Barang berhasil ditambahkan.", false);
+            SetAlert(successMsg, false);
             await LoadAsync();
         }
         catch (Exception ex)

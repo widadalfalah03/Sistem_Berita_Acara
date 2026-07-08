@@ -214,6 +214,7 @@ app.Use(async (context, next) =>
 });
 
 app.UseHttpsRedirection();
+app.UseStaticFiles(); // serve runtime-generated files (DOCX/PDF) from wwwroot
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -271,102 +272,6 @@ app.MapPost("/account/logout", async (
     return Results.Redirect("/login");
 });
 
-// ── ONLYOFFICE Callback Endpoint ──
-app.MapPost("/api/onlyoffice/callback/{baId:int}", async (
-    int baId,
-    HttpContext ctx,
-    IConfiguration cfg,
-    SistemBeritaAcara.Infrastructure.Data.AppDbContext db,
-    SistemBeritaAcara.Core.Interfaces.IDocumentService documentService) =>
-{
-    // Validasi shared secret — cegah request dari luar yang memalsukan callback OnlyOffice
-    var expectedSecret = cfg["OnlyOffice:CallbackSecret"] ?? "";
-    var providedSecret = ctx.Request.Query["secret"].ToString();
-    if (!string.IsNullOrEmpty(expectedSecret) && providedSecret != expectedSecret)
-        return Results.Unauthorized();
-
-    try
-    {
-        var payload = await ctx.Request.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-
-        // Status 2 = closed/saved (regular)
-        // Status 6 = auto force-save (dari config forcesave:true / Ctrl+S)
-        // Status 7 = force-save dipicu oleh docEditor.forceSave() API call — HARUS ditangani!
-        if (payload.TryGetProperty("status", out var statusProp) && (statusProp.GetInt32() == 2 || statusProp.GetInt32() == 6 || statusProp.GetInt32() == 7))
-        {
-            if (payload.TryGetProperty("url", out var downloadUrlProp))
-            {
-                var downloadUrl = downloadUrlProp.GetString();
-                if (!string.IsNullOrEmpty(downloadUrl))
-                {
-                    // ONLYOFFICE sends a URL from its own server (Docker-internal, port 80).
-                    // Rewrite the host to the mapped port on the Windows host so we can download it.
-                    var onlyOfficeServerUrl = (cfg["OnlyOffice:ServerUrl"] ?? "http://localhost:8081").TrimEnd('/');
-                    try
-                    {
-                        var dlUri = new Uri(downloadUrl);
-                        var targetBase = new Uri(onlyOfficeServerUrl);
-                        // Rewrite scheme+host+port to the configured ONLYOFFICE server (keeps path & query)
-                        var builder = new UriBuilder(targetBase);
-                        builder.Path = dlUri.AbsolutePath;
-                        builder.Query = dlUri.Query.TrimStart('?');
-                        downloadUrl = builder.Uri.ToString();
-                    }
-                    catch { /* keep original URL if rewrite fails */ }
-
-                    var ba = await db.BeritaAcara.FindAsync(baId);
-                    if (ba != null && !string.IsNullOrEmpty(ba.DocxPath))
-                    {
-                        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()));
-                        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-
-                        using var httpClient = new System.Net.Http.HttpClient();
-                        httpClient.Timeout = TimeSpan.FromSeconds(30);
-                        var response = await httpClient.GetAsync(downloadUrl);
-                        if (response.IsSuccessStatusCode)
-                        {
-                            // Tulis ke temp dulu, lalu atomic move — menghindari partial-write
-                            // dan konflik lock dengan proses lain (Spire.Doc, Defender, dsb.)
-                            var tempFilePath = filePath + ".cb_tmp";
-                            await using (var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None))
-                            {
-                                await response.Content.CopyToAsync(fs);
-                            }
-
-                            // Move dengan retry untuk menangani sisa lock sementara
-                            for (int attempt = 0; attempt < 10; attempt++)
-                            {
-                                try
-                                {
-                                    File.Move(tempFilePath, filePath, overwrite: true);
-                                    break;
-                                }
-                                catch (IOException) when (attempt < 9)
-                                {
-                                    await Task.Delay(300);
-                                }
-                            }
-
-                            // Regenerate PDF dari DOCX yang sudah diedit
-                            await documentService.ConvertDocxToPdfAsync(filePath);
-                        }
-                        else
-                        {
-                            return Results.Ok(new { error = 1, message = $"Download failed: {response.StatusCode} from {downloadUrl}" });
-                        }
-                    }
-                }
-            }
-        }
-        return Results.Ok(new { error = 0 });
-    }
-    catch (Exception ex)
-    {
-        return Results.Ok(new { error = 1, message = ex.Message });
-    }
-}).DisableAntiforgery();
-
-// PDF Preview endpoint — no-cache agar browser selalu fetch dari disk, bukan cache
 app.MapGet("/api/preview/pdf/{baId:int}", async (
     int baId,
     HttpContext ctx,
@@ -377,10 +282,12 @@ app.MapGet("/api/preview/pdf/{baId:int}", async (
     ctx.Response.Headers["Expires"] = "0";
 
     var ba = await db.BeritaAcara.FindAsync(baId);
-    if (ba?.DocxPath == null) return Results.NotFound();
+    if (ba == null || (ba.DocxPath == null && ba.DocxFinalPath == null)) return Results.NotFound();
 
+    // prefer final (with Reviewer + PJ signatures) over draft
+    string targetDocx = !string.IsNullOrEmpty(ba.DocxFinalPath) ? ba.DocxFinalPath : ba.DocxPath!;
     var pdfPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
-        ba.DocxPath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
+        targetDocx.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString()).Replace(".docx", ".pdf"));
 
     if (!File.Exists(pdfPath)) return Results.NotFound();
 

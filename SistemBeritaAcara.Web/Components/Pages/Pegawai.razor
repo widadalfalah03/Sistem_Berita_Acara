@@ -345,41 +345,66 @@ else
         if (string.IsNullOrWhiteSpace(formEmail)) { formError = "Email wajib diisi."; return; }
         if (!new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(formEmail)) { formError = "Format email tidak valid."; return; }
 
-        var duplicate = allPegawai.FirstOrDefault(p =>
-            p.NoPekerja == formNoPekerja.Trim() && p.Id != (editTarget?.Id ?? 0));
-        if (duplicate != null) { formError = $"No. Pekerja '{formNoPekerja}' sudah digunakan oleh pekerja lain."; return; }
-
         isSaving = true;
         try
         {
+            string successMsg;
             if (isEditMode && editTarget != null)
             {
                 var entity = await DbContext.Pegawai.FindAsync(editTarget.Id);
                 if (entity == null) return;
+                var conflict = await DbContext.Pegawai.FirstOrDefaultAsync(p =>
+                    p.NoPekerja == formNoPekerja.Trim() && p.Id != entity.Id);
+                if (conflict != null) { formError = $"No. Pekerja '{formNoPekerja}' sudah digunakan oleh pekerja lain."; return; }
                 entity.Nama = formNama.Trim();
                 entity.NoPekerja = formNoPekerja.Trim();
                 entity.Jabatan = string.IsNullOrWhiteSpace(formJabatan) ? null : formJabatan.Trim();
                 entity.FungsiDirektorat = string.IsNullOrWhiteSpace(formFungsi) ? null : formFungsi.Trim();
                 entity.Email = string.IsNullOrWhiteSpace(formEmail) ? null : formEmail.Trim();
                 entity.CostCenter = string.IsNullOrWhiteSpace(formCostCenter) ? null : formCostCenter.Trim();
+                successMsg = "Pekerja berhasil diperbarui.";
             }
             else
             {
-                DbContext.Pegawai.Add(new PegawaiEntity
+                var existing = await DbContext.Pegawai.FirstOrDefaultAsync(p =>
+                    p.NoPekerja == formNoPekerja.Trim());
+                if (existing != null)
                 {
-                    Nama = formNama.Trim(),
-                    NoPekerja = formNoPekerja.Trim(),
-                    Jabatan = string.IsNullOrWhiteSpace(formJabatan) ? null : formJabatan.Trim(),
-                    FungsiDirektorat = string.IsNullOrWhiteSpace(formFungsi) ? null : formFungsi.Trim(),
-                    Email = string.IsNullOrWhiteSpace(formEmail) ? null : formEmail.Trim(),
-                    CostCenter = string.IsNullOrWhiteSpace(formCostCenter) ? null : formCostCenter.Trim(),
-                    IsAktif = true
-                });
+                    bool wasInactive = !existing.IsAktif;
+                    existing.Nama = formNama.Trim();
+                    existing.Jabatan = string.IsNullOrWhiteSpace(formJabatan) ? null : formJabatan.Trim();
+                    existing.FungsiDirektorat = string.IsNullOrWhiteSpace(formFungsi) ? null : formFungsi.Trim();
+                    existing.Email = string.IsNullOrWhiteSpace(formEmail) ? null : formEmail.Trim();
+                    existing.CostCenter = string.IsNullOrWhiteSpace(formCostCenter) ? null : formCostCenter.Trim();
+                    existing.IsAktif = true;
+                    var linkedUsers = await DbContext.Users.Where(u => u.PegawaiId == existing.Id).ToListAsync();
+                    foreach (var u in linkedUsers)
+                    {
+                        u.Nama = existing.Nama;
+                        if (u.IsDeleted) { u.IsDeleted = false; u.DeletedAt = null; }
+                    }
+                    successMsg = wasInactive
+                        ? $"Pekerja '{existing.Nama}' sudah ada dan berhasil diaktifkan kembali."
+                        : "Pekerja berhasil diperbarui.";
+                }
+                else
+                {
+                    DbContext.Pegawai.Add(new PegawaiEntity
+                    {
+                        Nama = formNama.Trim(),
+                        NoPekerja = formNoPekerja.Trim(),
+                        Jabatan = string.IsNullOrWhiteSpace(formJabatan) ? null : formJabatan.Trim(),
+                        FungsiDirektorat = string.IsNullOrWhiteSpace(formFungsi) ? null : formFungsi.Trim(),
+                        Email = string.IsNullOrWhiteSpace(formEmail) ? null : formEmail.Trim(),
+                        CostCenter = string.IsNullOrWhiteSpace(formCostCenter) ? null : formCostCenter.Trim(),
+                        IsAktif = true
+                    });
+                    successMsg = "Pekerja berhasil ditambahkan.";
+                }
             }
-
             await DbContext.SaveChangesAsync();
             showForm = false;
-            SetAlert(isEditMode ? "Pekerja berhasil diperbarui." : "Pekerja berhasil ditambahkan.", false);
+            SetAlert(successMsg, false);
             await LoadAsync();
         }
         catch (Exception ex)
