@@ -1051,7 +1051,7 @@ else if (currentRole == "AdminIT")
                 await InvokeAsync(async () =>
                 {
                     DbContext.ChangeTracker.Clear();
-                    if (currentRole == "AdminGudangBarang")
+                    if (currentRole == "AdminBA")
                         await LoadGudangDataAsync();
                     else if (currentRole == "Reviewer")
                         await LoadReviewerDataAsync();
