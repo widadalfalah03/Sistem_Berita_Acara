@@ -1,11 +1,13 @@
 ﻿@page "/invitation"
 @layout EmptyLayout
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.SignalR
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
 @using SistemBeritaAcara.Infrastructure.Data
 @inject AppDbContext DbContext
 @inject UserManager<ApplicationUser> UserManager
+@inject IHubContext<SistemBeritaAcara.Web.Hubs.BaHub> HubContext
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
@@ -294,6 +296,8 @@
             // Security stamp berubah → sesi Admin IT lama otomatis logout
             await UserManager.UpdateSecurityStampAsync(user);
 
+            try { await HubContext.Clients.All.SendAsync("UserListUpdated"); } catch { }
+
             Navigation.NavigateTo("/login", forceLoad: true);
         }
         catch (Exception ex)
@@ -381,6 +385,8 @@
 
             // UpdateSecurityStamp memaksa semua sesi lain logout
             await UserManager.UpdateSecurityStampAsync(user);
+
+            try { await HubContext.Clients.All.SendAsync("UserListUpdated"); } catch { }
 
             Navigation.NavigateTo("/login", forceLoad: true);
         }

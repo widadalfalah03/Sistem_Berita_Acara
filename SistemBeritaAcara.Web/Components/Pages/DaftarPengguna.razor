@@ -1,6 +1,7 @@
 ﻿@page "/pengguna"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
 @using SistemBeritaAcara.Core.Entities
 @using SistemBeritaAcara.Infrastructure.Data
@@ -12,7 +13,7 @@
 @rendermode InteractiveServer
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
-@implements IDisposable
+@implements IAsyncDisposable
 
 @if (isLoading)
 {
@@ -256,6 +257,7 @@ else
     // Cooldown kirim ulang per user (userId → detik tersisa)
     private Dictionary<int, int> resendCooldowns = new();
     private System.Threading.Timer? _cooldownTimer;
+    private HubConnection? _hubConnection;
 
     private int currentPage = 1;
     private int pageSize = 10;
@@ -297,6 +299,39 @@ else
             StartCooldownFor(NewUserId.Value);
 
         isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _ = ConnectSignalRAsync();
+        await Task.CompletedTask;
+    }
+
+    private async Task ConnectSignalRAsync()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/ba"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On("UserListUpdated", async () =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    DbCtx.ChangeTracker.Clear();
+                    await LoadUsersAsync();
+                    StateHasChanged();
+                });
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch
+        {
+        }
     }
 
     private async Task LoadUsersAsync()
@@ -402,10 +437,15 @@ else
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _toastTimer?.Dispose();
         _cooldownTimer?.Dispose();
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.StopAsync();
+            await _hubConnection.DisposeAsync();
+        }
     }
 
     private static string GetRolePill(string role) => role switch

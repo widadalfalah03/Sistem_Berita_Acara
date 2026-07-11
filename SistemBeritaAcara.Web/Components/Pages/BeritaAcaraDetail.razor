@@ -498,7 +498,10 @@ else
             bool isCreator = appUser.Id == ba.CreatedBy;
             bool isRelatedParty = appUser.Id == ba.MengetahuiId || appUser.Id == ba.MenyerahkanId;
             
-            if (!isCreator && !isRelatedParty && currentRole != "AdminIT" && currentRole != "AdminBA")
+            bool allowedByRole = currentRole == "AdminIT" || currentRole == "AdminBA"
+                || (currentRole == "Reviewer" && From == "archive");
+
+            if (!isCreator && !isRelatedParty && !allowedByRole)
             {
                 Navigation.NavigateTo("/akses-ditolak", true);
                 return;
