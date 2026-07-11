@@ -164,9 +164,7 @@ else
                             <td>
                                 @if (!u.EmailConfirmed)
                                 {
-                                    <span class="status-dot" style="color:#d97706;">
-                                        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#d97706;margin-right:6px;"></span>Belum Aktivasi
-                                    </span>
+                                    <span class="status-dot pending">Belum Aktivasi</span>
                                 }
                                 else if (!u.IsDeleted)
                                 {

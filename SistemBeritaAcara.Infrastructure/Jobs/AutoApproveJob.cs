@@ -99,9 +99,9 @@ public class AutoApproveJob(
                     {
                         string namaBarang = p.Barang?.NamaBarang ?? "Perangkat";
                         string detail = $"{p.Jumlah} {p.Satuan}";
-                        if (!string.IsNullOrEmpty(p.NoSerial)) detail += $” — S/N: {p.NoSerial}”;
-                        if (!string.IsNullOrEmpty(p.Keterangan)) detail += $” ({p.Keterangan})”;
-                        return $”{namaBarang} — {detail}”;
+                        if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
+                        if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
+                        return $"{namaBarang} — {detail}";
                     })
                     .ToList();
 

@@ -633,6 +633,8 @@ a:hover { color: var(--primary-hover); }
 .status-dot.active::before { background: #22C55E; }
 .status-dot.inactive { color: var(--text-muted); }
 .status-dot.inactive::before { background: var(--text-muted); }
+.status-dot.pending { color: #d97706; }
+.status-dot.pending::before { background: #d97706; }
 
 
 .due-badge {
@@ -3751,7 +3753,8 @@ input[type="password"]::-ms-clear {
 
 .status-dot.active { color: #15803D; }
 .status-dot.active::before { background: #22C55E; }
-
+.status-dot.pending { color: #b45309; }
+.status-dot.pending::before { background: #f59e0b; }
 .status-dot.inactive { color: var(--text-muted); }
 .status-dot.inactive::before { background: var(--border); }
 
