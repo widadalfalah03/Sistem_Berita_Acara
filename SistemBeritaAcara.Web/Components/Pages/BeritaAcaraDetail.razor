@@ -19,7 +19,7 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @implements IAsyncDisposable
 
-<PageTitle>Detail Berita Acara â€” Sistem Berita Acara</PageTitle>
+<PageTitle>Detail Berita Acara — Sistem Berita Acara</PageTitle>
 
 
 
@@ -545,9 +545,9 @@ else
             var barangListReviewer = ba.Perangkat
                 .Select(p => {                    string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
-                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" â€” S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                    return $"{nama} â€” {detail}";
+                    return $"{nama} — {detail}";
                 }).ToList();
 
             if (!string.IsNullOrEmpty(ba.Mengetahui?.Email))
@@ -566,7 +566,7 @@ else
         }
         catch (Exception ex)
         {
-            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " â€” " +
+            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " +
 ex.InnerException.Message : "")}";
         }
         finally { isProcessing = false; }
@@ -635,9 +635,9 @@ Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
                 {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
-                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" â€” S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                    return $"{nama} â€” {detail}";
+                    return $"{nama} — {detail}";
                 }).ToList();
 
             await EmailService.SendMagicLinkAsync(ba.Pj!.Email ?? string.Empty, ba.Pj.Nama, ba.Id, tokenValue, baseUrl, ba.Jenis,
@@ -651,7 +651,7 @@ Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
         }
         catch (Exception ex)
         {
-            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " â€” " +
+            actionIsError = true; actionMessage = $"Gagal: {ex.Message}{(ex.InnerException != null ? " — " +
 ex.InnerException.Message : "")}";
         }
         finally { isProcessing = false; isReviewerAction = false; }
@@ -707,9 +707,9 @@ Navigation.BaseUri.TrimEnd('/')).TrimEnd('/');
                 {
                     string nama = p.Barang?.NamaBarang ?? "Perangkat";
                     string detail = $"{p.Jumlah} {p.Satuan}";
-                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" â€” S/N: {p.NoSerial}";
+                    if (!string.IsNullOrEmpty(p.NoSerial)) detail += $" — S/N: {p.NoSerial}";
                     if (!string.IsNullOrEmpty(p.Keterangan)) detail += $" ({p.Keterangan})";
-                    return $"{nama} â€” {detail}";
+                    return $"{nama} — {detail}";
                 }).ToList();
 
             var creatorUserReject = await UserManager.FindByIdAsync(ba.CreatedBy.ToString());
