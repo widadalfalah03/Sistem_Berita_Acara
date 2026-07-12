@@ -101,6 +101,10 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
         UPDATE [AspNetRoles] SET [Name] = 'Reviewer', [NormalizedName] = 'REVIEWER' WHERE [Name] = 'Approver';
         UPDATE [Users] SET [Role] = 'Reviewer' WHERE [Role] = 'Approver';
 
+        -- Cleanup TtdPath yang tidak valid (akibat bug string interpolation PowerShell)
+        -- Hapus TtdPath yang masih berisi karakter '$' (literal, bukan path yang benar)
+        UPDATE [Users] SET [TtdPath] = NULL WHERE [TtdPath] LIKE '%$%';
+
         -- Migrate MenyerahkanId: ubah FK dari Pegawai ke Users
         -- Cek apakah FK lama (ke Pegawai) masih ada; jika ya, drop dan migrasi data
         IF EXISTS (

@@ -1,4 +1,4 @@
-﻿@page "/profil"
+@page "/profil"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Identity
@@ -372,9 +372,9 @@ else
             var base64 = dataUrl.Split(',')[1];
             var bytes = Convert.FromBase64String(base64);
             
-            if (bytes.Length < 4 ||
-                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && 
-                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) 
+            bool isPng = bytes.Length >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47;
+            bool isJpeg = bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+            if (!isPng && !isJpeg)
             {
                 globalMessage = "Gagal: File yang diupload bukan gambar yang valid (PNG/JPEG).";
                 return;
@@ -382,17 +382,17 @@ else
 
             var folder = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "signatures");
             Directory.CreateDirectory(folder);
-            var fname = "ttd-user-$($currentUser!.Id).png";
+            var fname = $"ttd-user-{currentUser!.Id}.png";
             var fpath = Path.Combine(folder, fname);
             await File.WriteAllBytesAsync(fpath, bytes);
 
-            currentUser.TtdPath = "files/signatures/$fname";
+            currentUser.TtdPath = $"files/signatures/{fname}";
             await UserManager.UpdateAsync(currentUser);
             globalMessage = "Tanda tangan berhasil disimpan!";
             ttdCacheBuster = Guid.NewGuid().ToString();
             showTtdModal = false;
         }
-        catch (Exception ex) { globalMessage = "Gagal menyimpan TTD: $($ex.Message)"; }
+        catch (Exception ex) { globalMessage = $"Gagal menyimpan TTD: {ex.Message}"; }
         finally { isSavingTtd = false; }
     }
     

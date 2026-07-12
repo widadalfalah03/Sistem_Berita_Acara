@@ -1,4 +1,4 @@
-﻿@page "/pj/sign/{Token}"
+@page "/pj/sign/{Token}"
 @attribute [AllowAnonymous]
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.EntityFrameworkCore
@@ -123,14 +123,8 @@ else
                 <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">Gambar tanda tangan Anda di kotak ini:</div>
                 <div class="canvas-wrap">
                     <canvas id="pjSignCanvas" width="800" height="200"
-                            style="height:160px;"
-                            @onmousedown="OnCanvasMouseDown"
-                            @onmousemove="OnCanvasMouseMove"
-                            @onmouseup="OnMouseUp"
-                            @onmouseleave="OnMouseUp"
-                            @ontouchstart="OnTouchStart"
-                            @ontouchmove="OnTouchMove"
-                            @ontouchend="OnTouchEnd"></canvas>
+                            style="height:160px;">
+                    </canvas>
                 </div>
                 <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
                     <button type="button" class="btn btn-outline btn-sm" @onclick="ClearCanvasAsync">
@@ -179,60 +173,102 @@ else
 <script>
     window.pjCanvas = {
         _drawing: false,
-        init() {
+        _abortCtrl: null,
+
+        init: function (clearCanvas) {
             var c = document.getElementById('pjSignCanvas');
             if (!c) return;
+
+            // Abort & remove all previous event listeners cleanly
+            if (this._abortCtrl) this._abortCtrl.abort();
+            this._abortCtrl = new AbortController();
+            var signal = this._abortCtrl.signal;
+
+            // Unified DPR-based sizing — identical to setupCanvas & ttdCanvas
+            var dpr = window.devicePixelRatio || 1;
+            var rect = c.getBoundingClientRect();
+            c.width  = Math.round((rect.width  || 400) * dpr);
+            c.height = Math.round((rect.height || 160) * dpr);
+
+            // Reset context — only clear canvas when explicitly requested
+            // (on Blazor re-renders we re-attach listeners only, preserving existing drawing)
             var ctx = c.getContext('2d');
-            ctx.clearRect(0, 0, c.width, c.height);
+            ctx.scale(dpr, dpr);
+            if (clearCanvas !== false) ctx.clearRect(0, 0, c.width / dpr, c.height / dpr);
             ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 2;  // CSS pixel units — identical visual on all canvases
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
+            this._drawing = false;
+
+            var self = this;
+            self._prevX = 0; self._prevY = 0;
+
+            // Coordinates in CSS pixel space (ctx.scale handles DPR conversion)
+            var getPos = function (e) {
+                var r = c.getBoundingClientRect();
+                var src = e.touches ? e.touches[0] : e;
+                return { x: src.clientX - r.left, y: src.clientY - r.top };
+            };
+
+            var startDraw = function (e) {
+                self._drawing = true;
+                var p = getPos(e);
+                self._prevX = p.x;
+                self._prevY = p.y;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+            };
+
+            var moveDraw = function (e) {
+                if (!self._drawing) return;
+                var p = getPos(e);
+                // Quadratic Bezier midpoint smoothing — eliminates jagged corners
+                var midX = (self._prevX + p.x) / 2;
+                var midY = (self._prevY + p.y) / 2;
+                ctx.quadraticCurveTo(self._prevX, self._prevY, midX, midY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(midX, midY);
+                self._prevX = p.x;
+                self._prevY = p.y;
+            };
+
+            // Mouse events — pure JS, no Blazor round-trip
+            c.addEventListener('mousedown', startDraw, { signal: signal });
+            c.addEventListener('mousemove', moveDraw,  { signal: signal });
+            c.addEventListener('mouseup',    function () { self._drawing = false; }, { signal: signal });
+            c.addEventListener('mouseleave', function () { self._drawing = false; }, { signal: signal });
+
+            // Touch events
+            c.addEventListener('touchstart', function (e) { e.preventDefault(); startDraw(e); }, { passive: false, signal: signal });
+            c.addEventListener('touchmove',  function (e) { e.preventDefault(); moveDraw(e);  }, { passive: false, signal: signal });
+            c.addEventListener('touchend',   function (e) { e.preventDefault(); self._drawing = false; }, { passive: false, signal: signal });
         },
-        _pos(c, e) {
-            var r = c.getBoundingClientRect();
-            var sx = c.width / r.width, sy = c.height / r.height;
-            var src = e.touches ? e.touches[0] : e;
-            return { x: (src.clientX - r.left) * sx, y: (src.clientY - r.top) * sy };
-        },
-        start(e) {
-            var c = document.getElementById('pjSignCanvas'); if (!c) return;
-            this._drawing = true;
-            var p = this._pos(c, e);
-            var ctx = c.getContext('2d');
-            ctx.beginPath(); ctx.moveTo(p.x, p.y);
-        },
-        move(e) {
-            if (!this._drawing) return;
-            var c = document.getElementById('pjSignCanvas'); if (!c) return;
-            var p = this._pos(c, e);
-            var ctx = c.getContext('2d');
-            ctx.lineTo(p.x, p.y); ctx.stroke();
-        },
-        stop() { this._drawing = false; },
-        clear() {
-            var c = document.getElementById('pjSignCanvas'); if (!c) return;
+
+        clear: function () {
+            var c = document.getElementById('pjSignCanvas');
+            if (!c) return;
             c.getContext('2d').clearRect(0, 0, c.width, c.height);
         },
-        isEmpty() {
-            var c = document.getElementById('pjSignCanvas'); if (!c) return true;
+
+        isEmpty: function () {
+            var c = document.getElementById('pjSignCanvas');
+            if (!c) return true;
             var d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
             for (var i = 3; i < d.length; i += 4) { if (d[i] > 0) return false; }
             return true;
         },
-        getDataUrl() {
+
+        getDataUrl: function () {
             var c = document.getElementById('pjSignCanvas');
             if (!c) return null;
-            
-            
-            
             var ctx = c.getContext('2d');
             var data = ctx.getImageData(0, 0, c.width, c.height).data;
             var minX = c.width, maxX = 0, minY = c.height, maxY = 0;
             for (var y = 0; y < c.height; y++) {
                 for (var x = 0; x < c.width; x++) {
-                    var alpha = data[(y * c.width + x) * 4 + 3];
-                    if (alpha > 10) {
+                    if (data[(y * c.width + x) * 4 + 3] > 10) {
                         if (x < minX) minX = x;
                         if (x > maxX) maxX = x;
                         if (y < minY) minY = y;
@@ -240,9 +276,7 @@ else
                     }
                 }
             }
-            
             if (maxX <= minX || maxY <= minY) return c.toDataURL('image/png');
-            
             var pad = 4;
             minX = Math.max(0, minX - pad);
             minY = Math.max(0, minY - pad);
@@ -251,8 +285,7 @@ else
             var w = maxX - minX + 1;
             var h = maxY - minY + 1;
             var tmp = document.createElement('canvas');
-            tmp.width = w;
-            tmp.height = h;
+            tmp.width = w; tmp.height = h;
             tmp.getContext('2d').drawImage(c, minX, minY, w, h, 0, 0, w, h);
             return tmp.toDataURL('image/png');
         }
@@ -273,8 +306,8 @@ else
     private string? pdfPath;
     private long cacheBreaker;
 
-    private bool _isDrawing = false;
-    private string pjTtdMode = "draw"; 
+    private string pjTtdMode = "draw";
+    private bool _needsClearOnInit = true;  // canvas should be cleared on next init
 
     protected override async Task OnInitializedAsync()
     {
@@ -311,55 +344,43 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && isValidToken && !alreadySigned)
+        if (isValidToken && !alreadySigned && pjTtdMode == "draw")
         {
-            await JS.InvokeVoidAsync("pjCanvas.init");
-            if (!string.IsNullOrEmpty(pdfPath))
+            // Always re-init on every render — Blazor may replace the canvas DOM element
+            // on re-renders (auth revalidation, SignalR reconnect, etc.), killing our listeners.
+            // _needsClearOnInit controls whether to wipe canvas content or just re-attach.
+            bool clear = _needsClearOnInit;
+            _needsClearOnInit = false;
+            try { await JS.InvokeVoidAsync("pjCanvas.init", clear); } catch { }
+        }
+
+        if (firstRender && isValidToken && !alreadySigned && !string.IsNullOrEmpty(pdfPath))
+        {
+            var pdfUrl = $"/{pdfPath}?v={cacheBreaker}";
+            try
             {
-                var pdfUrl = $"/{pdfPath}?v={cacheBreaker}";
-                try 
-                {
-                    await JS.InvokeVoidAsync("pdfViewer.renderPdf", "pdf-render-container-pj", pdfUrl);
-                } 
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine("Error invoking pdfViewer: " + ex.Message);
-                }
+                await JS.InvokeVoidAsync("pdfViewer.renderPdf", "pdf-render-container-pj", pdfUrl);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("Error invoking pdfViewer: " + ex.Message);
             }
         }
-    }
-
-    private async Task OnCanvasMouseDown(MouseEventArgs e)
-    {
-        _isDrawing = true;
-        await JS.InvokeVoidAsync("pjCanvas.start", e);
-    }
-    private async Task OnCanvasMouseMove(MouseEventArgs e)
-    {
-        if (!_isDrawing) return;
-        await JS.InvokeVoidAsync("pjCanvas.move", e);
-    }
-    private void OnMouseUp(MouseEventArgs e) => _isDrawing = false;
-    private void OnTouchEnd(TouchEventArgs e) => _isDrawing = false;
-
-    private async Task OnTouchStart(TouchEventArgs e)
-    {
-        _isDrawing = true;
-        await JS.InvokeVoidAsync("pjCanvas.start", e);
-    }
-    private async Task OnTouchMove(TouchEventArgs e)
-    {
-        if (!_isDrawing) return;
-        await JS.InvokeVoidAsync("pjCanvas.move", e);
     }
 
     private async Task SwitchPjMode(string mode)
     {
         pjTtdMode = mode;
         if (mode == "draw")
-            try { await JS.InvokeVoidAsync("pjCanvas.init"); } catch { }
+        {
+            // Mark that next init should clear canvas (fresh start after tab switch)
+            _needsClearOnInit = true;
+            // StateHasChanged triggers OnAfterRenderAsync which calls init
+        }
         else
+        {
             try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
+        }
     }
 
     private async Task ClearCanvasAsync()
@@ -402,10 +423,10 @@ else
             if (string.IsNullOrEmpty(dataUrl)) { actionMessage = "Gagal membaca data tanda tangan."; isSubmitting = false; return; }
             var bytes = Convert.FromBase64String(dataUrl.Split(',')[1]);
 
-            
-            if (bytes.Length < 4 ||
-                !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) && 
-                !(bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)) 
+            // Validate image format
+            bool isPng = bytes.Length >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47;
+            bool isJpeg = bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+            if (!isPng && !isJpeg)
             {
                 actionMessage = "Gagal: File yang diupload bukan gambar yang valid (PNG/JPEG).";
                 isSubmitting = false;

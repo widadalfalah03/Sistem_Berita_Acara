@@ -1,4 +1,4 @@
-﻿
+
 window.ttdUpload = {
     _threshold: 200,
     _dataUrl: null,
@@ -143,39 +143,45 @@ window.ttdUpload = {
 window.setupCanvas = {
     isDrawing: false,
     ctx: null,
+    _prevX: 0,
+    _prevY: 0,
     init: function () {
         var oldC = document.getElementById('setup-ttd-canvas');
         if (!oldC) return;
-        
-        
+
         var c = oldC.cloneNode(true);
         oldC.parentNode.replaceChild(c, oldC);
 
+        // Unified DPR-based sizing — same approach as all other canvases
+        var dpr = window.devicePixelRatio || 1;
         var rect = c.getBoundingClientRect();
-        c.width = rect.width * 2;
-        c.height = rect.height * 2;
+        c.width = Math.round(rect.width * dpr);
+        c.height = Math.round(rect.height * dpr);
         this.ctx = c.getContext('2d');
-        this.ctx.scale(2, 2);
+        this.ctx.scale(dpr, dpr);
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
-        this.ctx.lineWidth = 3;
+        this.ctx.lineWidth = 2;  // CSS pixel units — identical visual on all canvases
         this.ctx.strokeStyle = '#000000';
         this.clear();
 
         c.addEventListener('mousedown', (e) => this.start(e));
         c.addEventListener('mousemove', (e) => this.move(e));
-        c.addEventListener('mouseup', (e) => this.stop(e));
-        c.addEventListener('mouseout', (e) => this.stop(e));
+        c.addEventListener('mouseup',   (e) => this.stop(e));
+        c.addEventListener('mouseout',  (e) => this.stop(e));
         c.addEventListener('touchstart', (e) => { e.preventDefault(); this.start(e); }, { passive: false });
-        c.addEventListener('touchmove', (e) => { e.preventDefault(); this.move(e); }, { passive: false });
-        c.addEventListener('touchend', (e) => { e.preventDefault(); this.stop(e); }, { passive: false });
+        c.addEventListener('touchmove',  (e) => { e.preventDefault(); this.move(e);  }, { passive: false });
+        c.addEventListener('touchend',   (e) => { e.preventDefault(); this.stop(e);  }, { passive: false });
     },
     start: function (e) {
         var c = document.getElementById('setup-ttd-canvas'); if (!c) return;
-        var rect = c.getBoundingClientRect();
-        var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-        var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+        var r = c.getBoundingClientRect();
+        var src = e.touches ? e.touches[0] : e;
+        var x = src.clientX - r.left;
+        var y = src.clientY - r.top;
         this.isDrawing = true;
+        this._prevX = x;
+        this._prevY = y;
         this.ctx.beginPath();
         this.ctx.moveTo(x, y);
     },
@@ -183,11 +189,19 @@ window.setupCanvas = {
         if (!this.isDrawing) return;
         if (e && e.preventDefault) e.preventDefault();
         var c = document.getElementById('setup-ttd-canvas'); if (!c) return;
-        var rect = c.getBoundingClientRect();
-        var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-        var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-        this.ctx.lineTo(x, y);
+        var r = c.getBoundingClientRect();
+        var src = e.touches ? e.touches[0] : e;
+        var x = src.clientX - r.left;
+        var y = src.clientY - r.top;
+        // Quadratic Bezier midpoint smoothing
+        var midX = (this._prevX + x) / 2;
+        var midY = (this._prevY + y) / 2;
+        this.ctx.quadraticCurveTo(this._prevX, this._prevY, midX, midY);
         this.ctx.stroke();
+        this.ctx.beginPath();
+        this.ctx.moveTo(midX, midY);
+        this._prevX = x;
+        this._prevY = y;
     },
     stop: function () {
         this.isDrawing = false;
@@ -216,62 +230,67 @@ window.ttdCanvas = {
     init: function () {
         const canvas = document.getElementById('ttd-canvas');
         if (!canvas) return;
+
+        // Unified DPR-based sizing — identical to setupCanvas and pjCanvas approach
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width  = Math.round((rect.width  || 600) * dpr);
+        canvas.height = Math.round((rect.height || 200) * dpr);
+
         this.ctx = canvas.getContext('2d');
+        this.ctx.scale(dpr, dpr);
         this.ctx.strokeStyle = '#1a1a2e';
-        this.ctx.lineWidth = 2.5;
+        this.ctx.lineWidth = 2;  // CSS pixel units — same visual thickness across all canvases
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
         this.isEmpty = true;
+        this._prevX = 0;
+        this._prevY = 0;
 
         const hidePlaceholder = () => {
             const ph = document.getElementById('ttd-placeholder');
             if (ph) ph.style.opacity = '0';
         };
 
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            hidePlaceholder();
-            const t = e.touches[0];
+        // Coordinates in CSS pixel space (ctx.scale handles DPR conversion)
+        const getXY = (e) => {
             const r = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / r.width;
-            const scaleY = canvas.height / r.height;
-            this.isDrawing = true;
-            this.ctx.beginPath();
-            this.ctx.moveTo((t.clientX - r.left) * scaleX, (t.clientY - r.top) * scaleY);
-        }, { passive: false });
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (!this.isDrawing) return;
-            const t = e.touches[0];
-            const r = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / r.width;
-            const scaleY = canvas.height / r.height;
-            this.ctx.lineTo((t.clientX - r.left) * scaleX, (t.clientY - r.top) * scaleY);
-            this.ctx.stroke();
-            this.isEmpty = false;
-        }, { passive: false });
-        canvas.addEventListener('touchend', (e) => { e.preventDefault(); this.isDrawing = false; }, { passive: false });
+            const src = e.touches ? e.touches[0] : e;
+            return { x: src.clientX - r.left, y: src.clientY - r.top };
+        };
 
-        
-        canvas.addEventListener('mousedown', (e) => {
-            hidePlaceholder();
-            const r = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / r.width;
-            const scaleY = canvas.height / r.height;
+        const startDraw = (e, hide) => {
+            if (hide) hidePlaceholder();
+            const p = getXY(e);
             this.isDrawing = true;
+            this._prevX = p.x;
+            this._prevY = p.y;
             this.ctx.beginPath();
-            this.ctx.moveTo((e.clientX - r.left) * scaleX, (e.clientY - r.top) * scaleY);
-        });
-        canvas.addEventListener('mousemove', (e) => {
+            this.ctx.moveTo(p.x, p.y);
+        };
+
+        const moveDraw = (e) => {
             if (!this.isDrawing) return;
-            const r = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / r.width;
-            const scaleY = canvas.height / r.height;
-            this.ctx.lineTo((e.clientX - r.left) * scaleX, (e.clientY - r.top) * scaleY);
+            const p = getXY(e);
+            // Quadratic Bezier midpoint smoothing
+            const midX = (this._prevX + p.x) / 2;
+            const midY = (this._prevY + p.y) / 2;
+            this.ctx.quadraticCurveTo(this._prevX, this._prevY, midX, midY);
             this.ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.moveTo(midX, midY);
+            this._prevX = p.x;
+            this._prevY = p.y;
             this.isEmpty = false;
-        });
-        canvas.addEventListener('mouseup', () => { this.isDrawing = false; });
+        };
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e, true); }, { passive: false });
+        canvas.addEventListener('touchmove',  (e) => { e.preventDefault(); moveDraw(e); },       { passive: false });
+        canvas.addEventListener('touchend',   (e) => { e.preventDefault(); this.isDrawing = false; }, { passive: false });
+
+        canvas.addEventListener('mousedown',  (e) => startDraw(e, true));
+        canvas.addEventListener('mousemove',  (e) => moveDraw(e));
+        canvas.addEventListener('mouseup',    () => { this.isDrawing = false; });
         canvas.addEventListener('mouseleave', () => { this.isDrawing = false; });
     },
 
