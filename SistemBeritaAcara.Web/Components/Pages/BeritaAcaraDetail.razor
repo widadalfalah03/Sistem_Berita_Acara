@@ -1,4 +1,4 @@
-﻿@page "/berita-acara/{Id:int}"
+@page "/berita-acara/{Id:int}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.EntityFrameworkCore
@@ -477,7 +477,8 @@ else
             }
 
             
-            if (From == "rejected" && currentRole != "AdminBA")
+            // Reviewer yang menolak BA boleh melihat detail dari menu Rejected (read-only, tanpa tombol Revisi)
+            if (From == "rejected" && currentRole != "AdminBA" && !isReviewer)
             {
                 Navigation.NavigateTo("/akses-ditolak", true);
                 return;

@@ -1,4 +1,4 @@
-﻿@page "/rejected"
+@page "/rejected"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
@@ -150,10 +150,16 @@ else
                                         @(string.IsNullOrEmpty(entry.Alasan) ? "Menunggu revisi" : entry.Alasan)
                                     </span>
                                 </td>
-                                <td>
-                                    <span style="font-size:13px;color:var(--text-secondary);">
-                                        @(entry.WaktuTolak == default ? "-" : entry.WaktuTolak.ToString("dd MMM yyyy, HH:mm"))
-                                    </span>
+                                <td style="white-space:nowrap;">
+                                    @if (entry.WaktuTolak == default)
+                                    {
+                                        <span style="color:var(--text-muted);">-</span>
+                                    }
+                                    else
+                                    {
+                                        <div>@entry.WaktuTolak.ToString("dd MMM yyyy")</div>
+                                        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">@entry.WaktuTolak.ToString("HH.mm") WIB</div>
+                                    }
                                 </td>
                                 @if (activeTab == "revisi" && currentRole == "AdminBA")
                                 {
