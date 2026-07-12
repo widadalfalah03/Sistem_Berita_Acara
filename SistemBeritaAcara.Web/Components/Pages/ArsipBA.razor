@@ -58,26 +58,26 @@
 
                     <div style="margin-bottom:12px;">
                         <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
-                            Yang Menyerahkan
+                            Admin BA
                         </label>
-                        <input type="text" placeholder="" @bind="menyerahkanSearch" @bind:event="oninput"
-                               style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
+                        <input type="text" placeholder="Cari nama Admin BA" @bind="menyerahkanSearch" @bind:event="oninput"
+                               class="filter-input-field" />
                     </div>
 
                     <div style="margin-bottom:12px;">
                         <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
-                            Yang Mengetahui
+                            Reviewer
                         </label>
-                        <input type="text" placeholder="" @bind="mengetahuiSearch" @bind:event="oninput"
-                               style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
+                        <input type="text" placeholder="Cari nama Reviewer" @bind="mengetahuiSearch" @bind:event="oninput"
+                               class="filter-input-field" />
                     </div>
 
                     <div>
                         <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px;">
-                            Yang Menerima
+                            Penanggung Jawab
                         </label>
-                        <input type="text" placeholder="" @bind="pjSearch" @bind:event="oninput"
-                               style="width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box;" />
+                        <input type="text" placeholder="Cari nama PJ" @bind="pjSearch" @bind:event="oninput"
+                               class="filter-input-field" />
                     </div>
 
                     @if (HasNameFilter)
