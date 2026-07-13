@@ -262,12 +262,11 @@ else
             </div>
 
             <div style="display:@(ttdMode == "upload" ? "block" : "none")">
-                <div style="position:relative;height:200px;border:2px dashed var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;margin-bottom:12px;transition:border-color .15s;"
-                     onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div id="ttd-ul-dropzone" style="position:relative;height:200px;border:2px dashed var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;margin-bottom:12px;transition:border-color .2s,background .2s,transform .2s;">
                     <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
-                        <i class="bi bi-image" style="font-size:30px;color:var(--primary);margin-bottom:8px;"></i>
-                        <div style="font-weight:600;font-size:14px;margin-bottom:3px;">Klik untuk pilih TTD</div>
-                        <div style="font-size:12px;color:var(--text-muted);">JPG, PNG, JPEG Â· Maks. 5MB</div>
+                        <i class="bi bi-cloud-arrow-up" style="font-size:34px;color:var(--primary);margin-bottom:8px;"></i>
+                        <div style="font-weight:600;font-size:14px;margin-bottom:3px;">Klik atau seret file ke sini</div>
+                        <div style="font-size:12px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
                     </div>
                     <div id="ttd-ul-wrap" style="display:none;position:absolute;inset:0;background:white;padding:8px;">
                         <canvas id="ttd-ul-canvas" style="display:block;max-width:100%;max-height:184px;margin:auto;"></canvas>
@@ -340,7 +339,11 @@ else
         if (mode == "draw")
             await JS.InvokeVoidAsync("ttdCanvas.init");
         else
+        {
             try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
+            await Task.Delay(60);
+            try { await JS.InvokeVoidAsync("ttdUpload.initDragDrop", "ttd-ul-dropzone", "ttd-ul-input", "ttd-ul-canvas", "ttd-ul-wrap"); } catch { }
+        }
     }
 
     private async Task ClearCanvasAsync()

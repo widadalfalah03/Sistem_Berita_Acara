@@ -1,4 +1,4 @@
-﻿@page "/buat-ba"
+@page "/buat-ba"
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Authorization
@@ -476,23 +476,20 @@
                     <div class="form-section">
                         <div class="form-section-title">5. Bukti Foto Serah Terima</div>
 
-                        <div style="display:flex;justify-content:center;margin-bottom:16px;">
-                            <label for="photo-upload-input" style="cursor:pointer;display:inline-block;">
-                                <div class="upload-btn-styled">
-                                    <i class="bi bi-cloud-arrow-up-fill" style="font-size:28px;"></i>
-                                    <span style="font-weight:600;font-size:15px;">
-                                        @if (photoFiles.Any() || existingPhotoUrls.Any())
-                                        {
-                                            @("Tambah Foto")
-                                        }
-                                        else
-                                        {
-                                            @("Pilih Foto")
-                                        }
-                                    </span>
-                                    <span style="font-size:12px;color:var(--text-muted);margin-top:2px;text-align:center;">JPG, PNG &middot; maks. 5 MB per file</span>
-                                </div>
-                            </label>
+                        <div id="photo-dropzone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;background:var(--bg-card);cursor:pointer;transition:border-color .2s,background .2s,transform .2s;margin-bottom:16px;position:relative;">
+                            <label for="photo-upload-input" style="position:absolute;inset:0;cursor:pointer;"></label>
+                            <i class="bi bi-cloud-arrow-up-fill" style="font-size:36px;color:var(--primary);display:block;margin-bottom:8px;"></i>
+                            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">
+                                @if (photoFiles.Any() || existingPhotoUrls.Any())
+                                {
+                                    @("Tambah Foto")
+                                }
+                                else
+                                {
+                                    @("Klik atau seret foto ke sini")
+                                }
+                            </div>
+                            <div style="font-size:12px;color:var(--text-muted);">JPG, PNG &middot; maks. 5 MB per file &middot; bisa beberapa sekaligus</div>
                         </div>
                         <InputFile id="photo-upload-input" OnChange="OnPhotosSelected" multiple
                                    accept="image/jpeg,image/png,.jpg,.jpeg,.png" style="display:none;" />
@@ -576,6 +573,8 @@
     private List<(string Url, string Name)> photoDataUrls = new();
     private List<(string RelPath, string Name)> existingPhotoUrls = new();
     private List<string> photosToDelete = new();
+    private DotNetObjectReference<BeritaAcara>? _dotNetRef;
+    private bool _photoDragDropInited = false;
 
     private PegawaiEntity? selectedPj;
     private string pjSearch = string.Empty;
@@ -680,6 +679,27 @@ _currentUserId);
             {
                 editId = null;
             }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_photoDragDropInited)
+        {
+            if (_dotNetRef == null) _dotNetRef = DotNetObjectReference.Create(this);
+            try
+            {
+                var exists = await JSRuntime.InvokeAsync<bool>("eval",
+                    "!!document.getElementById('photo-dropzone')");
+                if (exists)
+                {
+                    // Destroy any stale listener registration before re-wiring to the new DOM element
+                    try { await JSRuntime.InvokeVoidAsync("photoDragDrop.destroy", "photo-dropzone"); } catch { }
+                    await JSRuntime.InvokeVoidAsync("photoDragDrop.init", "photo-dropzone", _dotNetRef);
+                    _photoDragDropInited = true;
+                }
+            }
+            catch { }
         }
     }
 
@@ -830,6 +850,7 @@ _currentUserId);
             photoFiles.Clear();
             var existingIds = existingPhotoUrls.Select(x => x.RelPath).ToList();
             existingPhotoUrls.Clear();
+            _photoDragDropInited = false; // zone will disappear, needs re-init when it comes back
 
             if (editId.HasValue && existingIds.Any())
             {
@@ -861,6 +882,7 @@ Path.DirectorySeparatorChar));
             {
                 model.Perangkat.Add(new());
             }
+            _photoDragDropInited = false; // zone reappears when switching away from Lainnya
         }
 
         TriggerAutoSave();
@@ -946,6 +968,7 @@ Path.DirectorySeparatorChar));
         editId = null;
         autoSaveStatus = AutoSaveState.Idle;
         photosChanged = false;
+        _photoDragDropInited = false;
     }
 
     private void AddPerangkat() => model.Perangkat.Add(new());
@@ -1087,6 +1110,66 @@ Path.DirectorySeparatorChar));
             if (index < photoFiles.Count) photoFiles.RemoveAt(index);
         }
     }
+
+    // Called by JS photoDragDrop when files are dropped onto the photo zone.
+    [Microsoft.JSInterop.JSInvokable]
+    public async Task ReceiveDroppedPhotos(List<DroppedFileDto> files)
+    {
+        if (files == null || files.Count == 0) return;
+        photosChanged = true;
+
+        if (!editId.HasValue) await CreateInitialDraftAsync();
+        if (editId.HasValue && _currentUserId > 0)
+        {
+            autoSaveStatus = AutoSaveState.Saving;
+            await InvokeAsync(StateHasChanged);
+            try
+            {
+                var photoFolder = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "photos");
+                Directory.CreateDirectory(photoFolder);
+                int idx = existingPhotoUrls.Count + 1;
+                foreach (var f in files)
+                {
+                    var bytes = Convert.FromBase64String(f.Base64);
+                    if (!IsValidImageBytes(bytes)) continue;
+                    var ext = f.Mime == "image/png" ? ".png" : ".jpg";
+                    var saveName = $"ba-{editId.Value}-photo-{idx}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{ext}";
+                    var fullPath = System.IO.Path.Combine(photoFolder, saveName);
+                    var relPath = $"files/photos/{saveName}";
+                    await File.WriteAllBytesAsync(fullPath, bytes);
+                    var existingBa = await DbContext.BeritaAcara.FindAsync(editId.Value);
+                    DbContext.BuktiFoto.Add(new BuktiFoto { BaId = editId.Value, BeritaAcara = existingBa!, FilePath = relPath });
+                    existingPhotoUrls.Add((relPath, f.Name));
+                    idx++;
+                }
+                await DbContext.SaveChangesAsync();
+                autoSaveStatus = AutoSaveState.Saved;
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(3000);
+                if (autoSaveStatus == AutoSaveState.Saved) { autoSaveStatus = AutoSaveState.Idle; await InvokeAsync(StateHasChanged); }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "[ReceiveDroppedPhotos] Error saat upload foto via drag-drop");
+                autoSaveStatus = AutoSaveState.Error;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        else
+        {
+            // No draft yet — keep in-memory as data URLs
+            foreach (var f in files)
+            {
+                var bytes = Convert.FromBase64String(f.Base64);
+                if (!IsValidImageBytes(bytes)) continue;
+                var mime = f.Mime ?? "image/jpeg";
+                photoDataUrls.Add(($"data:{mime};base64,{f.Base64}", f.Name));
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public record DroppedFileDto(string Name, string Base64, string Mime);
 
     private async Task RemoveExistingPhoto(int index)
     {
@@ -1396,6 +1479,8 @@ false).Take(8).ToList();
         _autoSaveCts?.Cancel();
         _autoSaveCts?.Dispose();
         _autoSaveCts = null;
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
     }
 
     private class CreateBaModel

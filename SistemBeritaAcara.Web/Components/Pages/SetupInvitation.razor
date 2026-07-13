@@ -1,4 +1,4 @@
-﻿@page "/invitation"
+@page "/invitation"
 @layout EmptyLayout
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.SignalR
@@ -124,12 +124,12 @@
                         </div>
                     </div>
 
-                    <div style="display:@(setupTtdMode == "upload" ? "block" : "none");position:relative;height:200px;margin-bottom:12px;">
+                    <div id="setup-ul-dropzone" style="display:@(setupTtdMode == "upload" ? "block" : "none");position:relative;height:200px;margin-bottom:12px;transition:border-color .2s,background .2s,transform .2s;">
                         <label for="setup-ul-input" style="position:absolute;inset:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg-card);"
                                onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-                            <i class="bi bi-image" style="font-size:26px;color:var(--primary);margin-bottom:6px;"></i>
-                            <div style="font-weight:600;font-size:13px;margin-bottom:2px;">Klik untuk pilih gambar</div>
-                            <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG Ã‚Â· Maks. 5MB</div>
+                            <i class="bi bi-cloud-arrow-up" style="font-size:32px;color:var(--primary);margin-bottom:6px;"></i>
+                            <div style="font-weight:600;font-size:13px;margin-bottom:2px;">Klik atau seret file ke sini</div>
+                            <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
                             <input type="file" id="setup-ul-input" accept="image/*" style="display:none"
                                    onchange="ttdUpload.onFileChange('setup-ul-input', 'setup-ul-canvas', 'setup-ul-wrap')" />
                         </label>
@@ -320,6 +320,9 @@
         else
         {
             try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
+            // Init drag-and-drop after a brief render delay
+            await Task.Delay(60);
+            try { await JS.InvokeVoidAsync("ttdUpload.initDragDrop", "setup-ul-dropzone", "setup-ul-input", "setup-ul-canvas", "setup-ul-wrap"); } catch { }
         }
     }
 

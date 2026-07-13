@@ -137,6 +137,66 @@ window.ttdUpload = {
         ['ttd-ul-wrap', 'setup-ul-wrap', 'pj-ul-wrap'].forEach(function (id) {
             var el = document.getElementById(id); if (el) el.style.display = 'none';
         });
+        // Reset drag-over styling on all known TTD drop zones
+        ['ttd-ul-dropzone', 'setup-ul-dropzone', 'pj-ul-dropzone'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('drag-over');
+                el.style.borderColor = '';
+                el.style.background = '';
+            }
+        });
+    },
+
+    // initDragDrop: wire drag-and-drop onto a TTD drop zone element.
+    // dropzoneId   - the container element id (has the dashed border)
+    // inputId      - the hidden <input type="file"> id
+    // canvasId     - canvas to render the preview into
+    // wrapId       - wrapper shown when an image is loaded
+    initDragDrop: function (dropzoneId, inputId, canvasId, wrapId) {
+        var zone = document.getElementById(dropzoneId);
+        if (!zone || zone._dragInited) return;
+        zone._dragInited = true;
+        var self = this;
+
+        var highlight = function () {
+            zone.style.borderColor = 'var(--primary)';
+            zone.style.background = 'rgba(var(--primary-rgb,59,130,246),0.06)';
+        };
+        var unhighlight = function () {
+            zone.style.borderColor = '';
+            zone.style.background = '';
+        };
+
+        zone.addEventListener('dragenter', function (e) { e.preventDefault(); e.stopPropagation(); highlight(); });
+        zone.addEventListener('dragover',  function (e) { e.preventDefault(); e.stopPropagation(); highlight(); });
+        zone.addEventListener('dragleave', function (e) { e.preventDefault(); e.stopPropagation();
+            // only unhighlight when leaving the zone itself, not a child
+            if (!zone.contains(e.relatedTarget)) unhighlight();
+        });
+        zone.addEventListener('drop', function (e) {
+            e.preventDefault(); e.stopPropagation(); unhighlight();
+            var files = e.dataTransfer && e.dataTransfer.files;
+            if (!files || !files[0]) return;
+            var file = files[0];
+            if (file.size > 5 * 1024 * 1024) { alert('Ukuran file terlalu besar. Maksimal 5MB.'); return; }
+            if (!file.type.startsWith('image/')) { alert('File harus berupa gambar (JPG, PNG, dll).'); return; }
+            // Sync to the hidden input so the label/input remains consistent
+            var input = document.getElementById(inputId);
+            if (input) {
+                try {
+                    var dt = new DataTransfer();
+                    dt.items.add(file);
+                    input.files = dt.files;
+                } catch(ex) { /* Safari fallback — DataTransfer not writable */ }
+            }
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                self._origSrc = ev.target.result;
+                self._reprocess(ev.target.result, canvasId, wrapId);
+            };
+            reader.readAsDataURL(file);
+        });
     }
 };
 
@@ -408,5 +468,67 @@ window.profilCropperSetup = {
         
         // Clear input
         inputElement.value = '';
+    }
+};
+
+// photoDragDrop: handles drag-and-drop for the Bukti Foto Serah Terima upload zone.
+// Call photoDragDrop.init(dropzoneId, dotNetRef) from Blazor after the zone is rendered.
+// dotNetRef must expose a method: InvokeAsync("ReceiveDroppedPhotos", [{name, base64, mime},...])
+window.photoDragDrop = {
+    _inited: {},
+
+    init: function (dropzoneId, dotNetRef) {
+        if (this._inited[dropzoneId]) return;
+        this._inited[dropzoneId] = true;
+        var zone = document.getElementById(dropzoneId);
+        if (!zone) return;
+
+        var highlight = function () {
+            zone.style.borderColor = 'var(--primary)';
+            zone.style.background = 'rgba(var(--primary-rgb,59,130,246),0.07)';
+            zone.style.transform = 'scale(1.01)';
+        };
+        var unhighlight = function () {
+            zone.style.borderColor = '';
+            zone.style.background = '';
+            zone.style.transform = '';
+        };
+
+        var readFiles = function (files) {
+            var fileArray = Array.from(files).filter(function (f) {
+                return f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024;
+            });
+            if (fileArray.length === 0) return;
+            var results = [];
+            var pending = fileArray.length;
+            fileArray.forEach(function (file) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var dataUrl = e.target.result;
+                    var comma = dataUrl.indexOf(',');
+                    results.push({ name: file.name, base64: dataUrl.substring(comma + 1), mime: file.type });
+                    pending--;
+                    if (pending === 0) {
+                        dotNetRef.invokeMethodAsync('ReceiveDroppedPhotos', results);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        zone.addEventListener('dragenter', function (e) { e.preventDefault(); e.stopPropagation(); highlight(); });
+        zone.addEventListener('dragover',  function (e) { e.preventDefault(); e.stopPropagation(); highlight(); });
+        zone.addEventListener('dragleave', function (e) { e.preventDefault(); e.stopPropagation();
+            if (!zone.contains(e.relatedTarget)) unhighlight();
+        });
+        zone.addEventListener('drop', function (e) {
+            e.preventDefault(); e.stopPropagation(); unhighlight();
+            var files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) readFiles(files);
+        });
+    },
+
+    destroy: function (dropzoneId) {
+        delete this._inited[dropzoneId];
     }
 };
