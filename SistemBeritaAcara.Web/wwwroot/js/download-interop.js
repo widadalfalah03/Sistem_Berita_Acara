@@ -10,6 +10,54 @@ window.downloadFileFromBytes = function (fileName, contentType, byteArray) {
     URL.revokeObjectURL(url);
 };
 
+// Drag-and-drop interop untuk upload dokumen (DOCX/PDF) — assign ke file input lalu dispatch change
+window.docUploadDrop = {
+    _h: {},
+    init: function (dropZoneId, inputId, dotNetRef) {
+        const zone  = document.getElementById(dropZoneId);
+        const input = document.getElementById(inputId);
+        if (!zone || !input) return;
+        this.destroy(dropZoneId);
+
+        const onOver = function (e) {
+            e.preventDefault(); e.stopPropagation();
+            dotNetRef.invokeMethodAsync('OnDocDragOver');
+        };
+        const onLeave = function (e) {
+            if (!zone.contains(e.relatedTarget))
+                dotNetRef.invokeMethodAsync('OnDocDragLeave');
+        };
+        const onDrop = function (e) {
+            e.preventDefault(); e.stopPropagation();
+            dotNetRef.invokeMethodAsync('OnDocDragLeave');
+            var files = e.dataTransfer && e.dataTransfer.files;
+            if (!files || files.length === 0) return;
+            try {
+                var dt = new DataTransfer();
+                dt.items.add(files[0]);
+                input.files = dt.files;
+                // Trigger Blazor InputFile.OnChange via native change event
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (err) {
+                console.error('[docUploadDrop] drop error:', err);
+            }
+        };
+
+        zone.addEventListener('dragover',  onOver);
+        zone.addEventListener('dragleave', onLeave);
+        zone.addEventListener('drop',      onDrop);
+        this._h[dropZoneId] = { zone: zone, onOver: onOver, onLeave: onLeave, onDrop: onDrop };
+    },
+    destroy: function (dropZoneId) {
+        var h = this._h[dropZoneId];
+        if (!h) return;
+        h.zone.removeEventListener('dragover',  h.onOver);
+        h.zone.removeEventListener('dragleave', h.onLeave);
+        h.zone.removeEventListener('drop',      h.onDrop);
+        delete this._h[dropZoneId];
+    }
+};
+
 // Drag-and-drop interop untuk area upload Excel
 window.excelDropZone = {
     init: function (dropZoneId, dotnetRef) {

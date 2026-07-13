@@ -10,6 +10,7 @@
 @inject NavigationManager Navigation
 @inject IExcelService ExcelService
 @inject IJSRuntime JS
+@inject SistemBeritaAcara.Core.Interfaces.IDocumentService DocumentService
 @using SistemBeritaAcara.Core.Interfaces
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
@@ -176,7 +177,7 @@ else
                         <th>Jenis Berita Acara</th>
                         <th>Keterangan</th>
                         <th>Tanggal</th>
-                        <th style="width:90px;text-align:center;">Aksi</th>
+                        <th style="width:180px;text-align:center;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -210,14 +211,49 @@ else
                             </td>
                             <td>
                                 <div style="display:flex;align-items:center;justify-content:center;gap:6px;" @onclick:stopPropagation>
-                                    @if (!string.IsNullOrEmpty(ba.DocxFinalPath) || !string.IsNullOrEmpty(ba.DocxPath))
+                                    @if (ba.Jenis == "Lainnya" && currentRole == "AdminBA" && ba.CreatedBy == currentUserId)
                                     {
-                                        <button class="btn-icon" title="Pratinjau" @onclick="@(() => previewBaId = ba.Id)">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                        <a href="/api/ba/@ba.Id/download" download class="btn-icon" title="Unduh">
-                                            <i class="bi bi-download"></i>
+                                        @* Lainnya: DOCX download, upload, preview, PDF download *@
+                                        <a href="/api/ba/@ba.Id/download-docx" download class="btn-icon" title="Download DOCX untuk diedit"
+                                           style="color:var(--primary);">
+                                            <i class="bi bi-file-earmark-word"></i>
                                         </a>
+                                        <button class="btn-icon" title="Upload Dokumen"
+                                                style="color:var(--success);"
+                                                @onclick="@(() => OpenUploadModal(ba.Id, ba.NomorSurat ?? $"BA-{ba.Id}"))">
+                                            <i class="bi bi-upload"></i>
+                                        </button>
+                                        @if (!string.IsNullOrEmpty(ba.DocxFinalPath) || !string.IsNullOrEmpty(ba.DocxPath))
+                                        {
+                                            <button class="btn-icon" title="Pratinjau" @onclick="@(() => previewBaId = ba.Id)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <a href="/api/ba/@ba.Id/download" download class="btn-icon" title="Unduh PDF">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        @* Non-Lainnya: 2 spacer + preview + PDF download agar sejajar dengan BA Lainnya *@
+                                        @if (!string.IsNullOrEmpty(ba.DocxFinalPath) || !string.IsNullOrEmpty(ba.DocxPath))
+                                        {
+                                            <span style="width:36px;height:36px;display:inline-block;flex-shrink:0;"></span>
+                                            <span style="width:36px;height:36px;display:inline-block;flex-shrink:0;"></span>
+                                            <button class="btn-icon" title="Pratinjau" @onclick="@(() => previewBaId = ba.Id)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <a href="/api/ba/@ba.Id/download" download class="btn-icon" title="Unduh PDF">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span style="width:36px;height:36px;display:inline-block;flex-shrink:0;"></span>
+                                            <span style="width:36px;height:36px;display:inline-block;flex-shrink:0;"></span>
+                                            <span style="width:36px;height:36px;display:inline-block;flex-shrink:0;"></span>
+                                            <span style="width:36px;height:36px;display:inline-block;flex-shrink:0;"></span>
+                                        }
                                     }
                                 </div>
                             </td>
@@ -250,6 +286,87 @@ else
     </div>
 }
 
+@if (uploadModalBaId.HasValue)
+{
+    <div class="modal-overlay" @onclick="CloseUploadModal">
+        <div class="modal-content" @onclick:stopPropagation
+             style="max-width:480px;padding:28px 32px;border-radius:var(--radius-lg);">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-file-earmark-arrow-up" style="color:var(--primary);font-size:18px;"></i>
+                </div>
+                <div>
+                    <div style="font-size:16px;font-weight:700;color:var(--text-primary);">Upload Dokumen</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">@uploadModalNomorSurat</div>
+                </div>
+                <button type="button" @onclick="CloseUploadModal" @onclick:stopPropagation class="btn-icon" style="margin-left:auto;flex-shrink:0;">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.6;">
+                Upload file DOCX atau PDF hasil edit dari MS Word. File yang sudah ada akan diganti.
+            </div>
+
+            @* InputFile diletakkan di LUAR drop zone agar tidak mempengaruhi event bubbling *@
+            <InputFile OnChange="OnFileSelected" accept=".docx,.pdf"
+                       style="display:none;" id="upload-file-input" />
+
+            <div id="upload-drop-zone"
+                 style="border:2px dashed @(isDragOver ? "var(--primary)" : "var(--border)");border-radius:var(--radius);padding:28px 24px;text-align:center;transition:border-color .15s,background .15s;background:@(isDragOver ? "var(--primary-light)" : "var(--bg)");"
+                 ondragover="event.preventDefault()"
+                 ondrop="event.preventDefault()">
+                @* Label yang wrap hanya konten di dalam drop zone — klik label trigger input *@
+                <label for="upload-file-input" style="display:block;cursor:pointer;">
+                    @if (selectedFile is null)
+                    {
+                        <i class="bi bi-file-earmark-arrow-up" style="font-size:32px;color:var(--text-muted);display:block;margin-bottom:10px;"></i>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Drag & drop atau klik untuk pilih file</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">.docx atau .pdf — maks. 20 MB</div>
+                    }
+                    else
+                    {
+                        <i class="bi bi-file-earmark-check" style="font-size:32px;color:var(--success);display:block;margin-bottom:10px;"></i>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">@selectedFile.Name</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">@((selectedFile.Size / 1024.0).ToString("0.0")) KB — <span style="color:var(--primary);">Ganti file</span></div>
+                    }
+                </label>
+            </div>
+
+            @if (!string.IsNullOrEmpty(uploadError))
+            {
+                <div style="margin-top:12px;padding:10px 14px;background:var(--danger-light);border:1px solid var(--danger);border-radius:var(--radius);font-size:13px;color:var(--danger);display:flex;align-items:center;gap:8px;">
+                    <i class="bi bi-exclamation-circle"></i> @uploadError
+                </div>
+            }
+
+            @if (uploadSuccess)
+            {
+                <div style="margin-top:12px;padding:10px 14px;background:var(--success-light);border:1px solid var(--success);border-radius:var(--radius);font-size:13px;color:var(--success);display:flex;align-items:center;gap:8px;">
+                    <i class="bi bi-check-circle"></i> Dokumen berhasil diunggah!
+                </div>
+            }
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                <button type="button" class="btn btn-outline" @onclick="CloseUploadModal" @onclick:stopPropagation disabled="@isUploading">Batal</button>
+                <button type="button" class="btn btn-primary" @onclick="UploadFinalAsync" @onclick:stopPropagation
+                        disabled="@(selectedFile is null || isUploading)"
+                        style="display:flex;align-items:center;gap:7px;min-width:120px;justify-content:center;">
+                    @if (isUploading)
+                    {
+                        <div class="spinner" style="width:14px;height:14px;border-width:2px;border-color:white;border-top-color:transparent;flex-shrink:0;"></div>
+                        <span>Mengupload...</span>
+                    }
+                    else
+                    {
+                        <span>Upload</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<BeritaAcaraEntity> allBA = new();
     private bool isLoading = true;
@@ -259,6 +376,15 @@ else
     private bool showNamePopover = false;
     private bool showJenisDropdown = false;
     private int? previewBaId;
+
+    // Upload final state
+    private int? uploadModalBaId;
+    private string uploadModalNomorSurat = string.Empty;
+    private IBrowserFile? selectedFile;
+    private bool isUploading = false;
+    private string uploadError = string.Empty;
+    private bool uploadSuccess = false;
+    private bool isDragOver = false;
 
     private string _search = string.Empty;
     private string search
@@ -431,6 +557,137 @@ else
         }
     }
 
+    private DotNetObjectReference<ArsipBA>? _dotNetRef;
+    private bool _dragDropNeedsInit = false;
+
+    private void OpenUploadModal(int baId, string nomorSurat)
+    {
+        uploadModalBaId = baId;
+        uploadModalNomorSurat = nomorSurat;
+        selectedFile = null;
+        uploadError = string.Empty;
+        uploadSuccess = false;
+        isDragOver = false;
+        _dragDropNeedsInit = true;
+    }
+
+    private async Task CloseUploadModal()
+    {
+        if (isUploading) return;
+        try { await JS.InvokeVoidAsync("docUploadDrop.destroy", "upload-drop-zone"); } catch { }
+        uploadModalBaId = null;
+        selectedFile = null;
+        uploadError = string.Empty;
+        uploadSuccess = false;
+        isDragOver = false;
+    }
+
+    [JSInvokable] public void OnDocDragOver()  { isDragOver = true;  StateHasChanged(); }
+    [JSInvokable] public void OnDocDragLeave() { isDragOver = false; StateHasChanged(); }
+
+    private void OnFileSelected(InputFileChangeEventArgs e)
+    {
+        uploadError = string.Empty;
+        uploadSuccess = false;
+        selectedFile = e.File;
+
+        var ext = Path.GetExtension(selectedFile.Name).ToLowerInvariant();
+        if (ext != ".docx" && ext != ".pdf")
+        {
+            uploadError = "Hanya file .docx atau .pdf yang diizinkan.";
+            selectedFile = null;
+            return;
+        }
+        if (selectedFile.Size > 20 * 1024 * 1024)
+        {
+            uploadError = "Ukuran file maksimal 20 MB.";
+            selectedFile = null;
+        }
+    }
+
+    private async Task UploadFinalAsync()
+    {
+        if (selectedFile is null || uploadModalBaId is null) return;
+        isUploading = true;
+        uploadError = string.Empty;
+        uploadSuccess = false;
+
+        try
+        {
+            var ext = Path.GetExtension(selectedFile.Name).ToLowerInvariant();
+            if (ext != ".docx" && ext != ".pdf")
+            {
+                uploadError = "Hanya file .docx atau .pdf yang diizinkan.";
+                return;
+            }
+            if (selectedFile.Size > 20 * 1024 * 1024)
+            {
+                uploadError = "Ukuran file maksimal 20 MB.";
+                return;
+            }
+
+            var docFolder = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles", "documents");
+            Directory.CreateDirectory(docFolder);
+
+            var newFileName = $"ba-{uploadModalBaId}-final-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}{ext}";
+            var newPhysicalPath = Path.Combine(docFolder, newFileName);
+            var newRelPath = $"files/documents/{newFileName}";
+
+            // Simpan file ke disk
+            using (var fs = new FileStream(newPhysicalPath, FileMode.Create, FileAccess.Write))
+            {
+                var maxSize = 20 * 1024 * 1024;
+                using var uploadStream = selectedFile.OpenReadStream(maxAllowedSize: maxSize);
+                await uploadStream.CopyToAsync(fs);
+            }
+
+            // Konversi DOCX → PDF jika perlu
+            if (ext == ".docx")
+                await DocumentService.ConvertDocxToPdfAsync(newPhysicalPath);
+
+            // Hapus file final lama
+            var ba = allBA.FirstOrDefault(b => b.Id == uploadModalBaId.Value);
+            if (ba is not null && !string.IsNullOrEmpty(ba.DocxFinalPath))
+            {
+                try
+                {
+                    var oldPhysical = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
+                        ba.DocxFinalPath.TrimStart('/').Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    if (File.Exists(oldPhysical)) File.Delete(oldPhysical);
+                    var oldPdf = oldPhysical.Replace(".docx", ".pdf");
+                    if (File.Exists(oldPdf)) File.Delete(oldPdf);
+                }
+                catch { /* abaikan error hapus file lama */ }
+            }
+
+            // Update database
+            DbContext.ChangeTracker.Clear();
+            var trackedBa = await DbContext.Set<BeritaAcaraEntity>().FindAsync(uploadModalBaId.Value);
+            if (trackedBa is null)
+            {
+                uploadError = "BA tidak ditemukan di database.";
+                return;
+            }
+            trackedBa.DocxFinalPath = newRelPath;
+            await DbContext.SaveChangesAsync();
+
+            // Update list lokal
+            if (ba is not null)
+                ba.DocxFinalPath = newRelPath;
+
+            uploadSuccess = true;
+            selectedFile = null;
+        }
+        catch (Exception ex)
+        {
+            uploadError = $"Gagal upload: {ex.Message}";
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
     private async Task ReloadArchiveAsync()
     {
         try
@@ -450,11 +707,17 @@ else
         }
     }
 
-    protected override Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
             _ = ConnectSignalRAsync();
-        return Task.CompletedTask;
+
+        if (_dragDropNeedsInit && uploadModalBaId.HasValue)
+        {
+            _dragDropNeedsInit = false;
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            try { await JS.InvokeVoidAsync("docUploadDrop.init", "upload-drop-zone", "upload-file-input", _dotNetRef); } catch { }
+        }
     }
 
     private HubConnection? _hubConnection;
@@ -492,5 +755,6 @@ else
             await _hubConnection.StopAsync();
             await _hubConnection.DisposeAsync();
         }
+        _dotNetRef?.Dispose();
     }
 }

@@ -476,10 +476,11 @@
                     <div class="form-section">
                         <div class="form-section-title">5. Bukti Foto Serah Terima</div>
 
-                        <div id="photo-dropzone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;background:var(--bg-card);cursor:pointer;transition:border-color .2s,background .2s,transform .2s;margin-bottom:16px;position:relative;">
-                            <label for="photo-upload-input" style="position:absolute;inset:0;cursor:pointer;"></label>
-                            <i class="bi bi-cloud-arrow-up-fill" style="font-size:36px;color:var(--primary);display:block;margin-bottom:8px;"></i>
-                            <div style="font-weight:600;font-size:15px;margin-bottom:4px;">
+                        <div id="photo-dropzone"
+                             style="border:2px dashed var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;background:var(--bg-card);cursor:pointer;transition:border-color .2s,background .2s,transform .2s;margin-bottom:16px;position:relative;"
+                             onclick="document.getElementById('photo-upload-input').click()">
+                            <i class="bi bi-cloud-arrow-up-fill" style="font-size:36px;color:var(--primary);display:block;margin-bottom:8px;pointer-events:none;"></i>
+                            <div style="font-weight:600;font-size:15px;margin-bottom:4px;pointer-events:none;">
                                 @if (photoFiles.Any() || existingPhotoUrls.Any())
                                 {
                                     @("Tambah Foto")
@@ -489,7 +490,7 @@
                                     @("Klik atau seret foto ke sini")
                                 }
                             </div>
-                            <div style="font-size:12px;color:var(--text-muted);">JPG, PNG &middot; maks. 5 MB per file &middot; bisa beberapa sekaligus</div>
+                            <div style="font-size:12px;color:var(--text-muted);pointer-events:none;">JPG, PNG &middot; maks. 5 MB per file &middot; bisa beberapa sekaligus</div>
                         </div>
                         <InputFile id="photo-upload-input" OnChange="OnPhotosSelected" multiple
                                    accept="image/jpeg,image/png,.jpg,.jpeg,.png" style="display:none;" />

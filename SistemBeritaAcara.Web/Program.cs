@@ -1,4 +1,4 @@
-using Hangfire;
+﻿using Hangfire;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
@@ -80,7 +80,7 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
         IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('BeritaAcara') AND name = 'WasRejected')
             ALTER TABLE [BeritaAcara] ADD [WasRejected] bit NOT NULL DEFAULT 0;
 
-        -- MustChangePw dihapus dari entity C# — hapus kolom dari DB agar INSERT tidak gagal (NOT NULL tanpa DEFAULT)
+        -- MustChangePw dihapus dari entity C# â€” hapus kolom dari DB agar INSERT tidak gagal (NOT NULL tanpa DEFAULT)
         IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'MustChangePw')
         BEGIN
             -- Drop default constraint dulu jika ada, baru drop kolom
@@ -134,10 +134,10 @@ using (var preScope = builder.Services.BuildServiceProvider().CreateScope())
             IF @fkMenyerahkan IS NOT NULL
                 EXEC('ALTER TABLE [BeritaAcara] DROP CONSTRAINT [' + @fkMenyerahkan + ']')
 
-            -- Normalisasi: set 0 → NULL
+            -- Normalisasi: set 0 â†’ NULL
             UPDATE [BeritaAcara] SET [MenyerahkanId] = NULL WHERE [MenyerahkanId] = 0
 
-            -- Konversi PegawaiId → UserId (via Users.PegawaiId)
+            -- Konversi PegawaiId â†’ UserId (via Users.PegawaiId)
             UPDATE ba
             SET ba.[MenyerahkanId] = u.[Id]
             FROM [BeritaAcara] ba
@@ -368,6 +368,36 @@ app.MapGet("/api/ba/{baId:int}/download", async (
 
     var bytes = await File.ReadAllBytesAsync(pdfPath);
     return Results.File(bytes, "application/pdf", filename);
+}).RequireAuthorization().DisableAntiforgery();
+
+
+// Download DOCX template untuk BA Lainnya (agar bisa diedit di MS Word)
+app.MapGet("/api/ba/{baId:int}/download-docx", async (
+    int baId,
+    HttpContext ctx,
+    SistemBeritaAcara.Infrastructure.Data.AppDbContext db) =>
+{
+    var ba = await db.BeritaAcara.FindAsync(baId);
+    if (ba == null || ba.Jenis != "Lainnya") return Results.NotFound();
+
+    var userIdStr = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!int.TryParse(userIdStr, out int userId) || ba.CreatedBy != userId)
+        return Results.Forbid();
+
+    var docxRelPath = ba.DocxFinalPath ?? ba.DocxPath;
+    if (string.IsNullOrEmpty(docxRelPath)) return Results.NotFound();
+
+    var docxPhysical = Path.Combine(Directory.GetCurrentDirectory(), "AppFiles",
+        docxRelPath.TrimStart('/').Replace("files/", "").Replace("/", Path.DirectorySeparatorChar.ToString()));
+
+    if (!File.Exists(docxPhysical)) return Results.NotFound();
+
+    string filename = !string.IsNullOrEmpty(ba.NomorSurat)
+        ? $"Berita_Acara_{ba.NomorSurat.Replace("/", "_")}.docx"
+        : $"Berita_Acara_Lainnya_{ba.Id}.docx";
+
+    var bytes = await File.ReadAllBytesAsync(docxPhysical);
+    return Results.File(bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", filename);
 }).RequireAuthorization().DisableAntiforgery();
 
 

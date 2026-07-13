@@ -471,15 +471,12 @@ window.profilCropperSetup = {
     }
 };
 
-// photoDragDrop: handles drag-and-drop for the Bukti Foto Serah Terima upload zone.
-// Call photoDragDrop.init(dropzoneId, dotNetRef) from Blazor after the zone is rendered.
-// dotNetRef must expose a method: InvokeAsync("ReceiveDroppedPhotos", [{name, base64, mime},...])
 window.photoDragDrop = {
-    _inited: {},
+    _state: {},
 
     init: function (dropzoneId, dotNetRef) {
-        if (this._inited[dropzoneId]) return;
-        this._inited[dropzoneId] = true;
+        this.destroy(dropzoneId);
+        var self = this;
         var zone = document.getElementById(dropzoneId);
         if (!zone) return;
 
@@ -503,32 +500,43 @@ window.photoDragDrop = {
             var pending = fileArray.length;
             fileArray.forEach(function (file) {
                 var reader = new FileReader();
-                reader.onload = function (e) {
-                    var dataUrl = e.target.result;
+                reader.onload = function (ev) {
+                    var dataUrl = ev.target.result;
                     var comma = dataUrl.indexOf(',');
                     results.push({ name: file.name, base64: dataUrl.substring(comma + 1), mime: file.type });
-                    pending--;
-                    if (pending === 0) {
-                        dotNetRef.invokeMethodAsync('ReceiveDroppedPhotos', results);
-                    }
+                    if (--pending === 0) dotNetRef.invokeMethodAsync('ReceiveDroppedPhotos', results);
                 };
                 reader.readAsDataURL(file);
             });
         };
 
-        zone.addEventListener('dragenter', function (e) { e.preventDefault(); e.stopPropagation(); highlight(); });
-        zone.addEventListener('dragover',  function (e) { e.preventDefault(); e.stopPropagation(); highlight(); });
-        zone.addEventListener('dragleave', function (e) { e.preventDefault(); e.stopPropagation();
+        var onEnter = function (e) { e.preventDefault(); e.stopPropagation(); highlight(); };
+        var onOver  = function (e) { e.preventDefault(); e.stopPropagation(); highlight(); };
+        var onLeave = function (e) {
+            e.preventDefault(); e.stopPropagation();
             if (!zone.contains(e.relatedTarget)) unhighlight();
-        });
-        zone.addEventListener('drop', function (e) {
+        };
+        var onDrop  = function (e) {
             e.preventDefault(); e.stopPropagation(); unhighlight();
             var files = e.dataTransfer && e.dataTransfer.files;
             if (files && files.length > 0) readFiles(files);
-        });
+        };
+
+        zone.addEventListener('dragenter', onEnter);
+        zone.addEventListener('dragover',  onOver);
+        zone.addEventListener('dragleave', onLeave);
+        zone.addEventListener('drop',      onDrop);
+
+        self._state[dropzoneId] = { zone: zone, onEnter: onEnter, onOver: onOver, onLeave: onLeave, onDrop: onDrop };
     },
 
     destroy: function (dropzoneId) {
-        delete this._inited[dropzoneId];
+        var s = this._state[dropzoneId];
+        if (!s) return;
+        s.zone.removeEventListener('dragenter', s.onEnter);
+        s.zone.removeEventListener('dragover',  s.onOver);
+        s.zone.removeEventListener('dragleave', s.onLeave);
+        s.zone.removeEventListener('drop',      s.onDrop);
+        delete this._state[dropzoneId];
     }
 };
