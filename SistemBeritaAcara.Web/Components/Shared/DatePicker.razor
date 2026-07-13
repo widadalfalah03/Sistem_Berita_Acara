@@ -24,7 +24,7 @@
     @if (isOpen)
     {
         <div @onclick="CloseBackdrop" style="position:fixed;inset:0;z-index:199;"></div>
-        <div style="@PopupPositionStyle z-index:200;background:white;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);width:300px;overflow:hidden;"
+        <div class="dp-popup" style="@PopupPositionStyle z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18),0 0 0 1px var(--border);width:300px;overflow:hidden;"
              @onclick:stopPropagation>
 
             
@@ -65,8 +65,8 @@
                             var isCurrentMonth = viewDate.Month == month;
                             <button type="button" @onclick="() => SelectMonth(month)"
                                     style="padding:5px 2px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:@(isCurrentMonth ? "700" : "400");background:@(isCurrentMonth ? "var(--primary)" : "transparent");color:@(isCurrentMonth ? "white" : "var(--text-primary)");transition:all .12s;"
-                                    onmouseover="if(this.style.background!='var(--primary)')this.style.background='var(--primary-light)'"
-                                    onmouseout="if(this.style.background!='var(--primary)')this.style.background='transparent'">
+                                    onmouseover="if(this.style.background!='var(--primary)'){this.style.background='var(--primary-light)';this.style.color='var(--primary)';}"
+                                    onmouseout="if(this.style.background!='var(--primary)'){this.style.background='transparent';this.style.color='var(--text-primary)';}">
                                 @MonthShort[month - 1]
                             </button>
                         }
@@ -79,8 +79,8 @@
                             var isCurrentYear = viewDate.Year == year;
                             <button type="button" @onclick="() => SelectYear(year)"
                                     style="padding:5px 2px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:@(isCurrentYear ? "700" : "400");background:@(isCurrentYear ? "var(--primary)" : "transparent");color:@(isCurrentYear ? "white" : "var(--text-primary)");transition:all .12s;"
-                                    onmouseover="if(this.style.background!='var(--primary)')this.style.background='var(--primary-light)'"
-                                    onmouseout="if(this.style.background!='var(--primary)')this.style.background='transparent'">
+                                    onmouseover="if(this.style.background!='var(--primary)'){this.style.background='var(--primary-light)';this.style.color='var(--primary)';}"
+                                    onmouseout="if(this.style.background!='var(--primary)'){this.style.background='transparent';this.style.color='var(--text-primary)';}">
                                 @year
                             </button>
                         }
@@ -114,7 +114,7 @@
                                          (MaxDate.HasValue && c.Date.Date > MaxDate.Value.Date);
 
                         string bg = isSelected ? "var(--primary)" : "transparent";
-                        string color = isSelected ? "white" : isDisabled ? "var(--text-muted)" : isOtherMonth ? "#bbb" : "var(--text-primary)";
+                        string color = isSelected ? "white" : isDisabled ? "var(--text-muted)" : isOtherMonth ? "var(--text-muted)" : "var(--text-primary)";
                         string border = isToday && !isSelected ? "1.5px solid var(--primary)" : "1.5px solid transparent";
                         string fontW = isSelected || isToday ? "700" : "400";
                         string cursor = isDisabled ? "not-allowed" : "pointer";
