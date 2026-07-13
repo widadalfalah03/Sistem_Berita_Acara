@@ -11,7 +11,6 @@
 @inject IExcelService ExcelService
 @inject IJSRuntime JS
 @using SistemBeritaAcara.Core.Interfaces
-@inject IBACounterService BACounterService
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @implements IAsyncDisposable
@@ -220,20 +219,6 @@ else
                                             <i class="bi bi-download"></i>
                                         </a>
                                     }
-                                    @if (ba.Jenis == "Lainnya" && currentRole == "AdminBA" && ba.CreatedBy == currentUserId)
-                                    {
-                                        <button class="btn-icon" title="Hapus BA"
-                                                style="color:var(--danger);"
-                                                onmouseover="this.style.background='#fef2f2'"
-                                                onmouseout="this.style.background=''"
-                                                @onclick="@(() => confirmDeleteId = ba.Id)">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <span style="width:32px;height:32px;display:inline-block;flex-shrink:0;"></span>
-                                    }
                                 </div>
                             </td>
                         </tr>
@@ -265,33 +250,6 @@ else
     </div>
 }
 
-@if (confirmDeleteId is not null)
-{
-    <div style="position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4);">
-        <div style="background:var(--surface);border-radius:var(--radius-lg);padding:28px 32px;max-width:420px;width:100%;box-shadow:var(--shadow-xl);">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                <div style="width:40px;height:40px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-trash" style="color:#ef4444;font-size:18px;"></i>
-                </div>
-                <div style="font-size:16px;font-weight:700;color:var(--text-primary);">Hapus Berita Acara?</div>
-            </div>
-            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;">
-                BA <strong>@(allBA.FirstOrDefault(b => b.Id == confirmDeleteId)?.NomorSurat ?? $"#{confirmDeleteId}")</strong> akan dihapus permanen dari sistem. Tindakan ini tidak dapat dibatalkan.
-            </div>
-            <div style="display:flex;gap:12px;justify-content:flex-end;">
-                <button class="btn btn-outline" @onclick="() => confirmDeleteId = null" disabled="@isDeleting">Batal</button>
-                <button class="btn btn-danger" @onclick="DeleteLainnyaAsync" disabled="@isDeleting">
-                    @if (isDeleting)
-                    {
-                        <span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px;display:inline-block;vertical-align:middle;"></span>
-                    }
-                    Hapus Permanen
-                </button>
-            </div>
-        </div>
-    </div>
-}
-
 @code {
     private List<BeritaAcaraEntity> allBA = new();
     private bool isLoading = true;
@@ -301,8 +259,6 @@ else
     private bool showNamePopover = false;
     private bool showJenisDropdown = false;
     private int? previewBaId;
-    private int? confirmDeleteId;
-    private bool isDeleting = false;
 
     private string _search = string.Empty;
     private string search
@@ -472,40 +428,6 @@ else
         finally
         {
             isExporting = false;
-        }
-    }
-
-    private async Task DeleteLainnyaAsync()
-    {
-        if (confirmDeleteId is null) return;
-        isDeleting = true;
-        try
-        {
-            var ba = await DbContext.Set<BeritaAcaraEntity>()
-                .Include(b => b.Perangkat)
-                .Include(b => b.BuktiFotos)
-                .FirstOrDefaultAsync(b => b.Id == confirmDeleteId.Value
-                                       && b.Jenis == "Lainnya"
-                                       && b.CreatedBy == currentUserId);
-
-            if (ba is not null)
-            {
-                DbContext.Set<PerangkatBA>().RemoveRange(ba.Perangkat);
-                DbContext.Set<BuktiFoto>().RemoveRange(ba.BuktiFotos);
-                DbContext.Set<BeritaAcaraEntity>().Remove(ba);
-                await DbContext.SaveChangesAsync();
-                allBA.RemoveAll(b => b.Id == confirmDeleteId.Value);
-                await BACounterService.AdjustCounterAfterDeleteAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[ArsipBA] DeleteLainnyaAsync error: {ex.Message}");
-        }
-        finally
-        {
-            isDeleting = false;
-            confirmDeleteId = null;
         }
     }
 
