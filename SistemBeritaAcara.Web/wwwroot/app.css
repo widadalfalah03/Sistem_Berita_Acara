@@ -3181,6 +3181,8 @@ input[type="password"]::-ms-clear {
     color: var(--text-muted);
     gap: 12px;
     font-size: 15px;
+    background: var(--bg);
+    border-radius: var(--radius);
 }
 
 .spinner {
