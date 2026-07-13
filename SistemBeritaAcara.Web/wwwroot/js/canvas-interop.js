@@ -364,3 +364,49 @@ window.ttdCanvas = {
         return tmp.toDataURL('image/png');
     }
 };
+
+
+window.profilCropperSetup = {
+    handleFileSelect: function(inputElement) {
+        if (!inputElement.files || inputElement.files.length === 0) return;
+        const file = inputElement.files[0];
+        
+        // Create object URL for the selected file
+        const url = URL.createObjectURL(file);
+        
+        // First, trigger the modal to show
+        const btn = document.getElementById('hidden-show-modal');
+        if (btn) btn.click();
+        
+        // Wait for modal to render, then inject image and setup cropper
+        setTimeout(() => {
+            const container = document.getElementById('cropper-container');
+            if (!container) {
+                console.error("Cropper container not found");
+                return;
+            }
+            
+            // Clear container
+            container.innerHTML = '';
+            
+            // Create image element
+            const image = document.createElement('img');
+            image.id = 'cropper-image';
+            image.src = url;
+            image.style.display = 'block';
+            image.style.maxWidth = '100%';
+            image.style.maxHeight = '360px';
+            image.style.margin = '0 auto';
+            
+            container.appendChild(image);
+            
+            // Initialize cropper after image is appended
+            setTimeout(() => {
+                window.cropperInterop.setupCropper(image);
+            }, 150);
+        }, 150);
+        
+        // Clear input
+        inputElement.value = '';
+    }
+};

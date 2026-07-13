@@ -22,6 +22,52 @@
         inputElement.value = '';
     },
 
+    setupCropper: function(imageElement) {
+        if (typeof Cropper === 'undefined') {
+            alert("Library Cropper belum termuat. Mohon lakukan Hard Refresh (Ctrl + F5).");
+            return false;
+        }
+
+        if (!imageElement) {
+            console.error("Image element not provided for cropper");
+            return false;
+        }
+
+        const startCropper = () => {
+            try {
+                // Destroy existing instance if any
+                this.destroyCropper();
+
+                // Create new cropper instance
+                this.cropperInstance = new Cropper(imageElement, {
+                    aspectRatio: 1, 
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 0.8,
+                    restore: false,
+                    guides: true,
+                    center: true,
+                    highlight: false,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    toggleDragModeOnDblclick: false,
+                });
+            } catch (err) {
+                console.error("Failed to init Cropper:", err);
+            }
+        };
+
+        if (imageElement.complete && imageElement.naturalHeight !== 0) {
+            startCropper();
+        } else {
+            imageElement.onload = startCropper;
+            // Fallback timeout
+            setTimeout(startCropper, 300);
+        }
+
+        return true;
+    },
+
     initCropper: function (containerId, imageUrl) {
         if (typeof Cropper === 'undefined') {
             alert("Library Cropper belum termuat. Mohon lakukan Hard Refresh (Ctrl + F5).");
