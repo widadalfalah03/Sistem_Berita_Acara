@@ -10,6 +10,7 @@
 @inject IJSRuntime JS
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminIT")]
+@implements IDisposable
 
 <PageTitle>Data Pekerja — Sistem Berita Acara</PageTitle>
 
@@ -21,7 +22,7 @@
                 onmouseover="if(!this.disabled)this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
             @(isExporting ? "Mengexport..." : "Export Excel")
         </button>
-        <button @onclick="() => showUpload = true"
+        <button @onclick="OpenUpload"
                 style="display:inline-flex;align-items:center;padding:8px 16px;border-radius:var(--radius);border:none;background:var(--surface);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;"
                 onmouseover="this.style.color='var(--primary)';this.style.background='var(--primary-light)'"
                 onmouseout="this.style.color='var(--text-secondary)';this.style.background='var(--surface)'">
@@ -212,26 +213,38 @@ else
 
 @if (showUpload)
 {
-    <div class="modal-overlay" @onclick="() => showUpload = false">
+    <div class="modal-overlay" @onclick="CloseUpload">
         <div class="modal-content" style="max-width:500px;" @onclick:stopPropagation>
-            <button class="modal-close" @onclick="() => showUpload = false"><i class="bi bi-x-lg"></i></button>
+            <button class="modal-close" @onclick="CloseUpload"><i class="bi bi-x-lg"></i></button>
             <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Import Data Pekerja</div>
             <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;">
                 Upload file Excel (.xlsx) dengan kolom: Nama, No Pekerja, Jabatan, Fungsi/Direktorat, Email, Cost Center
             </div>
-            <div style="display:flex;justify-content:center;margin:24px 0;">
-                <label for="pegawai-upload-input" style="cursor:pointer;display:inline-block;">
-                    <div class="upload-btn-styled">
-                        <i class="bi bi-cloud-arrow-up-fill" style="font-size:28px;"></i>
-                        <span style="font-weight:600;font-size:15px;">Pilih File Excel</span>
-                        <span style="font-size:12px;color:var(--text-muted);margin-top:2px;">.xlsx · Maksimal 10MB</span>
+
+            @if (!string.IsNullOrEmpty(dropError))
+            {
+                <div style="background:var(--danger-light);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;color:var(--danger);font-size:13px;display:flex;align-items:center;gap:8px;">
+                    <i class="bi bi-exclamation-circle-fill"></i> @dropError
+                </div>
+            }
+
+            <div id="pegawai-drop-zone"
+                 style="border:2px dashed @(isDragOver ? "var(--primary)" : "var(--border)");
+                        border-radius:var(--radius);background:@(isDragOver ? "var(--primary-light)" : "var(--bg)");
+                        transition:all .2s;margin:8px 0 20px;cursor:pointer;">
+                <label for="pegawai-upload-input" style="cursor:pointer;display:block;padding:32px 24px;text-align:center;">
+                    <i class="bi bi-cloud-arrow-up-fill" style="font-size:36px;color:@(isDragOver ? "var(--primary)" : "var(--text-muted)");display:block;margin-bottom:10px;transition:color .2s;"></i>
+                    <div style="font-weight:600;font-size:15px;color:@(isDragOver ? "var(--primary)" : "var(--text-primary)");margin-bottom:4px;">
+                        @(isDragOver ? "Lepaskan file di sini" : "Pilih File Excel")
                     </div>
+                    <div style="font-size:12px;color:var(--text-muted);">atau drag &amp; drop file .xlsx di sini · Maksimal 10MB</div>
                 </label>
                 <InputFile id="pegawai-upload-input" OnChange="OnImportFileChanged" accept=".xlsx" style="display:none;" />
             </div>
+
             @if (isImporting)
             {
-                <div class="loading-spinner" style="padding:20px;">
+                <div class="loading-spinner" style="padding:16px;">
                     <div class="spinner"></div>
                 </div>
             }
@@ -246,6 +259,9 @@ else
     private bool isExporting = false;
     private bool showUpload = false;
     private bool isImporting = false;
+    private bool isDragOver = false;
+    private string dropError = string.Empty;
+    private DotNetObjectReference<Pegawai>? _dotNetRef;
     private bool showForm = false;
     private bool isEditMode = false;
     private bool showHapus = false;
@@ -479,4 +495,62 @@ else
         alertMessage = msg;
         alertIsError = isError;
     }
+
+    private async Task OpenUpload()
+    {
+        dropError = string.Empty;
+        isDragOver = false;
+        showUpload = true;
+        await Task.Delay(50);
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("excelDropZone.init", "pegawai-drop-zone", _dotNetRef);
+    }
+
+    private void CloseUpload()
+    {
+        showUpload = false;
+        isDragOver = false;
+        dropError = string.Empty;
+    }
+
+    [JSInvokable] public void OnDragOver()  { isDragOver = true;  StateHasChanged(); }
+    [JSInvokable] public void OnDragLeave() { isDragOver = false; StateHasChanged(); }
+    [JSInvokable] public void OnDropInvalidFile()
+    {
+        isDragOver = false;
+        dropError = "File tidak valid. Hanya file .xlsx yang diperbolehkan.";
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task OnDropFile(string fileName, long fileSize, string base64)
+    {
+        isDragOver = false;
+        dropError = string.Empty;
+        if (fileSize > 10_000_000) { dropError = "Ukuran file melebihi batas maksimal 10MB."; StateHasChanged(); return; }
+
+        isImporting = true;
+        StateHasChanged();
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var currentUser = await UserManager.FindByEmailAsync(auth.User.Identity!.Name!);
+            var bytes = Convert.FromBase64String(base64);
+            using var stream = new MemoryStream(bytes);
+            var (added, updated, deactivated, errors) = await ExcelService.ImportPegawaiAsync(stream, currentUser!.Id, fileName);
+            showUpload = false;
+            if (errors.Any() && added == 0 && updated == 0 && deactivated == 0)
+                SetAlert(errors[0], true);
+            else
+            {
+                SetAlert($"Berhasil: {added} ditambahkan, {updated} diperbarui, {deactivated} dinonaktifkan." +
+                         (errors.Any() ? $" Peringatan: {string.Join("; ", errors)}" : ""), false);
+                await LoadAsync();
+            }
+        }
+        catch (Exception ex) { SetAlert($"Gagal impor: {ex.Message}", true); }
+        finally { isImporting = false; StateHasChanged(); }
+    }
+
+    public void Dispose() => _dotNetRef?.Dispose();
 }
