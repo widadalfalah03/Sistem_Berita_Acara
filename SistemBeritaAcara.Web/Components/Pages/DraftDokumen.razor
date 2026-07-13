@@ -1,4 +1,4 @@
-﻿@page "/draft"
+@page "/draft"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @using BeritaAcaraEntity = SistemBeritaAcara.Core.Entities.BeritaAcara
@@ -6,6 +6,8 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager Navigation
+@using SistemBeritaAcara.Core.Interfaces
+@inject IBACounterService BACounterService
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "AdminBA")]
 
@@ -218,6 +220,7 @@ else
             DbContext.Set<BeritaAcaraEntity>().Remove(entity);
         }
         await DbContext.SaveChangesAsync();
+        await BACounterService.AdjustCounterAfterDeleteAsync();
         deleteAllConfirm = false;
         await LoadAsync();
     }
@@ -241,6 +244,7 @@ else
 
             DbContext.Set<BeritaAcaraEntity>().Remove(ba);
             await DbContext.SaveChangesAsync();
+            await BACounterService.AdjustCounterAfterDeleteAsync();
         }
         deleteConfirmId = null;
         await LoadAsync();

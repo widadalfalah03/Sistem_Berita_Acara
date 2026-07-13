@@ -1,4 +1,4 @@
-﻿@page "/archive"
+@page "/archive"
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.EntityFrameworkCore
@@ -10,6 +10,8 @@
 @inject NavigationManager Navigation
 @inject IExcelService ExcelService
 @inject IJSRuntime JS
+@using SistemBeritaAcara.Core.Interfaces
+@inject IBACounterService BACounterService
 
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @implements IAsyncDisposable
@@ -493,6 +495,7 @@ else
                 DbContext.Set<BeritaAcaraEntity>().Remove(ba);
                 await DbContext.SaveChangesAsync();
                 allBA.RemoveAll(b => b.Id == confirmDeleteId.Value);
+                await BACounterService.AdjustCounterAfterDeleteAsync();
             }
         }
         catch (Exception ex)

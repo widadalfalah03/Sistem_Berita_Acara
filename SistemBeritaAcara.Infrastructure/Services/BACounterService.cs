@@ -33,4 +33,25 @@ public class BACounterService(AppDbContext db, IConfiguration configuration) : I
 
         return (value, nomor);
     }
+
+    public async Task AdjustCounterAfterDeleteAsync()
+    {
+        await using var tx = await db.Database.BeginTransactionAsync();
+
+        var counter = await db.BACounter
+            .FromSqlRaw("SELECT * FROM [BACounter] WITH (UPDLOCK, ROWLOCK) WHERE [Id] = 1")
+            .FirstAsync();
+
+        var maxCounter = await db.BeritaAcara.MaxAsync(ba => (int?)ba.CounterValue) ?? 0;
+        
+        // If the next value is greater than the max counter + 1, it means the highest BA was deleted.
+        // We can safely step the counter back so the next BA reuses the deleted number.
+        if (counter.NextValue > maxCounter + 1)
+        {
+            counter.NextValue = maxCounter + 1;
+            await db.SaveChangesAsync();
+        }
+        
+        await tx.CommitAsync();
+    }
 }

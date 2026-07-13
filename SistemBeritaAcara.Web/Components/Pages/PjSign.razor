@@ -134,16 +134,14 @@ else
             </div>
 
             <div style="display:@(pjTtdMode == "upload" ? "block" : "none");margin-bottom:16px;">
-                <label for="pj-ul-input" style="cursor:pointer;display:block;">
-                    <div style="border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg);padding:18px;text-align:center;transition:border-color .15s;"
-                         onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-                        <i class="bi bi-image" style="font-size:26px;color:var(--primary);display:block;margin-bottom:6px;"></i>
-                        <div style="font-weight:600;font-size:13px;margin-bottom:2px;">Klik untuk pilih gambar</div>
-                        <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
-                    </div>
+                <div id="pj-ul-dropzone" style="position:relative;border:2px dashed var(--border);border-radius:var(--radius);background:var(--bg);padding:18px;text-align:center;transition:border-color .2s,background .2s,transform .2s;">
+                    <label for="pj-ul-input" style="position:absolute;inset:0;cursor:pointer;"></label>
+                    <i class="bi bi-cloud-arrow-up" style="font-size:32px;color:var(--primary);display:block;margin-bottom:6px;"></i>
+                    <div style="font-weight:600;font-size:13px;margin-bottom:2px;">Klik atau seret file ke sini</div>
+                    <div style="font-size:11px;color:var(--text-muted);">JPG, PNG, JPEG · Maks. 5MB</div>
                     <input type="file" id="pj-ul-input" accept="image/*" style="display:none"
                            onchange="ttdUpload.onFileChange('pj-ul-input', 'pj-ul-canvas', 'pj-ul-wrap')" />
-                </label>
+                </div>
 
                 <div id="pj-ul-wrap" style="display:none;margin-top:12px;">
                     <div style="background:white;border-radius:var(--radius);border:2px solid var(--border);padding:6px;min-height:60px;display:flex;align-items:center;justify-content:center;">
@@ -380,6 +378,8 @@ else
         else
         {
             try { await JS.InvokeVoidAsync("ttdUpload.reset"); } catch { }
+            await Task.Delay(60);
+            try { await JS.InvokeVoidAsync("ttdUpload.initDragDrop", "pj-ul-dropzone", "pj-ul-input", "pj-ul-canvas", "pj-ul-wrap"); } catch { }
         }
     }
 
