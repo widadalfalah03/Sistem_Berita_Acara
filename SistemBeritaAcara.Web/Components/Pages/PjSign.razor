@@ -485,9 +485,6 @@ else
             await DbContext.SaveChangesAsync();
 
             
-            await ExcelService.AppendBeritaAcaraToArsipAsync(ba);
-            ba.ExcelExported = true;
-            await DbContext.SaveChangesAsync();
             await tx.CommitAsync();
 
             

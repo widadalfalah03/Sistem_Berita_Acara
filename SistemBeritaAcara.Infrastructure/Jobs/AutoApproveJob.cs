@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SistemBeritaAcara.Core.Entities;
@@ -86,9 +86,7 @@ public class AutoApproveJob(
                 db.BeritaAcara.Update(ba);
                 await db.SaveChangesAsync();
 
-                await excelService.AppendBeritaAcaraToArsipAsync(ba);
-                ba.ExcelExported = true;
-                await db.SaveChangesAsync();
+
                 await tx.CommitAsync();
 
                 string msgInbox = $"Berita Acara {ba.Jenis} {ba.NomorSurat} telah selesai secara otomatis (PJ melewati batas waktu).";

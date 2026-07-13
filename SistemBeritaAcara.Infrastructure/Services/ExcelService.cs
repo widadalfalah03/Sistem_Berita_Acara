@@ -1,4 +1,4 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SistemBeritaAcara.Core.Entities;
@@ -223,54 +223,7 @@ public class ExcelService(AppDbContext db, IDeaktivasiService deaktivasiService,
         return (added, updated, deactivated, errors);
     }
 
-    public async Task AppendBeritaAcaraToArsipAsync(BeritaAcara ba)
-    {
-        await _archiveLock.WaitAsync();
-        try
-        {
-            var configuredPath = configuration["Storage:ArchivePath"];
-            var dataRoot = !string.IsNullOrWhiteSpace(configuredPath)
-                ? configuredPath
-                : Path.Combine(Directory.GetCurrentDirectory(), "data");
-            Directory.CreateDirectory(dataRoot);
 
-            var archivePath = Path.Combine(dataRoot, "ArsipBeritaAcara.xlsx");
-            using var workbook = File.Exists(archivePath)
-                ? new XLWorkbook(archivePath)
-                : new XLWorkbook();
-
-            var worksheet = workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Arsip")
-                ?? workbook.AddWorksheet("Arsip");
-
-            if (worksheet.RowsUsed() is null || worksheet.Row(1).Cell(1).GetString() != "Nomor Surat")
-            {
-                worksheet.Cell(1, 1).Value = "Nomor Surat";
-                worksheet.Cell(1, 2).Value = "Tanggal";
-                worksheet.Cell(1, 3).Value = "Jenis";
-                worksheet.Cell(1, 4).Value = "PJ";
-                worksheet.Cell(1, 5).Value = "Yang Menyerahkan";
-                worksheet.Cell(1, 6).Value = "Reviewer";
-                worksheet.Cell(1, 7).Value = "Status";
-                worksheet.Cell(1, 8).Value = "Tanggal Kembali";
-            }
-
-            var nextRow = worksheet.LastRowUsed()?.RowNumber() + 1 ?? 2;
-            worksheet.Cell(nextRow, 1).Value = ba.NomorSurat;
-            worksheet.Cell(nextRow, 2).Value = ba.Tanggal.ToString("yyyy-MM-dd");
-            worksheet.Cell(nextRow, 3).Value = ba.Jenis;
-            worksheet.Cell(nextRow, 4).Value = ba.Pj?.Nama ?? string.Empty;
-            worksheet.Cell(nextRow, 5).Value = ba.Menyerahkan?.Nama ?? string.Empty;
-            worksheet.Cell(nextRow, 6).Value = ba.Mengetahui?.Nama ?? string.Empty;
-            worksheet.Cell(nextRow, 7).Value = ba.Status;
-            worksheet.Cell(nextRow, 8).Value = ba.TanggalKembali?.ToString("yyyy-MM-dd") ?? string.Empty;
-
-            workbook.SaveAs(archivePath);
-        }
-        finally
-        {
-            _archiveLock.Release();
-        }
-    }
 
     public Task<byte[]> ExportArsipAsync(IEnumerable<BeritaAcara> data, string baseUrl)
     {
